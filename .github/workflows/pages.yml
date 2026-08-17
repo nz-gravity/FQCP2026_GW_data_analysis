@@ -29,7 +29,7 @@ jobs:
           cache-dependency-path: requirements-core.txt
 
       - name: Install website dependencies
-        run: python -m pip install "nbformat>=5.10" "nbconvert>=7.16"
+        run: python -m pip install "nbformat>=5.10" "jupyter-book>=1.0,<2.0"
 
       - name: Validate saved notebook outputs
         run: python validate_course.py
@@ -43,7 +43,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: _site
+          path: _build/html
 
   deploy:
     environment:

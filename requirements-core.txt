@@ -3,6 +3,7 @@ scipy>=1.11
 matplotlib>=3.8
 corner>=2.2
 jupyterlab>=4.0
+jupyter-book>=1.0,<2.0
 nbclient>=0.10
 rippleGW==0.2.1
 bilby==2.8.0
