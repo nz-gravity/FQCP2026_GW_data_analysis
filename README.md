@@ -48,11 +48,11 @@ python validate_course.py
 python build_site.py
 ```
 
-`build_course.py` is the reviewable notebook source. Saved outputs are validated before deployment.
+`build_course.py` is the reviewable notebook source. Saved outputs are validated before deployment. `build_site.py` builds the JupyterBook into `_build/html`; the book configuration and navigation are in `_config.yml` and `_toc.yml`.
 
 ## Website deployment
 
-`.github/workflows/pages.yml` validates notebooks, builds `_site`, and deploys it with the official GitHub Pages actions on pushes to `main`. In repository settings, select **GitHub Actions** as the Pages source.
+`.github/workflows/pages.yml` validates notebooks, builds `_build/html` with JupyterBook, and deploys it with the official GitHub Pages actions on pushes to `main`. In repository settings, select **GitHub Actions** as the Pages source.
 
 - Repository: `https://github.com/nz-gravity/FQCP2026_GW_data_analysis`
 - Intended site: `https://nz-gravity.github.io/FQCP2026_GW_data_analysis/`
