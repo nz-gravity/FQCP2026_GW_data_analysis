@@ -8,10 +8,30 @@ The material is consolidated into three self-contained notebooks, following the 
 
 | Notebook | Live time | Purpose |
 | --- | ---: | --- |
-| **`00_basics_parameter_estimation.ipynb`** | **30 min** | Prior, likelihood, posterior, evidence, uncertainty, Whittle likelihood, PSD, and audio whitening |
-| **`01_lvk_compact_binary_parameter_estimation.ipynb`** | **45 min** | CBC signals, animated detector response, manual network likelihood, Bilby, and localisation |
-| **`02_lisa_parameter_estimation_and_global_fit.ipynb`** | **40 min** | LISA response, manual likelihood, `AnalysisContainer`, gaps, and the global fit |
+| **`00_basics_parameter_estimation.ipynb`** | **30 min** | Prior, likelihood, posterior, evidence, MCMC, Fisher, nested sampling, Whittle likelihood, PSD, and audio whitening |
+| **`01_lvk_compact_binary_parameter_estimation.ipynb`** | **45 min** | CBC signals, animated detector response, matched filtering, manual network likelihood, the distance–inclination degeneracy, Bilby, and localisation |
+| **`02_lisa_parameter_estimation_and_global_fit.ipynb`** | **40 min** | LISA response, manual likelihood, Fisher forecasts, `AnalysisContainer`, gaps, and the global fit |
 | Questions/transitions | 5 min | Assumptions, limitations, next steps |
+
+Each notebook deliberately contains more than fits the live session. The
+sampling, Fisher, nested-sampling and calibration sections of notebook 00, and
+the extension sections elsewhere, are written to be read afterwards as a
+standalone reference.
+
+## How the algorithms are taught
+
+Every inference method is implemented in readable NumPy and then checked
+against an independent calculation, so students can see that it works rather
+than take it on faith:
+
+| Method | Where | Independent check |
+| --- | --- | --- |
+| grid posterior | 00 §3 | analytic Fisher covariance |
+| Metropolis–Hastings | 00 §5 | marginals overlaid on the exact grid |
+| Fisher / Laplace | 00 §6, 02 §4 | exact for the linear model; `sigma(ln A) = 1/SNR` for LISA |
+| nested sampling | 00 §7 | `log Z` agrees with the grid evidence to ~0.1 |
+| P–P calibration | 00 extension | 400 simulations inside the 95% band |
+| matched filtering | 01 §3 | recovered SNR matches Bilby's optimal SNR |
 
 ## Run in Google Colab
 

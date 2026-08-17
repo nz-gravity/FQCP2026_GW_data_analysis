@@ -359,8 +359,8 @@ Only afterwards does the chain wander around the degeneracy ridge in the way
 that actually samples it. Burn-in samples are discarded because they depend on
 where you started, not on the posterior."""
         ),
-        code("""frame_steps = np.arange(20, 1400, 18)
-fig, (walk_ax, trace_ax) = plt.subplots(1, 2, figsize=(11, 3.8))
+        code("""frame_steps = np.arange(20, 1400, 26)
+fig, (walk_ax, trace_ax) = plt.subplots(1, 2, figsize=(10, 3.6), dpi=72)
 walk_ax.contour(m_grid, c_grid, posterior.T, levels=6, cmap="magma")
 (path,) = walk_ax.plot([], [], lw=0.7, color="C0", alpha=0.8)
 (head,) = walk_ax.plot([], [], "o", color="C3", ms=7)
@@ -644,7 +644,7 @@ threshold rises. The right panel shows the integrand $\\mathcal{L}(X)$ against
 $\\log X$: the evidence is the area under it, and the visible bump is the
 region of prior volume that actually contributes."""
         ),
-        code("""fig, (live_ax, mass_ax) = plt.subplots(1, 2, figsize=(11, 3.8))
+        code("""fig, (live_ax, mass_ax) = plt.subplots(1, 2, figsize=(10, 3.6), dpi=72)
 live_ax.contour(m_grid, c_grid, posterior.T, levels=6, cmap="magma")
 (live_points,) = live_ax.plot([], [], ".", color="C0", ms=3)
 live_ax.set(xlim=(0, 1.5), ylim=(-5, 5), xlabel="slope m", ylabel="intercept c")
@@ -1223,10 +1223,10 @@ whitened_template = whiten(
 )
 h1_snr_series, _ = matched_filter(h1, injection_polarizations)
 
-lags = np.linspace(-0.3, 0.3, 61)
+lags = np.linspace(-0.3, 0.3, 45)
 window = (segment_time > 1.3) & (segment_time < 2.35)
 
-fig, (data_ax, snr_ax) = plt.subplots(1, 2, figsize=(12, 3.8))
+fig, (data_ax, snr_ax) = plt.subplots(1, 2, figsize=(10.5, 3.6), dpi=72)
 data_ax.plot(segment_time[window], whitened_data[window], lw=0.6, color="0.55")
 (template_line,) = data_ax.plot([], [], lw=1.4, color="C3")
 data_ax.set(
@@ -1243,6 +1243,7 @@ snr_ax.set(
     ylabel=r"$|z(\\tau)|$",
     title="overlap accumulated by the filter",
 )
+fig.subplots_adjust(top=0.78, wspace=0.28)
 
 
 def animate_filter(i):
@@ -1748,22 +1749,79 @@ axes[0].set(xlabel="frequency [mHz]",ylabel="response magnitude",title="JaxGB se
 axes[1].semilogy(1e3*frequency,4*df*np.sum(np.abs(template)**2/psd,axis=0))
 axes[1].set(xlabel="frequency [mHz]",ylabel=r"contribution to $\\rho^2$",title="PSD-weighted information by bin"); plt.show()"""
         ),
-        md("""### Manual one-parameter likelihood
+        md(r"""### Manual one-parameter likelihood
 
 Perturb the source frequency, regenerate the moving-constellation response, and
 compare optimal SNR with detected/matched SNR. A loud template can still match
-the data poorly. The peak of this likelihood scan is the maximum-likelihood
-frequency; normalising `exp(logL) × prior` would turn the grid into a
-posterior."""),
+the data poorly.
+
+Watch the two scales in the plots below. The overlap between two templates
+decays once they are separated by about one frequency bin, $1/T_{\rm obs}$.
+The *likelihood* is narrower than that by roughly the signal-to-noise ratio,
+which is why a 90-day observation pins $f_0$ to a small fraction of a bin.
+Longer missions help twice over: more bins, and more SNR per source."""),
         code(
-            """offsets=np.linspace(-7e-7,7e-7,61); detected=[]; logL=[]; trial_templates=[]
+            '''def trial_template(f0_offset):
+    """Regenerate the moving-constellation response at a shifted frequency."""
+    trial = GBObject(
+        f0=np.array([3e-3 + f0_offset]),
+        fdot=np.array([1e-17]),
+        A=np.array([2e-22]),
+        ra=np.array([1.0]),
+        dec=np.array([0.4]),
+        psi=np.array([0.3]),
+        iota=np.array([0.8]),
+        phi0=np.array([0.2]),
+        t_init=0.0,
+    )
+    kmin = int(simulator.get_kmin(parameters[:, 0])[0])
+    a, e, _ = simulator.sum_tdi(
+        trial.to_jaxgb_array(t0=0),
+        kmin,
+        kmin + simulator.n,
+        tdi_generation=2,
+        tdi_combination="AET",
+    )
+    return np.stack([np.asarray(a), np.asarray(e)])
+
+
+# Two very different scales matter here. The overlap between templates decays
+# over roughly a frequency bin, 1/T_obs, but the likelihood is narrower than
+# that by about the signal-to-noise ratio.
+wide_offsets = np.linspace(-7e-7, 7e-7, 61)
+detected = []
+for offset in wide_offsets:
+    h = trial_template(offset)
+    detected.append(inner(template, h) / np.sqrt(inner(h, h)))
+
+offsets = np.linspace(-2e-8, 2e-8, 61)
+logL, trial_templates = [], []
 for offset in offsets:
-    trial=GBObject(f0=np.array([3e-3+offset]),fdot=np.array([1e-17]),A=np.array([2e-22]),ra=np.array([1.]),dec=np.array([.4]),psi=np.array([.3]),iota=np.array([.8]),phi0=np.array([.2]),t_init=0.)
-    p=trial.to_jaxgb_array(t0=0); a,e,_=simulator.sum_tdi(p,int(simulator.get_kmin(parameters[:,0])[0]),int(simulator.get_kmin(parameters[:,0])[0])+simulator.n,tdi_generation=2,tdi_combination="AET")
-    h=np.stack([np.asarray(a),np.asarray(e)]); trial_templates.append(h); rho=np.sqrt(inner(h,h)); detected.append(inner(template,h)/rho); logL.append(-.5*inner(template-h,template-h))
-fig,axes=plt.subplots(1,2,figsize=(10,3.3)); axes[0].plot(offsets,detected); axes[0].axhline(optimal_snr,color="k",ls="--")
-axes[0].set(xlabel="frequency offset [Hz]",ylabel="detected SNR",title="Match falls away from the signal")
-axes[1].plot(offsets,np.array(logL)-np.max(logL)); axes[1].set(xlabel="frequency offset [Hz]",ylabel=r"$\\Delta \\log \\mathcal{L}$",title="Likelihood localises frequency"); plt.show()"""
+    h = trial_template(offset)
+    trial_templates.append(h)
+    logL.append(-0.5 * inner(template - h, template - h))
+
+fig, axes = plt.subplots(1, 2, figsize=(11, 3.4))
+axes[0].plot(1e9 * wide_offsets, detected)
+axes[0].axhline(optimal_snr, color="k", ls="--", label="optimal SNR")
+axes[0].axvline(1e9 / t_obs, color="C3", ls=":", label=r"one bin, $1/T_{\\rm obs}$")
+axes[0].set(
+    xlabel="frequency offset [nHz]",
+    ylabel="detected SNR",
+    title="Match falls away over about one bin",
+)
+axes[0].legend(fontsize=8)
+axes[1].plot(1e9 * offsets, np.array(logL) - np.max(logL))
+axes[1].axhline(-0.5, color="0.6", ls=":")
+axes[1].set(
+    xlabel="frequency offset [nHz]",
+    ylabel=r"$\\Delta \\log \\mathcal{L}$",
+    title="The likelihood is far narrower still",
+)
+plt.show()
+
+print(f"one frequency bin      : {1 / t_obs:.3e} Hz")
+print(f"plotted likelihood span: {offsets[-1] - offsets[0]:.3e} Hz")'''
         ),
         md(r"""### From a likelihood scan to a forecast: the Fisher matrix
 
