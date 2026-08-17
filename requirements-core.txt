@@ -9,3 +9,5 @@ rippleGW==0.2.1
 bilby==2.8.0
 jaxgb==0.2.1
 astropy==7.2.0
+lisaanalysistools==1.2.5
+gpubackendtools==0.1.1

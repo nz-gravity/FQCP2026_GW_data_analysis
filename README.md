@@ -4,17 +4,14 @@ A Colab-first mini-course for a two-hour lecture/tutorial at the 2026 Internatio
 
 ## Course structure
 
-The split notebooks are easier to teach and more useful as a later reference than one long notebook. The default live route omits the population chapter but preserves it for self-study.
+The material is consolidated into three self-contained notebooks, following the teaching progression of the local `nz_bilby_cbc_workshop_2024` and `lisa_analysis_workshop` repositories.
 
 | Notebook | Live time | Purpose |
 | --- | ---: | --- |
-| `00_start_here.ipynb` | 5 min | Map from source parameters to posterior |
-| **`01_bayes_and_whittle.ipynb`** | **25 min** | Estimate a PSD, whiten residuals, build a Whittle likelihood |
-| **`02_lvk_cbc_with_ripple.ipynb`** | **25 min** | CBC parameters and both IMRPhenomD polarisations |
-| **`03_lvk_response_and_localisation.ipynb`** | **30 min** | LVK antenna response, polarisation, timing localisation, PSDs, Bilby |
-| `04_population_inference.ipynb` | self-study | Mock catalogue and selection effects |
-| **`05_lisa_response_and_global_fit.ipynb`** | **35 min** | LISA orbit, real JaxGB TDI responses, mini global fit |
-| Questions/transitions | 15 min | Assumptions, limitations, next steps |
+| **`00_basics_parameter_estimation.ipynb`** | **30 min** | Prior, likelihood, grid posterior, marginalisation, posterior predictive checks, PSD bridge |
+| **`01_lvk_compact_binary_parameter_estimation.ipynb`** | **45 min** | CBC parameters, rippleGW polarisations, Bilby detector response/injection, posterior, localisation |
+| **`02_lisa_parameter_estimation_and_global_fit.ipynb`** | **40 min** | `lisatools` sensitivity, JaxGB TDI, SNR/likelihood, overlapping sources and source count |
+| Questions/transitions | 5 min | Assumptions, limitations, next steps |
 
 ## Run in Google Colab
 
@@ -24,7 +21,7 @@ After the repository is public, every chapter has a one-click link on the course
 https://colab.research.google.com/github/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/NOTEBOOK.ipynb
 ```
 
-The rippleGW, Bilby, and JaxGB notebooks contain pinned, conditional install cells. Python 3.12 or newer is required by JaxGB. No GPU is required.
+The LVK and LISA notebooks contain pinned, conditional install cells. Python 3.12 or newer is recommended. No GPU is required.
 
 ## Reusable Colab helpers
 
@@ -59,18 +56,17 @@ python build_site.py
 
 ## Scientific boundaries
 
-- The Whittle chapter assumes stationary Gaussian noise and a fixed PSD after its Welch estimate.
-- rippleGW supplies a physical CBC waveform, but the live inference is deliberately one-dimensional.
+- The basics chapter exposes prior, likelihood, posterior, prediction, and the assumptions behind the Whittle likelihood.
+- rippleGW supplies a physical CBC waveform, but the live LVK inference is deliberately one-dimensional.
 - The timing-only sky map is pedagogical; Bilby demonstrates the full detector projection, not a full sampling run.
-- Population measurements and selection are simplified.
-- The LISA chapter uses a real orbit and JaxGB TDI response, but fits only three fixed-catalogue amplitude coefficients. It is not a trans-dimensional production global fit.
+- The LISA chapter uses `lisatools` sensitivity curves and a real JaxGB orbit/TDI response, but fits a three-source candidate catalogue. BIC enumeration is explicitly only a classroom proxy for RJMCMC/evidence.
 
 ## Follow-on sources
 
 - [Bilby CBC tutorial](https://bilby-dev.github.io/bilby/compact-binary-coalescence-parameter-estimation.html)
 - [rippleGW documentation](https://ripplegw.readthedocs.io/)
 - [GWOSC tutorials](https://gwosc.org/tutorials/)
-- [GWTC-3 population paper](https://arxiv.org/abs/2111.03634)
 - [Global analysis of LISA data with GLASS](https://arxiv.org/abs/2301.03673)
+- [LISA Analysis Tools Workshop](https://github.com/mikekatz04/LATW)
 - [LISA Data Challenge files](https://lisa-ldc.in2p3.fr/file)
 - [JaxGB](https://pypi.org/project/jaxgb/)
