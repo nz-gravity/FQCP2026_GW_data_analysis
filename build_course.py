@@ -87,7 +87,13 @@ We will follow the teaching sequence used in the NZ Bilby CBC workshop:
 3. write a likelihood from a noise assumption;
 4. calculate a posterior on a grid;
 5. inspect marginals and posterior predictions;
-6. replace white noise by a gravitational-wave-style PSD-weighted likelihood.
+6. replace the grid with the algorithms real analyses use — Metropolis-Hastings,
+   the Fisher approximation, and nested sampling — and learn how to tell whether
+   they worked;
+7. replace white noise by a gravitational-wave-style PSD-weighted likelihood.
+
+Sections 5-7 and the extensions are written to be read on your own afterwards;
+they are the reference half of this notebook and are not all covered live.
 
 Bayes' theorem is
 
@@ -264,7 +270,413 @@ fig,ax=plt.subplots(figsize=(8,3.3)); ax.plot(time,data,"o",ms=3,color="k",label
 ax.plot(time,median,label="posterior median"); ax.fill_between(time,low,high,alpha=.25,label="90% signal band")
 ax.set(xlabel="time",ylabel="observation",title="Posterior predictive signal"); ax.legend(); plt.show()"""
         ),
-        md(r"""## 5. The gravitational-wave bridge: PSD and Whittle likelihood
+        md(r"""## 5. Why real PE cannot use a grid
+
+Everything so far used a grid. That worked because the model had two
+parameters. Grids die quickly: with $n$ points per axis and $D$ parameters, a
+grid costs $n^D$ likelihood evaluations.
+
+A binary black hole has about 15 parameters. At a coarse 20 points per axis
+that is $20^{15}\approx3\times10^{19}$ waveform evaluations. At one
+millisecond each, that is roughly a billion years.
+
+Stochastic samplers escape this because they spend their effort where the
+posterior actually has mass, rather than visiting the (overwhelmingly empty)
+rest of the prior volume."""),
+        code("""dimensions = np.arange(1, 16)
+grid_cost = 20.0**dimensions
+seconds_per_likelihood = 1e-3
+
+fig, ax = plt.subplots(figsize=(7.5, 3.3))
+ax.semilogy(dimensions, grid_cost * seconds_per_likelihood / (3600 * 24 * 365), "o-")
+ax.axhline(1, color="C3", ls="--", label="one year of computing")
+ax.set(
+    xlabel="number of parameters",
+    ylabel="grid cost [years]",
+    title="A 20-point-per-axis grid at 1 ms per likelihood",
+)
+ax.legend()
+plt.show()
+
+print(f"Two parameters: {20**2:,} evaluations")
+print(f"Fifteen parameters: {20**15:.2e} evaluations")"""),
+        md(r"""### Metropolis-Hastings in twelve lines
+
+The Metropolis algorithm needs only the ability to *evaluate* the unnormalised
+posterior $\mathcal L(\theta)\pi(\theta)$; it never needs the evidence. From
+the current point $\theta$:
+
+1. propose $\theta'=\theta+\mathcal N(0,\Sigma_{\rm prop})$;
+2. accept with probability
+   $\min\left[1,\dfrac{\mathcal L(\theta')\pi(\theta')}{\mathcal L(\theta)\pi(\theta)}\right]$;
+3. if rejected, **record the current point again**.
+
+Step 3 is not a bug. Rejections are how the chain builds up density in regions
+of high posterior probability. The resulting chain is a set of correlated draws
+whose histogram converges to the posterior."""),
+        code('''PRIOR_BOX = np.array([[0.0, 1.5], [-5.0, 5.0]])  # rows: m, c
+
+
+def log_posterior(theta):
+    """Unnormalised log posterior: flat prior inside the box, zero outside."""
+    if np.any(theta < PRIOR_BOX[:, 0]) or np.any(theta > PRIOR_BOX[:, 1]):
+        return -np.inf
+    return log_likelihood(theta[0], theta[1])
+
+
+def metropolis(log_target, start, n_steps, step_size, rng):
+    """Random-walk Metropolis. Returns the chain and the acceptance fraction."""
+    chain = np.empty((n_steps, len(start)))
+    current = np.asarray(start, dtype=float)
+    current_logp = log_target(current)
+    n_accepted = 0
+    for step in range(n_steps):
+        proposal = current + rng.normal(0.0, step_size)
+        proposal_logp = log_target(proposal)
+        if np.log(rng.uniform()) < proposal_logp - current_logp:
+            current, current_logp = proposal, proposal_logp
+            n_accepted += 1
+        chain[step] = current
+    return chain, n_accepted / n_steps
+
+
+sampler_rng = np.random.default_rng(4)
+chain, acceptance = metropolis(
+    log_posterior,
+    start=[1.35, -4.0],  # deliberately a bad starting guess
+    n_steps=6000,
+    step_size=np.array([0.12, 0.7]),
+    rng=sampler_rng,
+)
+print(f"acceptance fraction: {acceptance:.2f}")
+print(f"chain shape: {chain.shape}")'''),
+        md(
+            """### Animation: watch the chain find the posterior
+
+The walker starts in a corner where the posterior is negligible. The first
+phase is **burn-in**: a directed climb towards the bulk of the probability.
+Only afterwards does the chain wander around the degeneracy ridge in the way
+that actually samples it. Burn-in samples are discarded because they depend on
+where you started, not on the posterior."""
+        ),
+        code("""frame_steps = np.arange(20, 1400, 18)
+fig, (walk_ax, trace_ax) = plt.subplots(1, 2, figsize=(11, 3.8))
+walk_ax.contour(m_grid, c_grid, posterior.T, levels=6, cmap="magma")
+(path,) = walk_ax.plot([], [], lw=0.7, color="C0", alpha=0.8)
+(head,) = walk_ax.plot([], [], "o", color="C3", ms=7)
+walk_ax.plot(true_parameters["m"], true_parameters["c"], "c*", ms=12)
+walk_ax.set(
+    xlim=(0, 1.5), ylim=(-5, 5), xlabel="slope m", ylabel="intercept c"
+)
+(trace_line,) = trace_ax.plot([], [], lw=0.8, color="C0")
+trace_ax.axhline(true_parameters["m"], color="k", ls="--")
+trace_ax.set(
+    xlim=(0, frame_steps[-1]), ylim=(0, 1.5), xlabel="step", ylabel="slope m"
+)
+
+
+def animate_chain(i):
+    n = frame_steps[i]
+    path.set_data(chain[:n, 0], chain[:n, 1])
+    head.set_data([chain[n - 1, 0]], [chain[n - 1, 1]])
+    trace_line.set_data(np.arange(n), chain[:n, 0])
+    walk_ax.set_title(f"step {n}")
+    return path, head, trace_line
+
+
+chain_animation = FuncAnimation(
+    fig, animate_chain, frames=len(frame_steps), interval=80
+)
+plt.close(fig)
+display(HTML(chain_animation.to_jshtml()))"""),
+        md(
+            """### The proposal scale controls everything
+
+A chain can be perfectly correct in principle and useless in practice. Too
+small a step and the walker crawls, accepting almost everything but exploring
+nothing. Too large and almost every proposal lands somewhere absurd and is
+rejected. Both failures produce a chain that has not forgotten its starting
+point, and the "too small" chain below still reports a badly wrong mean.
+
+A useful rule of thumb for random-walk Metropolis is an acceptance fraction
+near 0.2-0.3. Production samplers (`emcee`, `dynesty`, `bilby`'s defaults)
+automate this tuning, but the failure modes remain the same."""
+        ),
+        code("""settings = [
+    ("too small", np.array([0.004, 0.02])),
+    ("well tuned", np.array([0.12, 0.7])),
+    ("too large", np.array([1.2, 7.0])),
+]
+
+fig, axes = plt.subplots(1, 3, figsize=(12, 3.2), sharey=True)
+for ax, (label, step_size) in zip(axes, settings):
+    trial_chain, trial_acceptance = metropolis(
+        log_posterior, [1.35, -4.0], 6000, step_size, np.random.default_rng(4)
+    )
+    ax.plot(trial_chain[:, 0], lw=0.6)
+    ax.axhline(true_parameters["m"], color="k", ls="--")
+    ax.set(
+        xlabel="step",
+        title=f"{label}\\nacceptance {trial_acceptance:.2f}",
+    )
+    print(
+        f"{label:>10}: acceptance {trial_acceptance:.2f}, "
+        f"posterior mean m = {trial_chain[500:, 0].mean():.3f}"
+    )
+axes[0].set_ylabel("slope m")
+axes[0].set_ylim(0, 1.5)
+plt.show()"""),
+        md(r"""### Diagnostics: burn-in and effective sample size
+
+Consecutive Metropolis samples are correlated, so $N$ stored samples are worth
+fewer than $N$ independent draws. The autocorrelation function
+$\rho(k)$ measures this, and the effective sample size is
+
+\[
+N_{\rm eff}\simeq\frac{N}{1+2\sum_{k\ge1}\rho(k)}.
+\]
+
+$N_{\rm eff}$, not the raw chain length, sets the Monte Carlo error on any
+posterior summary. A chain of a million highly correlated samples can carry
+less information than a thousand independent ones."""),
+        code('''burn_in = 500
+samples = chain[burn_in:]
+
+
+def autocorrelation(x):
+    """Normalised autocorrelation function of a 1D chain."""
+    x = x - x.mean()
+    acf = np.correlate(x, x, mode="full")[x.size - 1 :]
+    return acf / acf[0]
+
+
+def effective_sample_size(x):
+    acf = autocorrelation(x)
+    first_small = np.argmax(acf < 0.05)
+    cutoff = acf.size if first_small == 0 else first_small
+    return x.size / (1 + 2 * acf[1:cutoff].sum())
+
+
+fig, axes = plt.subplots(1, 2, figsize=(11, 3.3))
+axes[0].plot(chain[:, 0], lw=0.6)
+axes[0].axvspan(0, burn_in, color="C3", alpha=0.2, label="discarded burn-in")
+axes[0].axhline(true_parameters["m"], color="k", ls="--")
+axes[0].set(xlabel="step", ylabel="slope m", title="Trace")
+axes[0].legend()
+for index, name in enumerate(["m", "c"]):
+    axes[1].plot(autocorrelation(samples[:, index])[:200], label=name)
+axes[1].axhline(0, color="k", lw=0.8)
+axes[1].set(xlabel="lag [steps]", ylabel=r"$\\rho$", title="Autocorrelation")
+axes[1].legend()
+plt.show()
+
+for index, name in enumerate(["m", "c"]):
+    print(
+        f"{name}: N = {samples.shape[0]}, "
+        f"N_eff = {effective_sample_size(samples[:, index]):.0f}"
+    )'''),
+        md(
+            """### The corner plot, and a check against the grid
+
+A corner plot is the standard way to display a multi-dimensional posterior: 1D
+marginals on the diagonal, 2D marginals below. Because this problem is small
+enough to solve both ways, we can overlay the exact grid marginals in orange.
+Agreement is the check that the sampler is doing its job, and it is the only
+reason to trust the sampler on problems where no grid is possible."""
+        ),
+        code("""import subprocess
+import sys
+
+try:
+    import corner
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "corner"])
+    import corner
+
+corner_figure = corner.corner(
+    samples,
+    labels=["slope m", "intercept c"],
+    truths=[true_parameters["m"], true_parameters["c"]],
+    quantiles=[0.05, 0.5, 0.95],
+    show_titles=True,
+    title_fmt=".3f",
+)
+corner_axes = np.array(corner_figure.axes).reshape(2, 2)
+for axis, grid, marginal in [
+    (corner_axes[0, 0], m_grid, p_m),
+    (corner_axes[1, 1], c_grid, p_c),
+]:
+    # corner draws counts, not a density, so rescale the exact curve to match.
+    axis.plot(grid, marginal * axis.get_ylim()[1] / marginal.max(), color="C1", lw=2)
+corner_figure.suptitle("MCMC samples vs exact grid marginals (orange)", y=1.02)
+plt.show()
+
+print(f"grid    : m = {np.trapezoid(p_m * m_grid, m_grid):.4f}")
+print(f"sampler : m = {samples[:, 0].mean():.4f}")"""),
+        md(r"""## 6. The Fisher matrix: a cheap Gaussian approximation
+
+Expanding $\log\mathcal L$ to second order about its maximum approximates the
+posterior by a Gaussian with covariance $F^{-1}$, where
+
+\[
+F_{ij}=-\left\langle\frac{\partial^2\log\mathcal L}
+{\partial\theta_i\partial\theta_j}\right\rangle .
+\]
+
+For our linear model with Gaussian noise this is not an approximation at all:
+with a flat prior the posterior *is* exactly Gaussian, and
+$F=X^{\mathsf T}X/\sigma^2$ for the design matrix $X$. That makes it a clean
+place to see what the Fisher matrix does before trusting it elsewhere.
+
+In gravitational-wave work the same object appears as $F_{ij}=(\partial_i h\mid\partial_j h)$
+and is widely used for forecasts. Be careful: it is only reliable at high
+signal-to-noise ratio and for near-linear models. It cannot see multiple modes,
+hard prior boundaries, or curved (banana-shaped) degeneracies."""),
+        code("""design_matrix = np.column_stack([time, np.ones_like(time)])
+fisher_matrix = design_matrix.T @ design_matrix / sigma**2
+fisher_covariance = np.linalg.inv(fisher_matrix)
+fisher_mean = fisher_covariance @ design_matrix.T @ data / sigma**2
+
+fisher_sd = np.sqrt(np.diag(fisher_covariance))
+correlation = fisher_covariance[0, 1] / (fisher_sd[0] * fisher_sd[1])
+
+angles = np.linspace(0, 2 * np.pi, 200)
+eigenvalues, eigenvectors = np.linalg.eigh(fisher_covariance)
+circle = np.column_stack([np.cos(angles), np.sin(angles)])
+
+fig, ax = plt.subplots(figsize=(6, 4.2))
+ax.contour(m_grid, c_grid, posterior.T, levels=6, cmap="magma")
+for n_sigma in (1, 2):
+    ellipse = fisher_mean + n_sigma * circle @ (
+        eigenvectors * np.sqrt(eigenvalues)
+    ).T
+    ax.plot(ellipse[:, 0], ellipse[:, 1], color="C0", lw=2)
+ax.plot(true_parameters["m"], true_parameters["c"], "c*", ms=12)
+ax.set(
+    xlim=fisher_mean[0] + 4 * np.array([-1, 1]) * fisher_sd[0],
+    ylim=fisher_mean[1] + 4 * np.array([-1, 1]) * fisher_sd[1],
+    xlabel="slope m",
+    ylabel="intercept c",
+    title="Fisher 1- and 2-sigma ellipses over the grid posterior",
+)
+plt.show()
+
+print(f"Fisher   sd: m = {fisher_sd[0]:.4f}, c = {fisher_sd[1]:.4f}")
+print(f"Sampler  sd: m = {samples[:, 0].std():.4f}, c = {samples[:, 1].std():.4f}")
+print(f"m-c correlation coefficient: {correlation:+.3f}")"""),
+        md(r"""## 7. Nested sampling: where the evidence comes from
+
+Section 3 computed the evidence with a grid. Real analyses cannot. Nested
+sampling reorganises the integral by *prior volume*: let $X(\lambda)$ be the
+fraction of the prior with $\mathcal L>\lambda$. Then the $D$-dimensional
+integral collapses to a one-dimensional one,
+
+\[
+\mathcal Z=\int \mathcal L\,\pi\,d\theta=\int_0^1\mathcal L(X)\,dX .
+\]
+
+The algorithm keeps $N_{\rm live}$ points drawn from the prior, repeatedly
+deletes the worst one, and replaces it with a new point drawn from the prior
+*subject to* $\mathcal L>\mathcal L_{\rm worst}$. Each deletion shrinks the
+volume by a known factor, on average $X_i\approx e^{-i/N_{\rm live}}$, so the
+deleted likelihoods and their volume shells accumulate into $\mathcal Z$. The
+discarded points, suitably weighted, are posterior samples as a by-product.
+
+This is what `dynesty`, `MultiNest`, and `PolyChord` do, and it is why Bayesian
+model comparison is practical in gravitational-wave astronomy at all."""),
+        code('''def nested_sampling(
+    log_likelihood_fn, prior_box, n_live=250, n_iterations=1400, n_mcmc=25, rng=None
+):
+    """A minimal nested sampler with MCMC-based constrained replacement."""
+    low, high = prior_box[:, 0], prior_box[:, 1]
+    live = rng.uniform(low, high, size=(n_live, low.size))
+    live_logl = np.array([log_likelihood_fn(point) for point in live])
+
+    log_evidence = -np.inf
+    dead_logl, dead_logw, snapshots = [], [], []
+
+    for iteration in range(n_iterations):
+        worst = np.argmin(live_logl)
+        log_volume = -iteration / n_live
+        log_shell = log_volume + np.log1p(-np.exp(-1.0 / n_live))
+        log_evidence = np.logaddexp(log_evidence, live_logl[worst] + log_shell)
+        dead_logl.append(live_logl[worst])
+        dead_logw.append(log_shell)
+        if iteration % 50 == 0:
+            snapshots.append((live.copy(), log_volume, log_evidence))
+
+        # Replace the worst point by evolving a copy of a surviving one.
+        threshold = live_logl[worst]
+        point = live[rng.integers(n_live)].copy()
+        point_logl = log_likelihood_fn(point)
+        proposal_scale = live.std(axis=0)
+        for _ in range(n_mcmc):
+            trial = point + rng.normal(0.0, proposal_scale)
+            if np.all(trial > low) and np.all(trial < high):
+                trial_logl = log_likelihood_fn(trial)
+                if trial_logl > threshold:
+                    point, point_logl = trial, trial_logl
+        live[worst], live_logl[worst] = point, point_logl
+
+    # Add the remaining live points as a final block.
+    log_remaining = -n_iterations / n_live - np.log(n_live)
+    log_evidence = np.logaddexp(
+        log_evidence, np.logaddexp.reduce(live_logl) + log_remaining
+    )
+    return log_evidence, np.array(dead_logl), np.array(dead_logw), snapshots
+
+
+log_z_nested, dead_logl, dead_logw, snapshots = nested_sampling(
+    lambda point: log_likelihood(point[0], point[1]),
+    PRIOR_BOX,
+    rng=np.random.default_rng(7),
+)
+
+print(f"nested sampling log Z: {log_z_nested:.3f}")
+print(f"grid log Z           : {log_z_free_intercept:.3f}")
+print(f"difference           : {log_z_nested - log_z_free_intercept:+.3f}")'''),
+        md(
+            """### Animation: the live points contract onto the posterior
+
+Each frame shows the surviving live points. They begin spread over the whole
+prior and are squeezed into the high-likelihood ridge as the likelihood
+threshold rises. The right panel shows the integrand $\\mathcal{L}(X)$ against
+$\\log X$: the evidence is the area under it, and the visible bump is the
+region of prior volume that actually contributes."""
+        ),
+        code("""fig, (live_ax, mass_ax) = plt.subplots(1, 2, figsize=(11, 3.8))
+live_ax.contour(m_grid, c_grid, posterior.T, levels=6, cmap="magma")
+(live_points,) = live_ax.plot([], [], ".", color="C0", ms=3)
+live_ax.set(xlim=(0, 1.5), ylim=(-5, 5), xlabel="slope m", ylabel="intercept c")
+
+log_volume_axis = -np.arange(dead_logl.size) / 250
+posterior_mass = np.exp(dead_logl + dead_logw - np.max(dead_logl + dead_logw))
+mass_ax.plot(log_volume_axis, posterior_mass, color="0.7")
+(mass_line,) = mass_ax.plot([], [], color="C3", lw=2)
+mass_ax.set(
+    xlabel=r"$\\log X$ (log prior volume)",
+    ylabel=r"$\\mathcal{L}\\,\\Delta X$ (normalised)",
+    title="Where the evidence comes from",
+)
+
+
+def animate_nested(i):
+    live, log_volume, running_log_evidence = snapshots[i]
+    live_points.set_data(live[:, 0], live[:, 1])
+    used = log_volume_axis >= log_volume
+    mass_line.set_data(log_volume_axis[used], posterior_mass[used])
+    live_ax.set_title(
+        f"log X = {log_volume:.1f}, running log Z = {running_log_evidence:.1f}"
+    )
+    return live_points, mass_line
+
+
+nested_animation = FuncAnimation(
+    fig, animate_nested, frames=len(snapshots), interval=200
+)
+plt.close(fig)
+display(HTML(nested_animation.to_jshtml()))"""),
+        md(r"""## 8. The gravitational-wave bridge: PSD and Whittle likelihood
 
 A power spectral density (PSD) describes how a stationary random process's
 variance is distributed over frequency. For one-sided $S_n(f)$,
@@ -376,6 +788,89 @@ display(safe_audio(audio_data))
 print("Whitened data: frequencies are placed on a comparable noise scale")
 display(safe_audio(whitened_audio))"""),
         md(
+            """## Extension: is the posterior actually calibrated?
+
+A posterior can be self-consistent and still be wrong. The standard check is a
+**probability-probability (P-P) test**: draw a truth from the prior, simulate
+data, run inference, and record the quantile at which the truth falls in its
+own posterior. If the analysis is correct those quantiles are uniform, so the
+cumulative curve is a diagonal.
+
+This is how the LVK collaboration validates parameter-estimation pipelines,
+and it catches errors that no single analysis can reveal. Here the linear model
+has an exact Gaussian posterior (Section 6), so hundreds of trials are cheap.
+A deviating curve means a bug, a wrong noise model, or a prior mismatch."""
+        ),
+        code("""from scipy.stats import norm
+
+n_trials = 400
+calibration_rng = np.random.default_rng(11)
+quantiles = []
+for _ in range(n_trials):
+    truth = np.array(
+        [calibration_rng.uniform(0, 1.5), calibration_rng.uniform(-5, 5)]
+    )
+    trial_data = signal_model(time, *truth) + calibration_rng.normal(
+        0, sigma, time.size
+    )
+    estimate = fisher_covariance @ design_matrix.T @ trial_data / sigma**2
+    quantiles.append(norm.cdf(truth, estimate, fisher_sd))
+quantiles = np.array(quantiles)
+
+probability = np.linspace(0, 1, 100)
+band = 1.96 * np.sqrt(probability * (1 - probability) / n_trials)
+
+fig, ax = plt.subplots(figsize=(4.8, 4.6))
+ax.plot(probability, probability, "k--", lw=1)
+ax.fill_between(
+    probability,
+    probability - band,
+    probability + band,
+    color="0.7",
+    alpha=0.4,
+    label="95% expected band",
+)
+for index, name in enumerate(["m", "c"]):
+    fraction = (quantiles[:, index][None, :] < probability[:, None]).mean(axis=1)
+    ax.plot(probability, fraction, label=name)
+ax.set(
+    xlabel="credible level",
+    ylabel="fraction of truths inside",
+    title=f"P-P plot, {n_trials} simulations",
+    aspect="equal",
+)
+ax.legend()
+plt.show()"""),
+        md(
+            """## Reference: the parameter-estimation checklist
+
+Every analysis in the next two notebooks, and every published gravitational-wave
+result, is built from exactly these pieces.
+
+| Step | Question it answers | Where it can go wrong |
+| --- | --- | --- |
+| signal model $h(\\theta)$ | what could have produced the data? | waveform systematics, missing physics |
+| noise model / PSD | what does "a good fit" mean quantitatively? | non-stationarity, lines, glitches, PSD uncertainty |
+| likelihood $\\mathcal L(d\\mid\\theta)$ | how compatible are data and parameters? | wrong noise assumptions, correlated bins |
+| prior $\\pi(\\theta)$ | what was allowed before these data? | unintended informativeness, hard boundaries |
+| sampler | how do we explore the posterior? | poor tuning, unconverged chains, missed modes |
+| diagnostics | can we trust this particular run? | too few effective samples, no burn-in check |
+| evidence $\\mathcal Z$ | which model does the data prefer? | prior-volume dependence, under-converged runs |
+| calibration (P-P) | is the whole pipeline correct? | only detectable over many simulations |
+
+**Vocabulary quick reference**
+
+- *Marginalisation* integrates a nuisance parameter out; *profiling* maximises
+  over it. Section 3 showed these are different, and the LISA notebook measures
+  exactly how different.
+- *Burn-in* is the discarded start of a chain; *thinning* keeps every $k$-th
+  sample. Thinning reduces storage, not Monte Carlo error.
+- *Optimal SNR* assumes a perfect template; *matched-filter SNR* is what you
+  actually recover from data. The LVK notebook computes both.
+- *Credible interval* (Bayesian, probability over parameters) is not a
+  *confidence interval* (frequentist, coverage over repeated experiments)."""
+        ),
+        md(
             """## Checks and takeaways
 
 1. Widen the prior: which marginal changes most?
@@ -384,6 +879,12 @@ display(safe_audio(whitened_audio))"""),
    PE but not when comparing noise models?
 4. Change the prior width in the evidence cell. Why does the posterior near its
    peak barely move while the Bayes factor can change?
+5. Start the Metropolis chain at the true parameters. Does burn-in disappear,
+   and is that a safe thing to do in general?
+6. Reduce `n_live` in the nested sampler. What happens to `log Z`, and why is a
+   single run's evidence not enough to quote an uncertainty?
+7. In the Fisher cell, shrink `sigma` by a factor of ten. Why does the ellipse
+   agree with the grid posterior even better?
 
 **Takeaway:** PE is a model–data–noise calculation. A posterior is only as trustworthy as the waveform, response, PSD, priors, and computation that define it.
 
@@ -407,9 +908,15 @@ Follow a compact version of the NZ Bilby workshop's full CBC flow:
 \]
 
 We use rippleGW for an actual IMRPhenomD waveform and Bilby for detector
-geometry, PSDs, projection, and injection. A readable one-dimensional posterior
-replaces a slow live sampler. The aim is to make every layer visible before a
-high-level library combines them."""),
+geometry, PSDs, projection, and injection. Readable grid posteriors replace a
+slow live sampler. The aim is to make every layer visible before a high-level
+library combines them.
+
+Section 3 adds the step that comes before any parameter estimation: **matched
+filtering**, the search stage that finds the signal and produces the trigger.
+Section 4 then estimates parameters from it, including a two-dimensional
+posterior that shows the distance-inclination degeneracy behind
+gravitational-wave distance uncertainties."""),
         code(
             """import os,sys,subprocess,importlib.util
 IN_COLAB="COLAB_RELEASE_TAG" in os.environ
@@ -601,7 +1108,187 @@ response_animation = FuncAnimation(
 )
 plt.close(fig)
 display(HTML(response_animation.to_jshtml()))"""),
-        md("""## 3. Inject and infer manually
+        md(r"""## 3. Finding the signal first: matched filtering
+
+Before anyone estimates parameters, something has to notice that a signal is
+there. In real strain data a loud binary is still far below the noise: the
+whitened signal peaks at a few tenths of the noise standard deviation, so no
+amount of staring at the time series will show it.
+
+The optimal linear filter for a *known* waveform in Gaussian noise is the
+matched filter. Slide a normalised template through the data and record the
+overlap as a function of trial coalescence time $\tau$:
+
+\[
+z(\tau)=\frac{(d\mid h_\tau)}{\sqrt{(h\mid h)}},\qquad
+h_\tau(f)=h(f)\,e^{-2\pi i f\tau}.
+\]
+
+Because the time shift is only a phase ramp in frequency, the whole SNR time
+series comes from a single inverse FFT rather than one integral per trial time.
+Two numbers matter, and they are not the same:
+
+- the **optimal SNR** $\rho_{\rm opt}=\sqrt{(h\mid h)}$, what a perfect template
+  would achieve on average;
+- the **matched-filter SNR**, the value actually recovered, which scatters about
+  $\rho_{\rm opt}$ and is biased high at the peak because we maximised over
+  $\tau$.
+
+Searches repeat this over a bank of $\sim10^6$ templates. Parameter estimation
+then starts from the resulting trigger."""),
+        code("""bilby.core.utils.random.seed(2026)
+noisy_ifos = bilby.gw.detector.InterferometerList(["H1", "L1", "V1"])
+for ifo in noisy_ifos:
+    ifo.set_strain_data_from_power_spectral_density(
+        sampling_frequency=sample_rate, duration=duration, start_time=gps_time - 2
+    )
+    ifo.inject_signal_from_waveform_polarizations(
+        source_parameters, injection_polarizations
+    )
+
+n_samples = int(sample_rate * duration)
+segment_time = np.arange(n_samples) / sample_rate  # seconds after segment start
+# fftshift puts zero trial offset in the middle: bilby already places the
+# merger at geocent_time, so the peak should land at an offset of zero.
+trial_offset = (np.arange(n_samples) - n_samples // 2) / sample_rate
+
+
+def matched_filter(ifo, template_polarizations):
+    \"\"\"Return the SNR time series and the optimal SNR for one detector.\"\"\"
+    template = ifo.get_detector_response(
+        template_polarizations, source_parameters, frequencies=frequency
+    )
+    psd = ifo.power_spectral_density_array
+    usable = mask & np.isfinite(psd) & (psd > 0)
+    integrand = np.zeros(frequency.size, dtype=complex)
+    integrand[usable] = (
+        ifo.frequency_domain_strain[usable] * np.conj(template[usable]) / psd[usable]
+    )
+    padded = np.zeros(n_samples, dtype=complex)
+    padded[: integrand.size] = integrand
+    z = 4 * df * n_samples * np.fft.ifft(padded)
+    optimal = np.sqrt(4 * df * np.sum(np.abs(template[usable]) ** 2 / psd[usable]))
+    return np.fft.fftshift(np.abs(z)) / optimal, optimal
+
+
+fig, axes = plt.subplots(1, 2, figsize=(12, 3.6))
+for ifo in noisy_ifos:
+    snr_series, optimal_snr = matched_filter(ifo, injection_polarizations)
+    peak = np.argmax(snr_series)
+    axes[0].plot(trial_offset, snr_series, lw=0.7, label=ifo.name)
+    axes[1].plot(trial_offset, snr_series, lw=1.2, label=ifo.name)
+    print(
+        f"{ifo.name}: optimal SNR {optimal_snr:5.2f} | "
+        f"recovered peak {snr_series[peak]:5.2f} at "
+        f"{trial_offset[peak]:+.4f} s"
+    )
+axes[0].set(
+    xlabel="trial coalescence time offset [s]",
+    ylabel=r"$|z(\\tau)|$",
+    title="Matched-filter SNR across the whole segment",
+)
+axes[1].set(
+    xlim=(-0.05, 0.05),
+    xlabel="trial coalescence time offset [s]",
+    title="Zoom: the trigger is sharply localised in time",
+)
+for ax in axes:
+    ax.legend()
+plt.show()"""),
+        md(
+            """### Animation: sliding the template through whitened data
+
+Whitening divides each Fourier bin by the noise ASD so that every frequency
+carries comparable noise, exactly the weighting the likelihood applies. The
+left panel slides the whitened template across the whitened H1 data; the right
+panel traces the SNR that the overlap produces. The signal is invisible by eye
+in the data, yet the filter finds it because it adds the signal coherently over
+hundreds of cycles while the noise adds incoherently."""
+        ),
+        code("""def whiten(frequency_series, psd):
+    usable = mask & np.isfinite(psd) & (psd > 0)
+    whitened = np.zeros(frequency.size, dtype=complex)
+    whitened[usable] = frequency_series[usable] / np.sqrt(psd[usable] / (4 * df))
+    return np.fft.irfft(whitened, n=n_samples)
+
+
+h1 = noisy_ifos[0]
+h1_psd = h1.power_spectral_density_array
+whitened_data = whiten(h1.frequency_domain_strain, h1_psd)
+whitened_template = whiten(
+    h1.get_detector_response(
+        injection_polarizations, source_parameters, frequencies=frequency
+    ),
+    h1_psd,
+)
+h1_snr_series, _ = matched_filter(h1, injection_polarizations)
+
+lags = np.linspace(-0.3, 0.3, 61)
+window = (segment_time > 1.3) & (segment_time < 2.35)
+
+fig, (data_ax, snr_ax) = plt.subplots(1, 2, figsize=(12, 3.8))
+data_ax.plot(segment_time[window], whitened_data[window], lw=0.6, color="0.55")
+(template_line,) = data_ax.plot([], [], lw=1.4, color="C3")
+data_ax.set(
+    xlabel="time after segment start [s]",
+    ylabel="whitened strain",
+    title="whitened H1 data (grey) and trial template (red)",
+)
+(snr_trace,) = snr_ax.plot([], [], color="C0")
+(snr_head,) = snr_ax.plot([], [], "o", color="C3")
+snr_ax.set(
+    xlim=(lags[0], lags[-1]),
+    ylim=(0, 1.1 * h1_snr_series.max()),
+    xlabel="template time shift [s]",
+    ylabel=r"$|z(\\tau)|$",
+    title="overlap accumulated by the filter",
+)
+
+
+def animate_filter(i):
+    shift = int(round(lags[i] * sample_rate))
+    shifted = np.roll(whitened_template, shift)
+    template_line.set_data(segment_time[window], shifted[window])
+    used = trial_offset <= lags[i]
+    snr_trace.set_data(trial_offset[used], h1_snr_series[used])
+    snr_value = np.interp(lags[i], trial_offset, h1_snr_series)
+    snr_head.set_data([lags[i]], [snr_value])
+    fig.suptitle(f"time shift {lags[i]:+.3f} s, SNR {snr_value:.1f}")
+    return template_line, snr_trace, snr_head
+
+
+filter_animation = FuncAnimation(
+    fig, animate_filter, frames=len(lags), interval=110
+)
+plt.close(fig)
+display(HTML(filter_animation.to_jshtml()))"""),
+        md(
+            """### A template only works if it is close enough
+
+A search cannot use the true waveform, because the true parameters are what we
+are trying to find. It uses a bank of templates and hopes one is close enough.
+The cell below filters the same data with deliberately wrong chirp masses. The
+recovered SNR falls away smoothly, and how fast it falls is exactly what sets
+how densely a real template bank must be packed."""
+        ),
+        code("""mismatch_offsets = np.linspace(-4, 4, 25)
+recovered_peaks = []
+for offset in mismatch_offsets:
+    trial = polarizations(theta_true.at[0].set(float(theta_true[0]) + offset))
+    snr_series, _ = matched_filter(h1, trial)
+    recovered_peaks.append(snr_series.max())
+
+fig, ax = plt.subplots(figsize=(7.5, 3.3))
+ax.plot(mismatch_offsets, recovered_peaks, "o-")
+ax.axvline(0, color="k", ls="--", label="true chirp mass")
+ax.set(
+    xlabel="chirp-mass error of the template [solar masses]",
+    ylabel="recovered peak SNR",
+    title="Template mismatch loses signal-to-noise",
+)
+ax.legend()
+plt.show()"""),
+        md("""## 4. Inject and infer manually
 
 We use zero-noise data so the demonstration is deterministic: the data equal
 the injected signal, while the PSD still controls expected uncertainty. The
@@ -672,8 +1359,129 @@ for chirp_mass in mass_grid:
 np.testing.assert_allclose(bilby_log_likelihood, logL_network)
 print("Bilby likelihood agrees with the manual network calculation.")
 print("Prior:", bilby_priors["chirp_mass"])"""),
+        md(r"""### A two-dimensional posterior with a real degeneracy
+
+A one-parameter scan hides the feature that dominates real CBC results:
+parameters are correlated, and some are correlated so strongly that they are
+effectively measured only in combination.
+
+The classic example is distance and inclination. For the dominant quadrupole
+mode of a circular binary,
+
+\[
+h_+\propto\frac{1+\cos^2\iota}{2D_L},\qquad
+h_\times\propto\frac{\cos\iota}{D_L},
+\]
+
+so both parameters enter only as amplitudes. Moving the source further away and
+tilting it face-on both make the signal louder or quieter in nearly the same
+way. This is why gravitational-wave distances are much less precise than
+chirp masses, and why standard-siren cosmology cares so much about breaking it.
+
+Because inclination and distance affect IMRPhenomD only through these
+prefactors, we can rescale the injected polarisations instead of regenerating
+the waveform, which makes a two-dimensional grid cheap. The cell asserts that
+this shortcut reproduces rippleGW exactly.
+
+Two caveats worth carrying forward. This grid uses a **flat prior on distance**
+for simplicity; a real analysis uses a uniform-in-comoving-volume prior, which
+grows like $D_L^2$ and therefore pushes the posterior towards larger distances.
+And the posterior is one-sided in inclination here because we restricted
+$\iota\le\pi/2$; the full problem is also nearly symmetric under
+$\iota\rightarrow\pi-\iota$, giving the familiar two-lobed structure."""),
+        code("""true_distance, true_inclination = 800.0, 0.5
+
+
+def scaled_polarizations(distance, inclination):
+    \"\"\"Rescale the injection to a new distance and inclination.\"\"\"
+    plus_ratio = ((1 + np.cos(inclination) ** 2) / 2) / (
+        (1 + np.cos(true_inclination) ** 2) / 2
+    )
+    cross_ratio = np.cos(inclination) / np.cos(true_inclination)
+    distance_ratio = true_distance / distance
+    return {
+        "plus": injection_polarizations["plus"] * plus_ratio * distance_ratio,
+        "cross": injection_polarizations["cross"] * cross_ratio * distance_ratio,
+    }
+
+
+# The shortcut must agree with a full rippleGW call.
+check = polarizations(ripple_parameters(distance=1300.0, inclination=0.9))
+shortcut = scaled_polarizations(1300.0, 0.9)
+for polarisation in ("plus", "cross"):
+    np.testing.assert_allclose(
+        shortcut[polarisation][mask], check[polarisation][mask], rtol=1e-10
+    )
+print("Amplitude rescaling reproduces rippleGW to machine precision.")
+
+distance_grid = np.linspace(450, 1250, 70)
+inclination_grid = np.linspace(0.02, np.pi / 2 - 0.02, 66)
+logL_grid = np.array(
+    [
+        [
+            sum(
+                detector_log_likelihood(ifo, scaled_polarizations(distance, inclination))
+                for ifo in ifos
+            )
+            for inclination in inclination_grid
+        ]
+        for distance in distance_grid
+    ]
+)
+
+joint_posterior = np.exp(logL_grid - logL_grid.max())
+joint_posterior /= np.trapezoid(
+    np.trapezoid(joint_posterior, inclination_grid, axis=1), distance_grid
+)
+distance_marginal = np.trapezoid(joint_posterior, inclination_grid, axis=1)
+inclination_marginal = np.trapezoid(joint_posterior, distance_grid, axis=0)"""),
+        code("""fig = plt.figure(figsize=(9, 5.5))
+grid_spec = fig.add_gridspec(
+    2, 2, width_ratios=(4, 1.4), height_ratios=(1.4, 4), wspace=0.05, hspace=0.05
+)
+joint_ax = fig.add_subplot(grid_spec[1, 0])
+top_ax = fig.add_subplot(grid_spec[0, 0], sharex=joint_ax)
+side_ax = fig.add_subplot(grid_spec[1, 1], sharey=joint_ax)
+
+joint_ax.contourf(
+    distance_grid, inclination_grid, joint_posterior.T, levels=20, cmap="magma"
+)
+joint_ax.plot(true_distance, true_inclination, "c*", ms=14, label="injection")
+joint_ax.set(
+    xlabel="luminosity distance [Mpc]", ylabel=r"inclination $\\iota$ [rad]"
+)
+joint_ax.legend(loc="upper right", facecolor="white", framealpha=0.9)
+
+top_ax.plot(distance_grid, distance_marginal, color="C0")
+top_ax.axvline(true_distance, color="k", ls="--")
+top_ax.set_ylabel("marginal")
+top_ax.tick_params(labelbottom=False)
+
+side_ax.plot(inclination_marginal, inclination_grid, color="C0")
+side_ax.axhline(true_inclination, color="k", ls="--")
+side_ax.set_xlabel("marginal")
+side_ax.tick_params(labelleft=False)
+fig.suptitle("The distance-inclination degeneracy")
+plt.show()
+
+
+def credible_interval(grid, density, probability=0.9):
+    cdf = np.r_[0, np.cumsum((density[:-1] + density[1:]) * np.diff(grid) / 2)]
+    cdf /= cdf[-1]
+    tail = (1 - probability) / 2
+    return np.interp([tail, 0.5, 1 - tail], cdf, grid)
+
+
+low, median, high = credible_interval(distance_grid, distance_marginal)
+print(f"injected distance : {true_distance:.0f} Mpc")
+print(f"posterior median  : {median:.0f} Mpc")
+print(f"90% interval      : [{low:.0f}, {high:.0f}] Mpc")
+print(
+    "Fractional distance precision: "
+    f"{(high - low) / (2 * median):.0%}, far worse than the chirp mass."
+)"""),
         md(
-            """## 4. Why a network localises the sky
+            """## 5. Why a network localises the sky
 
 Timing alone gives a ring with two sites and smaller regions with three. Real Bilby localisation also uses coherent phase, antenna amplitudes, polarisation, distance–inclination correlations, waveform uncertainty, and sky priors."""
         ),
@@ -692,7 +1500,7 @@ for ax,names,title in zip(axes,[["H1","L1"],["H1","L1","V1"]],["two detectors: d
 plt.show()"""
         ),
         md(
-            r"""## 5. From events to a population
+            r"""## 6. From events to a population
 
 Event-level posteriors become inputs to hierarchical inference. If $\Lambda$ describes a population,
 \[
@@ -727,7 +1535,7 @@ print(f"Selection-aware MAP: {mean_grid[np.argmax(corrected)]:.2f}")"""),
         md(
             """This compact example treats masses as exactly measured. Real population inference reweights uncertain event posteriors, estimates selection with injection campaigns, infers several hyperparameters and often the rate, and checks sensitivity to event-level priors and waveform systematics.
 
-## 6. Bilby production composition
+## 7. Bilby production composition
 
 ```python
 waveform_generator = bilby.gw.WaveformGenerator(...)
@@ -957,6 +1765,130 @@ fig,axes=plt.subplots(1,2,figsize=(10,3.3)); axes[0].plot(offsets,detected); axe
 axes[0].set(xlabel="frequency offset [Hz]",ylabel="detected SNR",title="Match falls away from the signal")
 axes[1].plot(offsets,np.array(logL)-np.max(logL)); axes[1].set(xlabel="frequency offset [Hz]",ylabel=r"$\\Delta \\log \\mathcal{L}$",title="Likelihood localises frequency"); plt.show()"""
         ),
+        md(r"""### From a likelihood scan to a forecast: the Fisher matrix
+
+The scan above varied one parameter and held the rest fixed. That is a
+**conditional** slice, not a posterior width. To forecast what LISA measures,
+the standard tool is the Fisher matrix,
+
+\[
+F_{ij}=\left(\frac{\partial h}{\partial\theta_i}\Big|
+\frac{\partial h}{\partial\theta_j}\right),\qquad
+\sigma_i^{\rm marginal}=\sqrt{(F^{-1})_{ii}},\qquad
+\sigma_i^{\rm conditional}=1/\sqrt{F_{ii}}.
+\]
+
+We build it by finite-differencing the *full moving-constellation TDI
+response*, so the derivatives include the orbital modulation. Two checks make
+this concrete:
+
+- amplitude is a pure scaling, so $\sigma_{\ln A}$ must equal $1/\rho$ exactly;
+- the frequency scan from the previous cell must reproduce the **conditional**
+  error, which is smaller than the marginal one by $\sqrt{1-\rho_{f_0\phi_0}^2}$.
+
+That second point is the LISA-scale version of the lesson from the basics
+notebook: marginalising over a correlated parameter is not the same as fixing
+it, and quoting a conditional error as if it were a measurement uncertainty
+understates it. Fisher forecasts are cheap and ubiquitous, but they assume high
+SNR and near-linearity; at low SNR the real posterior is not an ellipse."""),
+        code('''fisher_truth = dict(
+    f0=3e-3, fdot=1e-17, A=2e-22, ra=1.0, dec=0.4, psi=0.3, iota=0.8, phi0=0.2
+)
+
+
+def fisher_response(**overrides):
+    """TDI A and E on the fixed band, for the source with parameters replaced."""
+    values = dict(fisher_truth)
+    values.update(overrides)
+    array = GBObject(
+        **{key: np.array([value]) for key, value in values.items()}, t_init=0.0
+    ).to_jaxgb_array(t0=0)
+    a, e, _ = simulator.sum_tdi(
+        array,
+        int(simulator.get_kmin(parameters[:, 0])[0]),
+        int(simulator.get_kmin(parameters[:, 0])[0]) + simulator.n,
+        tdi_generation=2,
+        tdi_combination="AET",
+    )
+    return np.stack([np.asarray(a), np.asarray(e)])
+
+
+def derivative(key, step):
+    """Central difference; amplitude is differentiated with respect to log A."""
+    if key == "A":
+        plus = fisher_response(A=fisher_truth["A"] * np.exp(step))
+        minus = fisher_response(A=fisher_truth["A"] * np.exp(-step))
+    else:
+        plus = fisher_response(**{key: fisher_truth[key] + step})
+        minus = fisher_response(**{key: fisher_truth[key] - step})
+    return (plus - minus) / (2 * step)
+
+
+fisher_labels = [r"$f_0$", r"$\\ln A$", r"$\\phi_0$"]
+derivatives = [derivative("f0", 1e-9), derivative("A", 1e-3), derivative("phi0", 1e-3)]
+fisher_matrix = np.array([[inner(a, b) for b in derivatives] for a in derivatives])
+fisher_covariance = np.linalg.inv(fisher_matrix)
+
+marginal_sd = np.sqrt(np.diag(fisher_covariance))
+conditional_sd = 1 / np.sqrt(np.diag(fisher_matrix))
+correlation = fisher_covariance / np.outer(marginal_sd, marginal_sd)
+
+print(f"optimal SNR                 : {optimal_snr:.3f}")
+print(f"sigma(ln A) from the Fisher : {marginal_sd[1]:.6f}")
+print(f"1 / SNR                     : {1 / optimal_snr:.6f}")
+print(f"f0-phi0 correlation         : {correlation[0, 2]:+.3f}")
+print()
+print(f"marginal    sigma(f0) : {marginal_sd[0]:.3e} Hz")
+print(f"conditional sigma(f0) : {conditional_sd[0]:.3e} Hz")
+print(f"ratio                 : {conditional_sd[0] / marginal_sd[0]:.3f}")
+print(f"sqrt(1 - rho^2)       : {np.sqrt(1 - correlation[0, 2] ** 2):.3f}")'''),
+        code("""# Turn the earlier one-dimensional scan into a normalised posterior and
+# compare its width with both Fisher predictions.
+scan_posterior = np.exp(np.array(logL) - np.max(logL))
+scan_posterior /= np.trapezoid(scan_posterior, offsets)
+scan_mean = np.trapezoid(scan_posterior * offsets, offsets)
+scan_sd = np.sqrt(np.trapezoid(scan_posterior * (offsets - scan_mean) ** 2, offsets))
+
+angles = np.linspace(0, 2 * np.pi, 200)
+circle = np.column_stack([np.cos(angles), np.sin(angles)])
+block = fisher_covariance[np.ix_([0, 2], [0, 2])]
+eigenvalues, eigenvectors = np.linalg.eigh(block)
+
+fig, (scan_ax, ellipse_ax) = plt.subplots(1, 2, figsize=(11, 3.8))
+scan_ax.plot(offsets, scan_posterior, label="likelihood scan (conditional)")
+gaussian = np.exp(-0.5 * (offsets / conditional_sd[0]) ** 2)
+scan_ax.plot(
+    offsets,
+    gaussian / np.trapezoid(gaussian, offsets),
+    "--",
+    label="Fisher conditional",
+)
+wide = np.exp(-0.5 * (offsets / marginal_sd[0]) ** 2)
+scan_ax.plot(
+    offsets, wide / np.trapezoid(wide, offsets), ":", label="Fisher marginal"
+)
+scan_ax.set(
+    xlabel=r"$f_0$ offset [Hz]",
+    ylabel="density",
+    title="Fixing a correlated parameter looks too precise",
+)
+scan_ax.legend(fontsize=8)
+
+for n_sigma in (1, 2):
+    ellipse = n_sigma * circle @ (eigenvectors * np.sqrt(eigenvalues)).T
+    ellipse_ax.plot(ellipse[:, 0], ellipse[:, 1], color="C0")
+ellipse_ax.axvline(0, color="0.7", lw=0.8)
+ellipse_ax.axhline(0, color="0.7", lw=0.8)
+ellipse_ax.set(
+    xlabel=r"$\\Delta f_0$ [Hz]",
+    ylabel=r"$\\Delta\\phi_0$ [rad]",
+    title=f"Fisher ellipse, correlation {correlation[0, 2]:+.2f}",
+)
+plt.show()
+
+print(f"scan sigma(f0)        : {scan_sd:.3e} Hz")
+print(f"conditional sigma(f0) : {conditional_sd[0]:.3e} Hz")
+print(f"marginal sigma(f0)    : {marginal_sd[0]:.3e} Hz")"""),
         md("""### The same calculation with LISA Analysis Tools
 
 The local `lisa_analysis_workshop` calls this abstraction an
