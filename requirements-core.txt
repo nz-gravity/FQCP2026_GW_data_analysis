@@ -1,0 +1,7 @@
+numpy>=1.26
+scipy>=1.11
+matplotlib>=3.8
+corner>=2.2
+jupyterlab>=4.0
+nbclient>=0.10
+rippleGW==0.2.1
