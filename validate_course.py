@@ -11,11 +11,33 @@ for path in notebooks:
     notebook = nbformat.read(path, as_version=4)
     nbformat.validate(notebook)
     for index, cell in enumerate(notebook.cells):
+        if cell.cell_type == "markdown":
+            if "\\[" in cell.source or "\\]" in cell.source:
+                raise SystemExit(
+                    f"{path.name}: markdown cell {index} uses \\[ or \\]; "
+                    "use $$ delimiters for JupyterBook and Colab compatibility"
+                )
+            if cell.source.count("$$") % 2:
+                raise SystemExit(
+                    f"{path.name}: markdown cell {index} has an unmatched $$ delimiter"
+                )
+            control_characters = [
+                character
+                for character in cell.source
+                if ord(character) < 32 and character != "\n"
+            ]
+            if control_characters:
+                raise SystemExit(
+                    f"{path.name}: markdown cell {index} contains control characters; "
+                    "use a raw string for LaTeX in build_course.py"
+                )
         if cell.cell_type != "code":
             continue
         if cell.execution_count is None:
             raise SystemExit(f"{path.name}: code cell {index} has not been executed")
         for output in cell.get("outputs", []):
             if output.output_type == "error":
-                raise SystemExit(f"{path.name}: code cell {index} saved {output.ename}: {output.evalue}")
+                raise SystemExit(
+                    f"{path.name}: code cell {index} saved {output.ename}: {output.evalue}"
+                )
     print(f"validated {path.name}")

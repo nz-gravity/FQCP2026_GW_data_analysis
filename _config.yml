@@ -25,4 +25,7 @@ html:
 exclude_patterns:
   - _build
   - _site
+  - .venv/**
+  - venv/**
+  - env/**
   - README.md
