@@ -18,10 +18,11 @@ BRANCH = "main"
 
 COURSE = [
     ("00_start_here", "Start here", "Course map, environment check, and vocabulary"),
-    ("01_bayes_and_whittle", "Bayes and the Whittle likelihood", "Coloured noise, PSD weighting, and an animated posterior"),
-    ("02_lvk_cbc_with_ripple", "LVK CBCs with rippleGW", "Physical IMRPhenomD waveforms and chirp-mass inference"),
-    ("03_population_inference", "Population inference", "A detected catalogue and selection effects"),
-    ("04_lisa_global_fit", "LISA global fitting", "Overlapping sources and a miniature joint fit"),
+    ("01_bayes_and_whittle", "The PSD and Whittle likelihood", "Welch estimation, whitening, and PSD-weighted inference"),
+    ("02_lvk_cbc_with_ripple", "CBC physics with rippleGW", "CBC parameters, two polarisations, and chirp-mass inference"),
+    ("03_lvk_response_and_localisation", "LVK response and localisation", "Antenna patterns, polarisation, timing, detector PSDs, and Bilby"),
+    ("04_population_inference", "Population inference", "A detected catalogue and selection effects"),
+    ("05_lisa_response_and_global_fit", "LISA response and global fitting", "LISA orbits, TDI with JaxGB, and overlapping sources"),
 ]
 
 
@@ -79,8 +80,8 @@ def build_index():
     border-radius:.7rem;padding:1.4rem;box-shadow:0 8px 28px #14213d14}}a{{color:#0057b8}}footer{{padding:2rem max(7vw,1rem);
     border-top:1px solid #ccd3df}}code{{background:#e8ebf1;padding:.1rem .3rem;border-radius:.2rem}}
     </style></head><body><header><p class="eyebrow">FQCP 2026 · Beijing</p><h1>Bayesian parameter estimation<br>for compact binaries</h1>
-    <p>A two-hour, notebook-first introduction spanning the Whittle likelihood, LVK compact binaries, population inference,
-    and the idea of a LISA global fit.</p></header><main>{cards}</main><footer>Teaching materials by Avi Vajpeyi.
+    <p>A two-hour, notebook-first introduction spanning PSD estimation, compact-binary polarisations, LVK detector
+    response and localisation, population inference, and the LISA global-fit problem.</p></header><main>{cards}</main><footer>Teaching materials by Avi Vajpeyi.
     Notebooks are designed for Google Colab and remain useful as a self-study reference.</footer></body></html>'''
     (SITE_DIR / "index.html").write_text(page, encoding="utf-8")
 
