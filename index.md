@@ -10,9 +10,9 @@ LISA sensitivity, response, and global fitting.
 
 | Chapter | Live time | Purpose |
 | --- | ---: | --- |
-| Basics: what is PE? | 30 min | Prior, likelihood, grid posterior, posterior predictive checks, and the PSD bridge |
-| LVK compact binaries | 45 min | CBC parameters, rippleGW, Bilby response, injection, posterior, and localisation |
-| LISA and the global fit | 40 min | Sensitivity, TDI, SNR, likelihood, overlapping sources, and source count |
+| Basics: what is PE? | 30 min | Prior, likelihood, posterior, evidence, Whittle likelihood, PSD, and audio whitening |
+| LVK compact binaries | 45 min | CBC signals, animated response, manual network likelihood, Bilby, and localisation |
+| LISA and the global fit | 40 min | Moving TDI response, manual likelihood, `AnalysisContainer`, gaps, and the global fit |
 | Questions and transitions | 5 min | Assumptions, limitations, and next steps |
 
 Use the {guilabel}`rocket` button on each chapter page to open the same
@@ -20,15 +20,21 @@ notebook in Google Colab.
 
 ## Scientific boundaries
 
-- The basics chapter begins with Gaussian linear regression and then introduces
-  the stationary Gaussian Whittle model and PSD estimation.
+- The basics chapter begins with Gaussian linear regression, contrasts a
+  posterior with a point estimate, demonstrates evidence, and then introduces
+  the stationary Gaussian Whittle model and PSD estimation. Its audio example
+  is an analogy rather than detector strain converted to sound.
 - rippleGW supplies a physical CBC waveform, while the live LVK posterior
   deliberately frees only chirp mass.
 - The timing-only sky map is pedagogical; Bilby demonstrates detector
-  projection rather than a full sampling run.
-- The LISA chapter uses `lisatools` sensitivity curves and a real JaxGB orbit/TDI
-  response, but its global fit uses a three-source candidate catalogue and is
-  not a trans-dimensional production analysis.
+  projection and wraps the manual likelihood rather than running a full
+  sampler.
+- The population example isolates selection effects by treating event masses as
+  exactly measured.
+- The LISA chapter uses `lisatools` sensitivity curves and `AnalysisContainer`,
+  plus a real JaxGB orbit/TDI response. Its gaps/non-stationarity laboratory is
+  intentionally toy, and its global fit uses a three-source candidate catalogue
+  rather than a production trans-dimensional analysis.
 
 ## Follow-on sources
 

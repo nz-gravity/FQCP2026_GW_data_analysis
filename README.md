@@ -8,9 +8,9 @@ The material is consolidated into three self-contained notebooks, following the 
 
 | Notebook | Live time | Purpose |
 | --- | ---: | --- |
-| **`00_basics_parameter_estimation.ipynb`** | **30 min** | Prior, likelihood, grid posterior, marginalisation, posterior predictive checks, PSD bridge |
-| **`01_lvk_compact_binary_parameter_estimation.ipynb`** | **45 min** | CBC parameters, rippleGW polarisations, Bilby detector response/injection, posterior, localisation |
-| **`02_lisa_parameter_estimation_and_global_fit.ipynb`** | **40 min** | `lisatools` sensitivity, JaxGB TDI, SNR/likelihood, overlapping sources and source count |
+| **`00_basics_parameter_estimation.ipynb`** | **30 min** | Prior, likelihood, posterior, evidence, uncertainty, Whittle likelihood, PSD, and audio whitening |
+| **`01_lvk_compact_binary_parameter_estimation.ipynb`** | **45 min** | CBC signals, animated detector response, manual network likelihood, Bilby, and localisation |
+| **`02_lisa_parameter_estimation_and_global_fit.ipynb`** | **40 min** | LISA response, manual likelihood, `AnalysisContainer`, gaps, and the global fit |
 | Questions/transitions | 5 min | Assumptions, limitations, next steps |
 
 ## Run in Google Colab
@@ -56,10 +56,18 @@ python build_site.py
 
 ## Scientific boundaries
 
-- The basics chapter exposes prior, likelihood, posterior, prediction, and the assumptions behind the Whittle likelihood.
+- The basics chapter distinguishes posterior inference from a point estimate,
+  demonstrates evidence with an explicit prior-volume dependence, and states the
+  assumptions behind the Whittle likelihood. The audio is an analogy, not
+  detector strain converted to sound.
 - rippleGW supplies a physical CBC waveform, but the live LVK inference is deliberately one-dimensional.
-- The timing-only sky map is pedagogical; Bilby demonstrates the full detector projection, not a full sampling run.
-- The LISA chapter uses `lisatools` sensitivity curves and a real JaxGB orbit/TDI response, but fits a three-source candidate catalogue. BIC enumeration is explicitly only a classroom proxy for RJMCMC/evidence.
+- The timing-only sky map is pedagogical; Bilby demonstrates the full detector
+  projection and wraps the manual likelihood, not a full sampling run.
+- The population section treats event masses as exact so that selection bias remains visually transparent.
+- The LISA chapter uses `lisatools` sensitivity curves and
+  `AnalysisContainer`, plus a real JaxGB orbit/TDI response, but fits a
+  three-source candidate catalogue. BIC enumeration is explicitly only a
+  classroom proxy for RJMCMC/evidence.
 
 ## Follow-on sources
 

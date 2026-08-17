@@ -1,6 +1,7 @@
-numpy>=1.26
+numpy>=2.0,<2.4
 scipy>=1.11
 matplotlib>=3.8
+black>=25.1
 corner>=2.2
 jupyterlab>=4.0
 jupyter-book>=1.0,<2.0
@@ -11,3 +12,4 @@ jaxgb==0.2.1
 astropy==7.2.0
 lisaanalysistools==1.2.5
 gpubackendtools==0.1.1
+eryn==1.2.6
