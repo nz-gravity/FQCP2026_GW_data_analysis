@@ -10,14 +10,14 @@ LISA sensitivity, response, and global fitting.
 
 | Chapter | Live time | Purpose |
 | --- | ---: | --- |
-| Basics: what is PE? | 30 min | Prior, likelihood, posterior, evidence, MCMC, Fisher, nested sampling, Whittle likelihood, PSD, and audio whitening |
+| Basics: what is PE? | 30 min | Prior, likelihood, posterior, evidence, MCMC, nested sampling, Whittle likelihood, PSD, and audio whitening |
 | LVK compact binaries | 45 min | CBC signals, animated response, matched filtering, manual network likelihood, the distance–inclination degeneracy, Bilby, and localisation |
-| LISA and the global fit | 40 min | Moving TDI response, manual likelihood, Fisher forecasts, `AnalysisContainer`, gaps, and the global fit |
+| LISA and the global fit | 40 min | Moving TDI response, manual likelihood, `AnalysisContainer`, gaps, blocked Gibbs updates, and the global fit |
 | Questions and transitions | 5 min | Assumptions, limitations, and next steps |
 
-Each chapter contains more material than the live session covers. The sampling,
-Fisher, nested-sampling and calibration sections of the basics chapter, and the
-extension sections elsewhere, are written to be read afterwards as a reference.
+Each chapter contains more material than the live session covers. Advanced
+sampling, Fisher, and calibration material is marked as optional or extension
+content to read afterwards.
 
 Use the {guilabel}`rocket` button on each chapter page to open the same
 notebook in Google Colab.
@@ -32,8 +32,9 @@ notebook in Google Colab.
   random-walk Metropolis sampler and a nested sampler with MCMC-based
   constrained replacement. They are validated against the exact grid rather
   than proposed as substitutes for `dynesty`, `emcee`, or `bilby`.
-- Fisher-matrix sections state their own limits: exact for the linear model,
-  but only a high-SNR, near-linear approximation for real signals.
+- Fisher-matrix material is outside the live route. Its extensions state the
+  limits clearly: exact for the linear model, but only a high-SNR, near-linear
+  approximation for real signals.
 - rippleGW supplies a physical CBC waveform, while the live LVK posterior
   deliberately frees only chirp mass.
 - The timing-only sky map is pedagogical; Bilby demonstrates detector
