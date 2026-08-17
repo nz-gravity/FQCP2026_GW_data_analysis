@@ -87,13 +87,13 @@ We will follow the teaching sequence used in the NZ Bilby CBC workshop:
 3. write a likelihood from a noise assumption;
 4. calculate a posterior on a grid;
 5. inspect marginals and posterior predictions;
-6. replace the grid with the algorithms real analyses use — Metropolis-Hastings,
-   the Fisher approximation, and nested sampling — and learn how to tell whether
-   they worked;
+6. replace the grid with the algorithms real analyses use — Metropolis-Hastings
+   and nested sampling — and learn how to tell whether they worked;
 7. replace white noise by a gravitational-wave-style PSD-weighted likelihood.
 
 Sections 5-7 and the extensions are written to be read on your own afterwards;
-they are the reference half of this notebook and are not all covered live.
+they are the reference half of this notebook and are not all covered live. A
+short Fisher-matrix comparison is retained only as optional extra material.
 
 Bayes' theorem is
 
@@ -130,6 +130,11 @@ repeated hypothetical datasets."""),
 
 Assume $d_i=m t_i+c+n_i$ and independent Gaussian noise $n_i\sim\mathcal N(0,\sigma^2)$. Every likelihood statement is conditional on assumptions like these."""
         ),
+        md(
+            """**Predict before running:** If the same noisy data admit several plausible
+lines, what information is missing from a best-fit line alone? Keep that answer
+in mind when the posterior appears below."""
+        ),
         code(
             """true_parameters={"m":.5,"c":.2}; sigma=3.0
 time=np.linspace(0,10,100)
@@ -143,6 +148,11 @@ ax.set(xlabel="time",ylabel="observation",title="Data = signal + noise"); ax.leg
             r"""## 2. Priors and prior predictive checks
 
 Take $m\sim\mathrm{Uniform}(0,1.5)$ and $c\sim\mathrm{Uniform}(-5,5)$. A prior is part of the model, not an afterthought. Drawing curves from it checks whether the model can plausibly describe the data before inference."""
+        ),
+        md(
+            """**Predict before running:** Which is the more serious warning sign: a prior
+that is broad, or a prior predictive curve that cannot resemble the observed
+data? Explain why before looking at the draw."""
         ),
         code(
             """n_prior=2500
@@ -210,6 +220,11 @@ line forced through zero ($M_0$). A model does not win merely because its best
 fit is higher: extra prior volume that fits poorly reduces its evidence. This
 is the Bayesian form of an Occam penalty, and it also means Bayes factors must
 be reported with their priors."""),
+        md(
+            """**Predict before running:** If we widen a prior in a direction that the data
+do not constrain, should the posterior peak move, the evidence move, both, or
+neither?"""
+        ),
         code('''def log_trapezoid_exp(log_values, grid, axis=-1):
     """Stable log of the trapezoidal integral of exp(log_values)."""
     reference = np.max(log_values)
@@ -272,17 +287,20 @@ ax.set(xlabel="time",ylabel="observation",title="Posterior predictive signal"); 
         ),
         md(r"""## 5. Why real PE cannot use a grid
 
-Everything so far used a grid. That worked because the model had two
-parameters. Grids die quickly: with $n$ points per axis and $D$ parameters, a
-grid costs $n^D$ likelihood evaluations.
+- A grid with $n$ points per axis and $D$ parameters costs $n^D$ likelihood
+  evaluations.
 
-A binary black hole has about 15 parameters. At a coarse 20 points per axis
-that is $20^{15}\approx3\times10^{19}$ waveform evaluations. At one
-millisecond each, that is roughly a billion years.
+\[
+\text{cost}=n^D,\qquad D_{\rm BBH}\approx15,\ n=20
+\ \Rightarrow\ 20^{15}\approx3\times10^{19}.
+\]
 
-Stochastic samplers escape this because they spend their effort where the
-posterior actually has mass, rather than visiting the (overwhelmingly empty)
-rest of the prior volume."""),
+- At 1 ms per waveform that is about a **billion years**.
+- The posterior occupies a vanishingly small fraction of that volume, so almost
+  every grid point is wasted.
+- Stochastic samplers spend their effort where the posterior has mass. The next
+  three sections build the two that dominate gravitational-wave work:
+  **MCMC** for parameters, **nested sampling** for evidence."""),
         code("""dimensions = np.arange(1, 16)
 grid_cost = 20.0**dimensions
 seconds_per_likelihood = 1e-3
@@ -302,18 +320,24 @@ print(f"Two parameters: {20**2:,} evaluations")
 print(f"Fifteen parameters: {20**15:.2e} evaluations")"""),
         md(r"""### Metropolis-Hastings in twelve lines
 
-The Metropolis algorithm needs only the ability to *evaluate* the unnormalised
-posterior $\mathcal L(\theta)\pi(\theta)$; it never needs the evidence. From
-the current point $\theta$:
+From the current point $\theta$, repeat:
 
-1. propose $\theta'=\theta+\mathcal N(0,\Sigma_{\rm prop})$;
-2. accept with probability
-   $\min\left[1,\dfrac{\mathcal L(\theta')\pi(\theta')}{\mathcal L(\theta)\pi(\theta)}\right]$;
-3. if rejected, **record the current point again**.
+\[
+\theta'=\theta+\mathcal N(0,\Sigma_{\rm prop}),\qquad
+\alpha=\min\left[1,\;
+\frac{\mathcal L(\theta')\,\pi(\theta')}{\mathcal L(\theta)\,\pi(\theta)}\right],
+\]
 
-Step 3 is not a bug. Rejections are how the chain builds up density in regions
-of high posterior probability. The resulting chain is a set of correlated draws
-whose histogram converges to the posterior."""),
+accept $\theta'$ with probability $\alpha$, otherwise **store $\theta$ again**.
+
+- Only the *ratio* is needed, so the evidence $\mathcal Z$ cancels. This is why
+  MCMC works when the normalisation is unknown.
+- Repeating a rejected point is not a bug: it is how the chain accumulates
+  density where the posterior is large.
+- The output is a set of **correlated** draws whose histogram converges to the
+  posterior. Correlated is fine; it just costs effective samples (Section 5.3).
+- Uphill moves are always accepted; downhill moves are accepted sometimes. That
+  is what stops the chain collapsing onto the maximum-likelihood point."""),
         code('''PRIOR_BOX = np.array([[0.0, 1.5], [-5.0, 5.0]])  # rows: m, c
 
 
@@ -353,11 +377,15 @@ print(f"chain shape: {chain.shape}")'''),
         md(
             """### Animation: watch the chain find the posterior
 
-The walker starts in a corner where the posterior is negligible. The first
-phase is **burn-in**: a directed climb towards the bulk of the probability.
-Only afterwards does the chain wander around the degeneracy ridge in the way
-that actually samples it. Burn-in samples are discarded because they depend on
-where you started, not on the posterior."""
+Two distinct phases to look for:
+
+- **Burn-in** — a directed climb from the deliberately bad start in the corner,
+  where the posterior is negligible. These samples describe where we started,
+  not the posterior, so they are discarded.
+- **Sampling** — the walker wanders up and down the degeneracy ridge. This is
+  the part that is actually a draw from the posterior.
+
+The trace panel on the right is the standard way to spot the transition."""
         ),
         code("""frame_steps = np.arange(20, 1400, 26)
 fig, (walk_ax, trace_ax) = plt.subplots(1, 2, figsize=(10, 3.6), dpi=72)
@@ -392,15 +420,18 @@ display(HTML(chain_animation.to_jshtml()))"""),
         md(
             """### The proposal scale controls everything
 
-A chain can be perfectly correct in principle and useless in practice. Too
-small a step and the walker crawls, accepting almost everything but exploring
-nothing. Too large and almost every proposal lands somewhere absurd and is
-rejected. Both failures produce a chain that has not forgotten its starting
-point, and the "too small" chain below still reports a badly wrong mean.
+A chain can be correct in principle and useless in practice:
 
-A useful rule of thumb for random-walk Metropolis is an acceptance fraction
-near 0.2-0.3. Production samplers (`emcee`, `dynesty`, `bilby`'s defaults)
-automate this tuning, but the failure modes remain the same."""
+- **Steps too small** — almost everything is accepted, but the walker crawls
+  and never crosses the posterior. Watch the printed mean below: it is badly
+  wrong, from code that has no bug.
+- **Steps too large** — almost every proposal lands somewhere absurd and is
+  rejected, so the chain sits still.
+- **Well tuned** — acceptance around 0.2-0.3 for random-walk Metropolis.
+
+Both failures look the same in the end: a chain that has not forgotten where it
+started. `emcee`, `dynesty`, and `bilby` automate the tuning, but these failure
+modes are exactly what their convergence diagnostics are looking for."""
         ),
         code("""settings = [
     ("too small", np.array([0.004, 0.02])),
@@ -428,17 +459,21 @@ axes[0].set_ylim(0, 1.5)
 plt.show()"""),
         md(r"""### Diagnostics: burn-in and effective sample size
 
-Consecutive Metropolis samples are correlated, so $N$ stored samples are worth
-fewer than $N$ independent draws. The autocorrelation function
-$\rho(k)$ measures this, and the effective sample size is
+Consecutive samples are correlated, so $N$ stored samples are worth fewer than
+$N$ independent draws. With autocorrelation $\rho(k)$ at lag $k$,
 
 \[
-N_{\rm eff}\simeq\frac{N}{1+2\sum_{k\ge1}\rho(k)}.
+N_{\rm eff}\simeq\frac{N}{1+2\sum_{k\ge1}\rho(k)},\qquad
+\text{Monte Carlo error}\propto\frac{1}{\sqrt{N_{\rm eff}}}.
 \]
 
-$N_{\rm eff}$, not the raw chain length, sets the Monte Carlo error on any
-posterior summary. A chain of a million highly correlated samples can carry
-less information than a thousand independent ones."""),
+- $N_{\rm eff}$, **not** the raw chain length, sets the error on every
+  posterior summary you quote.
+- A million highly correlated samples can carry less information than a
+  thousand independent ones.
+- Thinning (keeping every $k$-th sample) saves storage. It does not improve
+  $N_{\rm eff}$, so it never buys accuracy.
+- Rule of thumb: report a number only if $N_{\rm eff}$ is in the hundreds."""),
         code('''burn_in = 500
 samples = chain[burn_in:]
 
@@ -513,77 +548,36 @@ plt.show()
 
 print(f"grid    : m = {np.trapezoid(p_m * m_grid, m_grid):.4f}")
 print(f"sampler : m = {samples[:, 0].mean():.4f}")"""),
-        md(r"""## 6. The Fisher matrix: a cheap Gaussian approximation
+        md(r"""## 6. Nested sampling: where the evidence comes from
 
-Expanding $\log\mathcal L$ to second order about its maximum approximates the
-posterior by a Gaussian with covariance $F^{-1}$, where
-
-\[
-F_{ij}=-\left\langle\frac{\partial^2\log\mathcal L}
-{\partial\theta_i\partial\theta_j}\right\rangle .
-\]
-
-For our linear model with Gaussian noise this is not an approximation at all:
-with a flat prior the posterior *is* exactly Gaussian, and
-$F=X^{\mathsf T}X/\sigma^2$ for the design matrix $X$. That makes it a clean
-place to see what the Fisher matrix does before trusting it elsewhere.
-
-In gravitational-wave work the same object appears as $F_{ij}=(\partial_i h\mid\partial_j h)$
-and is widely used for forecasts. Be careful: it is only reliable at high
-signal-to-noise ratio and for near-linear models. It cannot see multiple modes,
-hard prior boundaries, or curved (banana-shaped) degeneracies."""),
-        code("""design_matrix = np.column_stack([time, np.ones_like(time)])
-fisher_matrix = design_matrix.T @ design_matrix / sigma**2
-fisher_covariance = np.linalg.inv(fisher_matrix)
-fisher_mean = fisher_covariance @ design_matrix.T @ data / sigma**2
-
-fisher_sd = np.sqrt(np.diag(fisher_covariance))
-correlation = fisher_covariance[0, 1] / (fisher_sd[0] * fisher_sd[1])
-
-angles = np.linspace(0, 2 * np.pi, 200)
-eigenvalues, eigenvectors = np.linalg.eigh(fisher_covariance)
-circle = np.column_stack([np.cos(angles), np.sin(angles)])
-
-fig, ax = plt.subplots(figsize=(6, 4.2))
-ax.contour(m_grid, c_grid, posterior.T, levels=6, cmap="magma")
-for n_sigma in (1, 2):
-    ellipse = fisher_mean + n_sigma * circle @ (
-        eigenvectors * np.sqrt(eigenvalues)
-    ).T
-    ax.plot(ellipse[:, 0], ellipse[:, 1], color="C0", lw=2)
-ax.plot(true_parameters["m"], true_parameters["c"], "c*", ms=12)
-ax.set(
-    xlim=fisher_mean[0] + 4 * np.array([-1, 1]) * fisher_sd[0],
-    ylim=fisher_mean[1] + 4 * np.array([-1, 1]) * fisher_sd[1],
-    xlabel="slope m",
-    ylabel="intercept c",
-    title="Fisher 1- and 2-sigma ellipses over the grid posterior",
-)
-plt.show()
-
-print(f"Fisher   sd: m = {fisher_sd[0]:.4f}, c = {fisher_sd[1]:.4f}")
-print(f"Sampler  sd: m = {samples[:, 0].std():.4f}, c = {samples[:, 1].std():.4f}")
-print(f"m-c correlation coefficient: {correlation:+.3f}")"""),
-        md(r"""## 7. Nested sampling: where the evidence comes from
-
-Section 3 computed the evidence with a grid. Real analyses cannot. Nested
-sampling reorganises the integral by *prior volume*: let $X(\lambda)$ be the
-fraction of the prior with $\mathcal L>\lambda$. Then the $D$-dimensional
-integral collapses to a one-dimensional one,
+MCMC gives parameters but not $\mathcal Z$. Nested sampling gives both, by
+reordering the integral along **prior volume**. Let $X(\lambda)$ be the
+fraction of the prior with $\mathcal L>\lambda$. Then a $D$-dimensional
+integral becomes a one-dimensional one:
 
 \[
-\mathcal Z=\int \mathcal L\,\pi\,d\theta=\int_0^1\mathcal L(X)\,dX .
+\mathcal Z=\int\mathcal L(\theta)\,\pi(\theta)\,d\theta
+=\int_0^1\mathcal L(X)\,dX
+\;\simeq\;\sum_i\mathcal L_i\,\Delta X_i .
 \]
 
-The algorithm keeps $N_{\rm live}$ points drawn from the prior, repeatedly
-deletes the worst one, and replaces it with a new point drawn from the prior
-*subject to* $\mathcal L>\mathcal L_{\rm worst}$. Each deletion shrinks the
-volume by a known factor, on average $X_i\approx e^{-i/N_{\rm live}}$, so the
-deleted likelihoods and their volume shells accumulate into $\mathcal Z$. The
-discarded points, suitably weighted, are posterior samples as a by-product.
+The algorithm:
 
-This is what `dynesty`, `MultiNest`, and `PolyChord` do, and it is why Bayesian
-model comparison is practical in gravitational-wave astronomy at all."""),
+1. Draw $N_{\rm live}$ points from the prior.
+2. Delete the **worst** one and record its likelihood.
+3. Replace it by a new draw from the prior, restricted to
+   $\mathcal L>\mathcal L_{\rm worst}$.
+4. Repeat. Each deletion shrinks the volume by a known factor,
+   $X_i\approx e^{-i/N_{\rm live}}$.
+
+- The likelihood threshold only ever rises, so the live points contract onto
+  the peak. The animation below shows exactly this.
+- Step 3 is the hard part in real problems, and it is what separates
+  `MultiNest` (ellipsoids) from `PolyChord` and `dynesty` (slice sampling).
+  Ours evolves a copy of a surviving point with a short constrained MCMC.
+- Posterior samples come out free: the deleted points weighted by
+  $\mathcal L_i\Delta X_i$.
+- This is why Bayesian model comparison is practical in GW astronomy at all."""),
         code('''def nested_sampling(
     log_likelihood_fn, prior_box, n_live=250, n_iterations=1400, n_mcmc=25, rng=None
 ):
@@ -676,7 +670,7 @@ nested_animation = FuncAnimation(
 )
 plt.close(fig)
 display(HTML(nested_animation.to_jshtml()))"""),
-        md(r"""## 8. The gravitational-wave bridge: PSD and Whittle likelihood
+        md(r"""## 7. The gravitational-wave bridge: PSD and Whittle likelihood
 
 A power spectral density (PSD) describes how a stationary random process's
 variance is distributed over frequency. For one-sided $S_n(f)$,
@@ -746,12 +740,17 @@ axes[1].set(
     title="Welch estimate of the ASD",
 )
 plt.show()"""),
-        md("""### Optional audio analogy: hear what whitening does
+        md(r"""### Optional audio analogy: hear and see what whitening does
 
-This is **not detector strain converted to sound**. It is an audible toy with a
-chirp buried in coloured noise. The second clip divides each Fourier component
-by the known noise ASD (“whitening”), the same inverse-noise idea that appears
-in the Whittle likelihood."""),
+- This is **not detector strain converted to sound**. It is an audible toy: a
+  chirp buried in coloured noise.
+- Whitening divides each Fourier component by the noise ASD,
+  $\tilde d(f)\rightarrow\tilde d(f)/\sqrt{S_n(f)}$, which is the same
+  inverse-noise weighting the Whittle likelihood applies.
+- Listen first, then look at the spectrograms. The low-frequency noise wall
+  carries almost all the power, which is why the raw clip sounds like rumble.
+- After whitening every frequency carries comparable noise, so the chirp
+  becomes the loudest and the brightest feature."""),
         code("""from IPython.display import Audio
 from scipy.signal import chirp
 
@@ -787,6 +786,90 @@ print("Coloured data: the chirp is partly masked")
 display(safe_audio(audio_data))
 print("Whitened data: frequencies are placed on a comparable noise scale")
 display(safe_audio(whitened_audio))"""),
+        code("""from scipy.signal import spectrogram
+
+fig, axes = plt.subplots(
+    1,
+    3,
+    figsize=(13, 3.9),
+    sharey=True,
+    gridspec_kw={"width_ratios": [1, 3, 3], "wspace": 0.08},
+)
+f_top = 1600
+
+axes[0].loglog(np.sqrt(audio_noise_shape[1:]), audio_frequency[1:], color="C3")
+axes[0].invert_xaxis()
+axes[0].set(
+    ylim=(20, f_top),
+    xlabel="noise ASD",
+    ylabel="frequency [Hz]",
+    title="the weight",
+)
+
+for ax, series, title in zip(
+    axes[1:], [audio_data, whitened_audio], ["coloured data", "whitened data"]
+):
+    spec_f, spec_t, power = spectrogram(series, fs=audio_rate, nperseg=256, noverlap=224)
+    band = (spec_f > 20) & (spec_f < f_top)
+    decibels = 10 * np.log10(power[band] + 1e-20)
+    ax.pcolormesh(
+        spec_t,
+        spec_f[band],
+        decibels,
+        shading="auto",
+        cmap="magma",
+        vmin=np.percentile(decibels, 5),
+        vmax=np.percentile(decibels, 99.7),
+    )
+    ax.set(xlabel="time [s]", title=title)
+axes[1].set_yscale("log")
+plt.show()"""),
+        md(r"""## Extension: the Fisher matrix
+
+A cheap Gaussian stand-in for the posterior. Skip on a first pass; it is here
+because forecast papers use it constantly and notebook 02 needs it.
+
+- Expand $\log\mathcal L$ to second order about the peak. The posterior becomes
+  a Gaussian with covariance $F^{-1}$.
+- $F_{ij}=-\langle\partial_i\partial_j\log\mathcal L\rangle$, which for a
+  gravitational-wave signal is $F_{ij}=(\partial_i h\mid\partial_j h)$.
+- For **this** model it is not an approximation: the posterior is exactly
+  Gaussian and $F=X^{\mathsf T}X/\sigma^2$ for the design matrix $X$. The
+  ellipses below should sit on the grid contours.
+- It breaks down at low SNR, on curved degeneracies, with multiple modes, and
+  against hard prior edges. Then you need the samplers above."""),
+        code("""design_matrix = np.column_stack([time, np.ones_like(time)])
+fisher_matrix = design_matrix.T @ design_matrix / sigma**2
+fisher_covariance = np.linalg.inv(fisher_matrix)
+fisher_mean = fisher_covariance @ design_matrix.T @ data / sigma**2
+
+fisher_sd = np.sqrt(np.diag(fisher_covariance))
+correlation = fisher_covariance[0, 1] / (fisher_sd[0] * fisher_sd[1])
+
+angles = np.linspace(0, 2 * np.pi, 200)
+eigenvalues, eigenvectors = np.linalg.eigh(fisher_covariance)
+circle = np.column_stack([np.cos(angles), np.sin(angles)])
+
+fig, ax = plt.subplots(figsize=(6, 4.2))
+ax.contour(m_grid, c_grid, posterior.T, levels=6, cmap="magma")
+for n_sigma in (1, 2):
+    ellipse = fisher_mean + n_sigma * circle @ (
+        eigenvectors * np.sqrt(eigenvalues)
+    ).T
+    ax.plot(ellipse[:, 0], ellipse[:, 1], color="C0", lw=2)
+ax.plot(true_parameters["m"], true_parameters["c"], "c*", ms=12)
+ax.set(
+    xlim=fisher_mean[0] + 4 * np.array([-1, 1]) * fisher_sd[0],
+    ylim=fisher_mean[1] + 4 * np.array([-1, 1]) * fisher_sd[1],
+    xlabel="slope m",
+    ylabel="intercept c",
+    title="Fisher 1- and 2-sigma ellipses over the grid posterior",
+)
+plt.show()
+
+print(f"Fisher   sd: m = {fisher_sd[0]:.4f}, c = {fisher_sd[1]:.4f}")
+print(f"Sampler  sd: m = {samples[:, 0].std():.4f}, c = {samples[:, 1].std():.4f}")
+print(f"m-c correlation coefficient: {correlation:+.3f}")"""),
         md(
             """## Extension: is the posterior actually calibrated?
 
@@ -871,20 +954,56 @@ result, is built from exactly these pieces.
   *confidence interval* (frequentist, coverage over repeated experiments)."""
         ),
         md(
-            """## Checks and takeaways
+            """## Question bank and answer key
 
-1. Widen the prior: which marginal changes most?
-2. Halve the assumed `sigma`: does the posterior become more accurate or merely more confident?
-3. Why may the PSD-dependent likelihood normalisation be dropped for fixed-PSD
+The questions above and below are deliberately collected here so that an
+instructor can pause during the notebook without revealing the answer. Try to
+answer them from the plots and equations first.
+
+1. If several lines plausibly fit the data, what is missing from a best-fit line?
+2. Is a broad prior or an implausible prior predictive draw the more serious
+   warning sign?
+3. If an unconstrained prior direction is widened, what happens to the local
+   posterior peak and to the evidence?
+4. Widen the prior: which marginal changes most?
+5. Halve the assumed `sigma`: does the posterior become more accurate or merely more confident?
+6. Why may the PSD-dependent likelihood normalisation be dropped for fixed-PSD
    PE but not when comparing noise models?
-4. Change the prior width in the evidence cell. Why does the posterior near its
+7. Change the prior width in the evidence cell. Why does the posterior near its
    peak barely move while the Bayes factor can change?
-5. Start the Metropolis chain at the true parameters. Does burn-in disappear,
+8. Start the Metropolis chain at the true parameters. Does burn-in disappear,
    and is that a safe thing to do in general?
-6. Reduce `n_live` in the nested sampler. What happens to `log Z`, and why is a
+9. Reduce `n_live` in the nested sampler. What happens to `log Z`, and why is a
    single run's evidence not enough to quote an uncertainty?
-7. In the Fisher cell, shrink `sigma` by a factor of ten. Why does the ellipse
+10. In the Fisher cell, shrink `sigma` by a factor of ten. Why does the ellipse
    agree with the grid posterior even better?
+
+<details>
+<summary>Show the answer key</summary>
+
+1. A best fit omits uncertainty, correlations, alternative modes, and dependence
+   on modelling assumptions. The posterior supplies those missing pieces.
+2. A broad prior can be reasonable; a prior predictive distribution that cannot
+   produce data remotely like the observation says the model/prior combination is
+   incoherent before inference begins.
+3. The peak need not move, but the prior-averaged likelihood and therefore the
+   evidence can fall as unsupported prior volume grows.
+4. The posterior is most sensitive where the likelihood is broad or truncated by
+   the prior. A well-constrained marginal near the likelihood peak changes less.
+5. Halving `sigma` makes the calculation more confident. It makes it more
+   accurate only if the smaller noise scale is actually the data-generating one.
+6. The PSD normalisation is constant in parameters for fixed-PSD PE, but it
+   changes between competing noise models and must then be retained.
+7. Widening an unconstrained prior need not move a local posterior peak, but it
+   lowers the prior-averaged likelihood and can lower the evidence.
+8. Starting near the truth can shorten a visible transient in this toy problem,
+   but it is unsafe in general: the truth is unknown and a favourable start can
+   hide poor mixing or missed modes.
+9. Fewer live points make nested-sampling evidence noisier and less reliable;
+   one run cannot by itself establish its numerical uncertainty.
+10. At higher signal-to-noise ratio the posterior is more nearly local and
+   Gaussian, so the Fisher ellipse better approximates the exact grid result.
+</details>
 
 **Takeaway:** PE is a model–data–noise calculation. A posterior is only as trustworthy as the waveform, response, PSD, priors, and computation that define it.
 
@@ -938,7 +1057,16 @@ from ripplegw.conversions import ms_to_Mc_eta
 from ripplegw.waveforms.IMRPhenomD import gen_IMRPhenomD_hphc
 logging.getLogger("bilby").setLevel(logging.ERROR)
 plt.style.use("seaborn-v0_8-whitegrid"); plt.rcParams["animation.html"]="jshtml"
-rng=np.random.default_rng(20260817)"""),
+rng=np.random.default_rng(20260817)
+
+from matplotlib.ticker import NullFormatter, ScalarFormatter
+
+
+def tidy_log_frequency(axis, ticks=(20, 50, 100, 200, 500)):
+    \"\"\"Readable Hz labels: matplotlib's log minor ticks overlap on wide bands.\"\"\"
+    axis.set_xticks(list(ticks))
+    axis.xaxis.set_major_formatter(ScalarFormatter())
+    axis.xaxis.set_minor_formatter(NullFormatter())"""),
         md(
             r"""## 1. CBC parameters
 
@@ -973,23 +1101,96 @@ print(f"Detector-frame chirp mass: {float(theta_true[0]):.3f} solar masses")""")
             """fig,axes=plt.subplots(1,2,figsize=(11,3.4))
 for name,h in injection_polarizations.items(): axes[0].loglog(frequency[mask],np.abs(h[mask]),label=name)
 axes[0].set(xlabel="frequency [Hz]",ylabel="strain / Hz",title="Radiation has two polarisations"); axes[0].legend()
-axes[1].plot(frequency[mask],np.unwrap(np.angle(injection_polarizations["plus"][mask])))
-axes[1].set(xlabel="frequency [Hz]",ylabel="phase [rad]",title="Chirp mass is measured mainly through phase"); plt.show()"""
+axes[1].semilogx(frequency[mask],np.unwrap(np.angle(injection_polarizations["plus"][mask])))
+axes[1].set(xlabel="frequency [Hz]",ylabel="phase [rad]",title="Hundreds of radians accumulate in band")
+for ax in axes: tidy_log_frequency(ax)
+plt.show()"""
         ),
         md(
             r"""For a non-precessing circular binary, approximately
 $h_+\propto(1+\cos^2\iota)/(2D_L)$ and $h_\times\propto\cos\iota/D_L$.
 Inclination is the binary's orientation to us; polarisation angle rotates the plus/cross basis on the sky."""
         ),
+        md(r"""### Animation: why chirp mass is measured so precisely
+
+The signal accumulates hundreds of radians of phase in band, so a wrong chirp
+mass shows up as **dephasing**, not as a wrong amplitude.
+
+A template is free to slide in time and shift its overall phase, and matched
+filtering maximises over both. So the fair comparison removes a linear-in-$f$
+term first:
+
+\[
+\Delta\psi(f)=\psi_{\mathcal M}(f)-\psi_{\mathcal M_{\rm true}}(f)
+-\underbrace{(a f+b)}_{\text{absorbed by }t_c,\ \phi_c}.
+\]
+
+What is left cannot be absorbed and is what destroys the match.
+
+- Left: the amplitude barely moves. You could not measure $\mathcal M$ this way.
+- Right: the residual dephasing. Once $|\Delta\psi|$ exceeds about 1 radian
+  (grey band) the template and signal drift out of step and the recovered SNR
+  falls, as Section 3 will show directly."""),
         code(
-            """frames=np.linspace(float(theta_true[0])-6,float(theta_true[0])+6,16)
-fig,(aa,ap)=plt.subplots(1,2,figsize=(11,3.3)); la,=aa.loglog([],[]); lp,=ap.plot([],[])
-aa.set(xlim=(20,512),ylim=(1e-25,3e-22),xlabel="frequency [Hz]",ylabel=r"$|h_+|$")
-ap.set(xlim=(20,512),ylim=(-650,50),xlabel="frequency [Hz]",ylabel="relative phase [rad]")
+            """mass_offsets = np.linspace(-2.0, 2.0, 21)
+mc_true = float(theta_true[0])
+f_band = frequency[mask]
+reference = injection_polarizations["plus"][mask]
+reference_phase = np.unwrap(np.angle(reference))
+# Weight the tc/phi_c fit by signal power so it reflects where the SNR is.
+weight = np.abs(reference) ** 2
+basis = np.vstack([f_band, np.ones_like(f_band)]).T
+weighted_basis = basis * np.sqrt(weight)[:, None]
+
+fig, (amp_ax, phase_ax) = plt.subplots(1, 2, figsize=(11, 3.5), dpi=80)
+amp_ax.loglog(f_band, np.abs(reference), color="0.7", lw=3, label="injection")
+(amp_line,) = amp_ax.loglog([], [], color="C0", label="trial template")
+amp_ax.set(
+    xlim=(20, 512),
+    ylim=(1e-25, 3e-22),
+    xlabel="frequency [Hz]",
+    ylabel=r"$|h_+|$",
+    title="amplitude: almost no information",
+)
+amp_ax.legend(loc="lower left", fontsize=8)
+
+phase_ax.axhspan(-1, 1, color="0.8", alpha=0.7)
+phase_ax.axhline(0, color="k", lw=0.8)
+(phase_line,) = phase_ax.semilogx([], [], color="C3")
+phase_ax.set(
+    xlim=(20, 512),
+    ylim=(-10, 10),
+    xlabel="frequency [Hz]",
+    ylabel=r"$\\Delta\\psi$ [rad]",
+    title="residual dephasing: all the information",
+)
+for ax in (amp_ax, phase_ax):
+    tidy_log_frequency(ax)
+fig.subplots_adjust(top=0.80, wspace=0.28)
+
+
 def animate_mass(i):
-    h=polarizations(theta_true.at[0].set(frames[i]))["plus"][mask]; phase=np.unwrap(np.angle(h)); phase-=phase[0]
-    la.set_data(frequency[mask],np.abs(h)); lp.set_data(frequency[mask],phase); fig.suptitle(f"chirp mass = {frames[i]:.1f} solar masses"); return la,lp
-animation=FuncAnimation(fig,animate_mass,frames=len(frames),interval=130); plt.close(fig); display(HTML(animation.to_jshtml()))"""
+    trial = polarizations(theta_true.at[0].set(mc_true + mass_offsets[i]))["plus"][mask]
+    difference = np.unwrap(np.angle(trial)) - reference_phase
+    coefficients = np.linalg.lstsq(
+        weighted_basis, difference * np.sqrt(weight), rcond=None
+    )[0]
+    residual = difference - basis @ coefficients
+    amp_line.set_data(f_band, np.abs(trial))
+    phase_line.set_data(f_band, residual)
+    fig.suptitle(
+        f"chirp mass error {mass_offsets[i]:+.2f} solar masses "
+        f"({100 * mass_offsets[i] / mc_true:+.1f}%), "
+        f"peak dephasing {np.abs(residual).max():.1f} rad"
+    )
+    return amp_line, phase_line
+
+
+mass_animation = FuncAnimation(
+    fig, animate_mass, frames=len(mass_offsets), interval=160
+)
+plt.close(fig)
+display(HTML(mass_animation.to_jshtml()))"""
         ),
         md(
             """### Fast inspiral cartoon—physics intuition, not numerical relativity
@@ -1048,63 +1249,144 @@ for ifo in ifos:
     axes[1].loglog(frequency[mask],np.abs(response[mask]),label=ifo.name)
 axes[0].set(xlabel="frequency [Hz]",ylabel=r"ASD [1/$\\sqrt{\\mathrm{Hz}}$]",title="Each detector has a PSD")
 axes[1].set(xlabel="frequency [Hz]",ylabel="projected strain / Hz",title="Each detector sees a different signal")
-for ax in axes: ax.legend(); plt.show()"""),
-        md(r"""### Fast animation: move the source across the detector network
+for ax in axes:
+    tidy_log_frequency(ax)
+    ax.legend()
+plt.show()"""),
+        md(r"""### All-sky network response: predict, then inspect
 
-At fixed sidereal time, changing right ascension moves the source around the
-sky. The bars show each detector's root-sum-square antenna response
-$\sqrt{F_+^2+F_\times^2}$. A real signal also carries phase, inclination,
-polarisation, distance, and arrival-time information."""),
-        code("""sky_ra_frames = np.linspace(-np.pi, np.pi, 24, endpoint=False)
+**Predict before running:** Does adding a detector make every sky direction
+equally loud, or does it mainly fill particular blind spots? Which information
+needed for localisation is absent from a sensitivity map?
+
+Each detector's polarisation-averaged sensitivity to a direction is
+
+\[
+R_I(\alpha,\delta)=\sqrt{F_+^{I\,2}+F_\times^{I\,2}},\qquad
+\text{network proxy}=\sqrt{\sum_I\left(\frac{R_I}{\mathrm{ASD}_I}\right)^2}.
+\]
+
+- $R_I$ is **independent of the polarisation angle** $\psi$: rotating $\psi$
+  mixes $F_+$ and $F_\times$ but preserves this combination.
+- A single interferometer has a quadrupolar pattern with four blind spots.
+  Watch how the three individual maps put their blind spots in *different*
+  places, so the network map is far more uniform.
+- The proxy is noise-weighted with each ASD at 100 Hz. It is not a real SNR:
+  that also needs the waveform, distance, inclination, and full PSD.
+- A sensitivity map says how *loud* a source is, not *where* it is. Localisation
+  comes from arrival-time and phase differences, which Section 5 covers."""),
+        code("""sky_ra = np.linspace(-np.pi, np.pi, 73)
+sky_dec = np.linspace(-np.pi / 2, np.pi / 2, 37)
+sky_ra_grid, sky_dec_grid = np.meshgrid(sky_ra, sky_dec)
+reference_frequency = 100.0
+reference_index = np.argmin(np.abs(frequency - reference_frequency))
+asd_reference = np.array(
+    [
+        ifo.power_spectral_density.get_amplitude_spectral_density_array(frequency)[
+            reference_index
+        ]
+        for ifo in ifos
+    ]
+)
+
+
+def response_and_snr_proxy(ra, dec):
+    responses = []
+    for ifo in ifos:
+        f_plus = ifo.antenna_response(ra, dec, gps_time, source_parameters["psi"], "plus")
+        f_cross = ifo.antenna_response(ra, dec, gps_time, source_parameters["psi"], "cross")
+        responses.append(np.hypot(f_plus, f_cross))
+    responses = np.asarray(responses)
+    return responses, np.sqrt(np.sum((responses / asd_reference) ** 2, axis=0))
+
+
+# Per-detector response maps and the noise-weighted network proxy.
+detector_maps = np.array(
+    [
+        [[response_and_snr_proxy(ra, dec)[0][k] for ra in sky_ra] for dec in sky_dec]
+        for k in range(len(ifos))
+    ]
+)
+snr_proxy_map = np.array(
+    [[response_and_snr_proxy(ra, dec)[1] for ra in sky_ra] for dec in sky_dec]
+)
+snr_proxy_scale = snr_proxy_map.max()
 detector_names = [ifo.name for ifo in ifos]
 
-fig, (sky_ax, response_ax) = plt.subplots(
-    1,
-    2,
-    figsize=(10, 3.8),
-    subplot_kw={"projection": None},
-)
-sky_ax.remove()
-sky_ax = fig.add_subplot(1, 2, 1, projection="mollweide")
-source_marker, = sky_ax.plot([], [], "o", color="C3", ms=8)
-sky_ax.grid(True)
-sky_ax.set_title("source position")
+detector_scales = detector_maps.max(axis=(1, 2))
+panels = [
+    (name, detector_maps[k] / detector_scales[k])
+    for k, name in enumerate(detector_names)
+]
+panels.append(("network", snr_proxy_map / snr_proxy_scale))
 
-bars = response_ax.bar(detector_names, np.zeros(len(ifos)))
-response_ax.set(
-    ylim=(0, 1),
-    ylabel=r"$\\sqrt{F_+^2+F_\\times^2}$",
-    title="instantaneous antenna response",
+# Four reasonably sized maps reveal the blind spots more clearly than one
+# compressed row. The bar chart answers the local question at the marker.
+fig = plt.figure(figsize=(12, 6.8), dpi=78)
+grid_spec = fig.add_gridspec(
+    2, 3, width_ratios=[1, 1, 0.72], hspace=0.24, wspace=0.16
 )
+markers = []
+map_axes = []
+for panel_index, (name, field) in enumerate(panels):
+    row, column = divmod(panel_index, 2)
+    sky_ax = fig.add_subplot(grid_spec[row, column], projection="mollweide")
+    map_axes.append(sky_ax)
+    image = sky_ax.pcolormesh(
+        sky_ra_grid, sky_dec_grid, field, shading="auto", cmap="viridis", vmin=0, vmax=1
+    )
+    (marker,) = sky_ax.plot([], [], "o", color="C3", mec="white", ms=7)
+    markers.append(marker)
+    sky_ax.grid(True, lw=0.4, alpha=0.5)
+    sky_ax.set_xticklabels([])
+    sky_ax.set_yticklabels([])
+    sky_ax.set_title(
+        f"{name} blind spots" if name != "network" else "network (noise-weighted)",
+        fontsize=10,
+    )
+fig.colorbar(
+    image,
+    ax=map_axes,
+    location="bottom",
+    pad=0.08,
+    shrink=0.72,
+    label="normalised response",
+)
+
+sky_ra_frames = np.linspace(-np.pi, np.pi, 24, endpoint=False)
+response_ax = fig.add_subplot(grid_spec[:, 2])
+bars = response_ax.bar(
+    [*detector_names, "network"],
+    np.zeros(4),
+    color=["C0", "C1", "C2", "0.25"],
+)
+response_ax.set(
+    ylim=(0, 1.05),
+    ylabel="normalised response at marker",
+    title="what this sky position gives",
+)
+response_ax.tick_params(axis="x", rotation=30)
+
 
 def animate_sky_response(frame):
     source_ra = sky_ra_frames[frame]
-    source_marker.set_data([source_ra], [source_parameters["dec"]])
-    for bar, ifo in zip(bars, ifos):
-        f_plus = ifo.antenna_response(
-            source_ra,
-            source_parameters["dec"],
-            gps_time,
-            source_parameters["psi"],
-            "plus",
-        )
-        f_cross = ifo.antenna_response(
-            source_ra,
-            source_parameters["dec"],
-            gps_time,
-            source_parameters["psi"],
-            "cross",
-        )
-        bar.set_height(np.hypot(f_plus, f_cross))
-    fig.suptitle(f"right ascension = {source_ra:+.2f} rad")
-    return (source_marker, *bars)
+    for marker in markers:
+        marker.set_data([source_ra], [source_parameters["dec"]])
+    responses, network_response = response_and_snr_proxy(
+        source_ra, source_parameters["dec"]
+    )
+    values = np.r_[responses / detector_scales, network_response / snr_proxy_scale]
+    for bar, value in zip(bars, values):
+        bar.set_height(value)
+    fig.suptitle(
+        f"source at right ascension {source_ra:+.2f} rad; "
+        f"network proxy {values[-1]:.2f}"
+    )
+    return (*markers, *bars)
 
 
 response_animation = FuncAnimation(
-    fig,
-    animate_sky_response,
-    frames=len(sky_ra_frames),
-    interval=100,
+    fig, animate_sky_response, frames=len(sky_ra_frames), interval=140
 )
 plt.close(fig)
 display(HTML(response_animation.to_jshtml()))"""),
@@ -1205,6 +1487,11 @@ panel traces the SNR that the overlap produces. The signal is invisible by eye
 in the data, yet the filter finds it because it adds the signal coherently over
 hundreds of cycles while the noise adds incoherently."""
         ),
+        md(
+            """**Predict before running:** Why can the filter find a signal that is
+invisible by eye in the whitened data, and why would an incorrect phase
+evolution stop that coherent accumulation?"""
+        ),
         code("""def whiten(frequency_series, psd):
     usable = mask & np.isfinite(psd) & (psd > 0)
     whitened = np.zeros(frequency.size, dtype=complex)
@@ -1289,15 +1576,25 @@ ax.set(
 )
 ax.legend()
 plt.show()"""),
-        md("""## 4. Inject and infer manually
+        md(r"""## 4. Inject and infer manually
 
-We use zero-noise data so the demonstration is deterministic: the data equal
-the injected signal, while the PSD still controls expected uncertainty. The
-calculation below changes one shared source parameter, projects the waveform
-into every detector, evaluates each detector's Whittle log likelihood, adds
-them, applies a prior, and normalises the posterior. Replace
-`set_strain_data_from_zero_noise` with Bilby's PSD-noise method to study repeated
-noise realisations."""),
+We free only the detector-frame chirp mass $\mathcal M$:
+
+\[
+p(\mathcal M\mid d)\propto \pi(\mathcal M)
+\exp\!\left[-\frac12\sum_I
+(d_I-h_I(\mathcal M)\mid d_I-h_I(\mathcal M))_I\right].
+\]
+
+- The waveform changes once, then is projected into H1, L1, and Virgo.
+- Independent detector log likelihoods add to form the network likelihood.
+- We use zero-noise data so the width is deterministic; the PSD still sets the
+  expected uncertainty.
+- The grid is deliberately zoomed to $\pm0.1\,M_\odot$. On the old wide scale
+  both posteriors were visually indistinguishable spikes.
+
+Replace `set_strain_data_from_zero_noise` with Bilby's PSD-noise method to study
+scatter across noise realisations."""),
         code(
             """for ifo in ifos: ifo.inject_signal_from_waveform_polarizations(source_parameters,injection_polarizations)
 print("Network optimal SNR:",round(np.sqrt(sum(ifo.meta_data["optimal_SNR"]**2 for ifo in ifos)),2))
@@ -1308,7 +1605,9 @@ def detector_log_likelihood(ifo,model_polarizations):
     psd=ifo.power_spectral_density_array
     return -2*df*np.sum(np.abs(residual[mask])**2/psd[mask])
 
-mass_grid=np.linspace(float(theta_true[0])-2,float(theta_true[0])+2,141)
+# The chirp mass is measured to ~0.01 solar masses, so the grid must be narrow.
+# A +/-2 solar mass window would be about 120 sigma wide and show only a spike.
+mass_grid=np.linspace(float(theta_true[0])-.1,float(theta_true[0])+.1,141)
 logL_by_ifo={ifo.name:[] for ifo in ifos}
 for mc in mass_grid:
     model=polarizations(theta_true.at[0].set(mc))
@@ -1319,9 +1618,23 @@ def density(logp):
 log_prior_mass=np.where((mass_grid>=mass_grid[0])&(mass_grid<=mass_grid[-1]),0.,-np.inf)
 posterior_h1=density(np.array(logL_by_ifo["H1"])+log_prior_mass)
 posterior_network=density(logL_network+log_prior_mass)
-fig,ax=plt.subplots(figsize=(8,3.4)); ax.plot(mass_grid,posterior_h1,label="H1 only")
-ax.plot(mass_grid,posterior_network,label="H1+L1+V1"); ax.axvline(float(theta_true[0]),color="k",ls="--",label="injection")
-ax.set(xlabel="detector-frame chirp mass [solar masses]",ylabel="posterior density",title="A coherent network gives more information"); ax.legend(); plt.show()"""
+
+def summarise(density_values):
+    mean=np.trapezoid(density_values*mass_grid,mass_grid)
+    return np.sqrt(np.trapezoid(density_values*(mass_grid-mean)**2,mass_grid))
+
+sd_h1=summarise(posterior_h1); sd_network=summarise(posterior_network)
+snr_h1=ifos[0].meta_data["optimal_SNR"]
+snr_network=np.sqrt(sum(ifo.meta_data["optimal_SNR"]**2 for ifo in ifos))
+
+fig,ax=plt.subplots(figsize=(8,3.4)); ax.plot(mass_grid,posterior_h1,label=f"H1 only (SNR {snr_h1:.1f})")
+ax.plot(mass_grid,posterior_network,label=f"H1+L1+V1 (SNR {snr_network:.1f})"); ax.axvline(float(theta_true[0]),color="k",ls="--",label="injection")
+ax.set(xlabel="detector-frame chirp mass [solar masses]",ylabel="posterior density",title="A coherent network gives more information"); ax.legend(); plt.show()
+
+print(f"sigma, H1 only : {sd_h1:.4f} solar masses")
+print(f"sigma, network : {sd_network:.4f} solar masses")
+print(f"width ratio    : {sd_h1/sd_network:.2f}")
+print(f"SNR ratio      : {snr_network/snr_h1:.2f}  <- posterior width scales as 1/SNR")"""
         ),
         md("""### Put the same likelihood behind Bilby's interface
 
@@ -1361,6 +1674,10 @@ np.testing.assert_allclose(bilby_log_likelihood, logL_network)
 print("Bilby likelihood agrees with the manual network calculation.")
 print("Prior:", bilby_priors["chirp_mass"])"""),
         md(r"""### A two-dimensional posterior with a real degeneracy
+
+**Predict before running:** If we double the distance, which change in
+inclination could approximately restore the observed amplitude? What feature
+should that create in the joint posterior?
 
 A one-parameter scan hides the feature that dominates real CBC results:
 parameters are correlated, and some are correlated so strongly that they are
@@ -1482,23 +1799,53 @@ print(
     f"{(high - low) / (2 * median):.0%}, far worse than the chirp mass."
 )"""),
         md(
-            """## 5. Why a network localises the sky
+            r"""## 5. Why a network localises the sky
 
-Timing alone gives a ring with two sites and smaller regions with three. Real Bilby localisation also uses coherent phase, antenna amplitudes, polarisation, distance–inclination correlations, waveform uncertainty, and sky priors."""
+For detectors at positions $\mathbf x_I$ and $\mathbf x_J$, a sky direction
+$\hat{\mathbf n}$ predicts
+
+\[
+\Delta t_{IJ}(\hat{\mathbf n})
+=\frac{\hat{\mathbf n}\cdot(\mathbf x_I-\mathbf x_J)}{c}.
+\]
+
+- **One detector:** no time difference, so timing alone allows the whole sky.
+- **Two detectors:** one measured delay selects a ring of constant
+  $\Delta t_{IJ}$.
+- **Three detectors:** two independent delays intersect into much smaller
+  regions.
+
+Real Bilby localisation also uses coherent phase, antenna amplitudes,
+polarisation, distance-inclination correlations, waveform uncertainty, and sky
+priors."""
+        ),
+        md(
+            """**Predict before running:** Why does one arrival-time difference make a
+ring, rather than a point? When Virgo is added, which degeneracy remains because
+this particular calculation still uses timing alone?"""
         ),
         code(
             """ra=np.linspace(-np.pi,np.pi,91); dec=np.linspace(-np.pi/2,np.pi/2,46); RA,DEC=np.meshgrid(ra,dec)
 delays={ifo.name:np.array([[ifo.time_delay_from_geocenter(r,d,gps_time) for r in ra] for d in dec]) for ifo in ifos}
 observed={ifo.name:ifo.time_delay_from_geocenter(source_parameters["ra"],source_parameters["dec"],gps_time) for ifo in ifos}; sigma_t=3e-4
 def timing_likelihood(names):
+    # With a single detector there is no arrival-time difference to form, so
+    # the timing likelihood is flat: every direction is equally allowed.
     ref=names[0]; value=np.zeros_like(RA)
     for name in names[1:]: value-=.5*((delays[name]-delays[ref]-(observed[name]-observed[ref]))/sigma_t)**2
     return value
-fig,axes=plt.subplots(1,2,figsize=(12,4),subplot_kw={"projection":"mollweide"})
-for ax,names,title in zip(axes,[["H1","L1"],["H1","L1","V1"]],["two detectors: delay ring","three detectors: smaller regions"]):
+panels=[(["H1"],"one detector:\\nno timing information"),
+        (["H1","L1"],"two detectors:\\na ring of constant delay"),
+        (["H1","L1","V1"],"three detectors:\\nring intersections")]
+fig,axes=plt.subplots(1,3,figsize=(15,3.8),subplot_kw={"projection":"mollweide"})
+for ax,(names,title) in zip(axes,panels):
     ll=timing_likelihood(names); sky=np.exp(ll-ll.max()); ax.contourf(RA,DEC,sky,levels=np.linspace(.05,1,15),cmap="magma")
-    ax.plot(source_parameters["ra"],source_parameters["dec"],"c*",ms=10); ax.set_title(title); ax.grid(True)
-plt.show()"""
+    ax.plot(source_parameters["ra"],source_parameters["dec"],"c*",ms=10); ax.set_title(title,fontsize=10); ax.grid(True,lw=.4,alpha=.5)
+    ax.set_xticklabels([]); ax.set_yticklabels([])
+plt.show()
+print("Sky area allowed by timing alone shrinks with each added detector.")
+print("One detector constrains direction only through its antenna pattern,")
+print("which is why a single-detector alert has a nearly all-sky map.")"""
         ),
         md(
             r"""## 6. From events to a population
@@ -1559,6 +1906,33 @@ the toy likelihood wrapper with a waveform generator and a stochastic sampler.
 - Extend the mock catalogue by giving each event a mass posterior instead of an exact mass.
 
 Adapted substantially from `nz_bilby_cbc_workshop_2024`, with its injection → PSD → prior → likelihood → result structure."""
+        ),
+        md(
+            """## Question bank and answer key
+
+1. Does adding a detector make every sky direction equally loud, and what does a
+   response map omit about localisation?
+2. Why can matched filtering recover an otherwise invisible signal, and why does
+   waveform mismatch reduce its SNR?
+3. Why do distance and inclination form an extended posterior degeneracy?
+4. Why does one inter-detector time difference produce a ring instead of a
+   unique sky position?
+
+<details>
+<summary>Show the answer key</summary>
+
+1. A new detector fills some blind spots and improves the network unevenly. A
+   sensitivity map omits the phase and arrival-time information that is crucial
+   for localisation.
+2. The correct template adds hundreds of signal cycles coherently while noise
+   adds incoherently. Mismatch lets the template phase drift, so that coherent
+   sum is lost.
+3. Both parameters predominantly rescale the two polarisations. A more distant,
+   more face-on source can resemble a nearer, more inclined source.
+4. A fixed path-length difference defines a locus on the celestial sphere. A
+   third timing constraint reduces that locus, but timing alone still leaves
+   mirror/extended degeneracies that coherent amplitudes and phases help break.
+</details>"""
         ),
     ],
 )
@@ -1631,6 +2005,21 @@ The hard part is not that Bayes' theorem changes. The signal, response, noise,
 and catalogue blocks become more strongly coupled, so fitting one source while
 treating everything else as fixed can bias the residual seen by the next
 source."""),
+        md(
+            """### What the mixed data stream looks like
+
+These LISA Data Challenge views make the overlap concrete. The same year of
+Sangria data contains persistent Galactic structure, instrument noise, and
+shorter massive-black-hole-binary signals.
+
+| Time-domain mixture | Time-frequency view |
+| --- | --- |
+| ![Sangria time-domain data showing instrument noise, the full Galaxy, verification binaries, and massive black-hole binaries](https://lisa-ldc.in2p3.fr/static/data/img/Sangria_TD.png) | ![Sangria time-frequency periodogram with massive-black-hole-binary signals annotated](https://lisa-ldc.in2p3.fr/static/data/img/PeriodogramAnn.png) |
+
+*Official LDC2A Sangria illustrations from the
+[LISA Data Challenge](https://lisa-ldc.in2p3.fr/). The key lesson is visual:
+there is no pristine data segment belonging to only one source class.*"""
+        ),
         code(
             """year=YRSID_SI; AU=149597870700.; orbits=EqualArmlengthOrbits(); times=np.linspace(0,year,240)
 positions=np.asarray(orbits.compute_position(times,[1,2,3])); fig,ax=plt.subplots(figsize=(5.4,5.4))
@@ -1641,6 +2030,11 @@ ax.plot(0,0,"o",color="gold",mec="k",label="Sun"); ax.set(xlabel="heliocentric x
             """### Fast animation: the moving constellation
 
 The orbital motion is not decorative: it amplitude-, phase-, and frequency-modulates long-lived signals and encodes sky position. This animation uses precomputed orbit coordinates, so it remains fast in Colab."""
+        ),
+        md(
+            """**Predict before running:** Hold a binary fixed on the sky. Which observed
+features can change during a year even if the binary itself is nearly
+monochromatic, and why can those changes help localisation?"""
         ),
         code(
             """orbit_frames=np.arange(0,len(times),10); fig,ax=plt.subplots(figsize=(5.2,5.2)); triangle,=ax.plot([],[],"o-",lw=1.5); trail_lines=[ax.plot([],[],alpha=.35)[0] for _ in range(3)]
@@ -1657,6 +2051,11 @@ plt.close(fig); display(HTML(orbit_animation.to_jshtml()))"""
             """## 2. Sensitivity and Galactic confusion
 
 As in LATW Tutorial 1, start with the noise model. The unresolved Galactic foreground changes with observing time because longer data resolve and subtract more binaries."""
+        ),
+        md(
+            """**Predict before running:** At which frequencies should a longer observation
+change the total sensitivity most: where instrumental noise dominates, or where
+the unresolved Galactic foreground dominates?"""
         ),
         code(
             """f_curve=np.logspace(-5,-1,1800)
@@ -1732,6 +2131,11 @@ For independent A and E channels,
 \]
 
 These are the same objects as in LVK analysis. What changes is the instrument response, source durations, channels, band, and global model."""
+        ),
+        md(
+            """**Predict before running:** If two frequency templates are one Fourier bin
+apart, will they be distinguishable? How should that answer change with
+observation time and with SNR?"""
         ),
         code(
             """t_obs=90*86400.; simulator=JaxGB(orbits,t_obs=t_obs,t0=0,n=128)
@@ -1823,11 +2227,11 @@ plt.show()
 print(f"one frequency bin      : {1 / t_obs:.3e} Hz")
 print(f"plotted likelihood span: {offsets[-1] - offsets[0]:.3e} Hz")'''
         ),
-        md(r"""### From a likelihood scan to a forecast: the Fisher matrix
+        md(r"""## Extension: Fisher forecasts for LISA
 
-The scan above varied one parameter and held the rest fixed. That is a
-**conditional** slice, not a posterior width. To forecast what LISA measures,
-the standard tool is the Fisher matrix,
+Skip this section on the live route. The preceding likelihood scan contains the
+main lesson; this extension explains why a one-parameter slice can look more
+precise than a marginal posterior.
 
 \[
 F_{ij}=\left(\frac{\partial h}{\partial\theta_i}\Big|
@@ -1836,19 +2240,13 @@ F_{ij}=\left(\frac{\partial h}{\partial\theta_i}\Big|
 \sigma_i^{\rm conditional}=1/\sqrt{F_{ii}}.
 \]
 
-We build it by finite-differencing the *full moving-constellation TDI
-response*, so the derivatives include the orbital modulation. Two checks make
-this concrete:
-
-- amplitude is a pure scaling, so $\sigma_{\ln A}$ must equal $1/\rho$ exactly;
-- the frequency scan from the previous cell must reproduce the **conditional**
-  error, which is smaller than the marginal one by $\sqrt{1-\rho_{f_0\phi_0}^2}$.
-
-That second point is the LISA-scale version of the lesson from the basics
-notebook: marginalising over a correlated parameter is not the same as fixing
-it, and quoting a conditional error as if it were a measurement uncertainty
-understates it. Fisher forecasts are cheap and ubiquitous, but they assume high
-SNR and near-linearity; at low SNR the real posterior is not an ellipse."""),
+- Finite differences use the full moving-constellation TDI response.
+- Because amplitude is a pure scaling, $\sigma_{\ln A}=1/\rho$ is an exact check.
+- The scan holds phase fixed, so it should match the **conditional** error.
+- Marginalising over correlated phase broadens the frequency uncertainty by
+  $1/\sqrt{1-\rho_{f_0\phi_0}^2}$.
+- Fisher ellipses assume high SNR and local linearity. They cannot represent
+  multiple modes, hard prior edges, or strongly curved posteriors."""),
         code('''fisher_truth = dict(
     f0=3e-3, fdot=1e-17, A=2e-22, ra=1.0, dec=0.4, psi=0.3, iota=0.8, phi0=0.2
 )
@@ -1947,7 +2345,7 @@ plt.show()
 print(f"scan sigma(f0)        : {scan_sd:.3e} Hz")
 print(f"conditional sigma(f0) : {conditional_sd[0]:.3e} Hz")
 print(f"marginal sigma(f0)    : {marginal_sd[0]:.3e} Hz")"""),
-        md("""### The same calculation with LISA Analysis Tools
+        md("""## 4b. Return to the live route: LISA Analysis Tools
 
 The local `lisa_analysis_workshop` calls this abstraction an
 `AnalysisContainer`. It bundles a `DataResidualArray` with a compatible
@@ -1990,13 +2388,54 @@ print(
 )"""
         ),
         md(
-            r"""## 5. The global-fit problem
+            r"""## 5. The global fit: a wheel of conditional analyses
 
-The LATW challenge combines a massive-black-hole binary with groups of Galactic binaries. The GLASS demonstration writes the same idea schematically as
+The data contain every source class and the instrument at once:
+
 \[
-d=h_{\rm UCB}+h_{\rm VGB}+h_{\rm MBHB}+n(\eta).
+d=\sum_b h_b(\theta_b)+n(\eta).
 \]
-No source is analysed against pristine data: each block sees a residual containing the current estimates of all other source and noise blocks. Source count may itself be unknown, motivating reversible-jump/trans-dimensional methods."""
+
+The global-fit "wheel" separates that enormous problem into communicating
+blocks. Each block receives a residual with the other current models removed,
+
+\[
+r_b=d-\sum_{k\ne b}h_k(\theta_k),\qquad
+p(\theta_b\mid d,\theta_{-b})\propto
+\pi(\theta_b)\exp\!\left[-\frac12(r_b-h_b\mid r_b-h_b)\right].
+\]
+
+![Global Fit Wheel linking LISA source classes with instrument noise and calibration](../assets/global_fit_wheel.png)
+
+*Global Fit Wheel from Katz et al.,
+[Phys. Rev. D 111, 024060 (2025)](https://doi.org/10.1103/PhysRevD.111.024060),
+CC BY 4.0. The black-outlined blocks were present in the initial Erebor
+implementation.*
+
+### Gibbs versus blocked Metropolis-Hastings
+
+One **sweep** visits every block:
+
+1. Build block $b$'s conditional residual $r_b$.
+2. Update $\theta_b$ while holding the other blocks fixed.
+3. Write the updated waveform/residual back to the wheel.
+4. Move to the next block; repeat the wheel many times.
+
+- **Gibbs:** draw exactly from $p(\theta_b\mid d,\theta_{-b})$ when that
+  conditional distribution is available.
+- **Blocked MH:** otherwise run proposals inside the block and accept/reject
+  against that same conditional target.
+- The blocks are not independent fits. Repeated residual exchange propagates
+  uncertainty and correlations around the wheel.
+- Our three-amplitude toy below has Gaussian conditional distributions, so it
+  can perform genuine Gibbs draws. Real source blocks use internal MCMC/RJMCMC
+  samplers, and the unknown Galactic-binary count makes the full problem
+  trans-dimensional."""
+        ),
+        md(
+            """**Predict before running:** If the first recovered source has a slightly
+wrong amplitude, where does that mistake appear in the next source's fit? Why is
+independent one-source-at-a-time fitting not a reliable global strategy?"""
         ),
         code(
             """frequencies=np.array([3e-3,3.00012e-3,3.00025e-3]); true_scales=np.array([1.,.72,.48])
@@ -2015,26 +2454,57 @@ for i,h in enumerate(templates): ax.plot(1e3*common_frequency,np.abs(true_scales
 ax.set(xlabel="frequency [mHz]",ylabel="TDI A magnitude",title="Overlapping JaxGB sources plus LISA noise"); ax.legend(); plt.show()"""
         ),
         code(
-            """# One sequential pass, then a blocked conditional fit.
-sequential=np.zeros(3); residual=data.copy()
-for i,h in enumerate(templates): sequential[i]=global_inner(h,residual)/global_inner(h,h); residual-=sequential[i]*h
-blocked=np.zeros(3); history=[blocked.copy()]
-for sweep in range(12):
-    for i,h in enumerate(templates):
-        effective=data-np.sum(blocked[:,None,None]*templates,axis=0)+blocked[i]*h
-        blocked[i]=global_inner(h,effective)/global_inner(h,h)
-    history.append(blocked.copy())
-history=np.asarray(history)
+            """# A one-pass subtraction is order-dependent because later blocks inherit
+# the errors left by earlier ones.
+sequential = np.zeros(3)
+residual = data.copy()
+for i, h in enumerate(templates):
+    sequential[i] = global_inner(h, residual) / global_inner(h, h)
+    residual -= sequential[i] * h
 
-# The simultaneous weighted least-squares solution.
+# Exact blocked Gibbs updates for the three amplitude coefficients. With a flat
+# prior, each one-dimensional conditional posterior is Gaussian.
+n_sweeps = 2000
+gibbs_state = np.zeros(3)
+gibbs_history = [gibbs_state.copy()]
+for sweep in range(n_sweeps):
+    for i, h in enumerate(templates):
+        conditional_residual = (
+            data
+            - np.sum(gibbs_state[:, None, None] * templates, axis=0)
+            + gibbs_state[i] * h
+        )
+        precision = global_inner(h, h)
+        conditional_mean = global_inner(h, conditional_residual) / precision
+        conditional_sd = 1 / np.sqrt(precision)
+        gibbs_state[i] = rng.normal(conditional_mean, conditional_sd)
+    gibbs_history.append(gibbs_state.copy())
+gibbs_history = np.asarray(gibbs_history)
+gibbs_samples = gibbs_history[400:]
+
+# The simultaneous weighted least-squares solution is the Gaussian posterior
+# mean, providing an independent check on the Gibbs chain.
 whitened_templates=(np.sqrt(4*df/common_psd)[None,:,:]*templates).reshape(3,-1).T
 whitened_data=(np.sqrt(4*df/common_psd)*data).ravel()
 design=np.vstack([whitened_templates.real,whitened_templates.imag]); target=np.r_[whitened_data.real,whitened_data.imag]
 joint=np.linalg.lstsq(design,target,rcond=None)[0]
-print("true      ",np.round(true_scales,3)); print("one pass  ",np.round(sequential,3)); print("joint     ",np.round(joint,3)); print("blocked   ",np.round(blocked,3))
-fig,ax=plt.subplots(figsize=(8,3.4))
-for i in range(3): ax.plot(history[:,i],"o-",label=f"source {i+1}"); ax.axhline(true_scales[i],color=f"C{i}",ls="--",alpha=.5)
-ax.set(xlabel="blocked sweep",ylabel="amplitude multiplier",title="Source blocks communicate through the residual"); ax.legend(); plt.show()"""
+
+print("true             ",np.round(true_scales,3))
+print("one pass         ",np.round(sequential,3))
+print("joint mean       ",np.round(joint,3))
+print("Gibbs mean       ",np.round(gibbs_samples.mean(axis=0),3))
+print("Gibbs uncertainty",np.round(gibbs_samples.std(axis=0),3))
+
+fig,axes=plt.subplots(1,2,figsize=(11,3.6))
+for i in range(3):
+    axes[0].plot(gibbs_history[:80,i],lw=1,label=f"source {i+1}")
+    axes[0].axhline(true_scales[i],color=f"C{i}",ls="--",alpha=.5)
+    axes[1].hist(gibbs_samples[:,i],bins=32,density=True,histtype="step",color=f"C{i}",label=f"source {i+1}")
+    axes[1].axvline(joint[i],color=f"C{i}",ls="--",alpha=.7)
+axes[0].set(xlabel="Gibbs sweep",ylabel="amplitude multiplier",title="Conditional chains")
+axes[1].set(xlabel="amplitude multiplier",ylabel="posterior density",title="Gibbs posterior")
+for ax in axes: ax.legend(fontsize=8)
+plt.show()"""
         ),
         md(
             """## 6. A miniature unknown-source-count challenge
@@ -2057,11 +2527,16 @@ print("Preferred subset:",labels[int(np.argmin(delta))],"(the injected subset is
         ),
         md("""## Extension: animate the global residual"""),
         code(
-            """fig,ax=plt.subplots(figsize=(9,3.3)); line,=ax.plot([],[],lw=.8)
+            """animation_sweeps=np.arange(0,40,2)
+fig,ax=plt.subplots(figsize=(9,3.3)); line,=ax.plot([],[],lw=.8)
 ax.set(xlim=(1e3*common_frequency.min(),1e3*common_frequency.max()),ylim=(0,1.1*np.max(np.abs(data[0]))),xlabel="frequency [mHz]",ylabel="A residual magnitude")
 def animate_residual(i):
-    residual=data-np.sum(history[i,:,None,None]*templates,axis=0); line.set_data(1e3*common_frequency,np.abs(residual[0])); ax.set_title(f"global residual after sweep {i}"); return (line,)
-animation=FuncAnimation(fig,animate_residual,frames=len(history),interval=220); plt.close(fig); display(HTML(animation.to_jshtml()))"""
+    sweep=animation_sweeps[i]
+    residual=data-np.sum(gibbs_history[sweep,:,None,None]*templates,axis=0)
+    line.set_data(1e3*common_frequency,np.abs(residual[0]))
+    ax.set_title(f"shared residual after Gibbs sweep {sweep}")
+    return (line,)
+animation=FuncAnimation(fig,animate_residual,frames=len(animation_sweeps),interval=220); plt.close(fig); display(HTML(animation.to_jshtml()))"""
         ),
         md("""## Optional LISA Data Challenge input and boundary
 
@@ -2081,5 +2556,41 @@ Continue with:
 - `LATW-challenge-problem.ipynb` for an MBHB plus two trans-dimensional GB groups;
 - [GLASS global analysis](https://arxiv.org/abs/2301.03673);
 - [LISA Data Challenge files](https://lisa-ldc.in2p3.fr/file)."""),
+        md(
+            """## Question bank and answer key
+
+1. Why does a fixed LISA source acquire amplitude, phase, and frequency
+   modulation during the mission, and how can that aid localisation?
+2. Where should observing longer alter the total sensitivity most?
+3. How do Fourier-bin separation, observing time, and SNR jointly control the
+   ability to distinguish nearby frequencies?
+4. Why does an imperfect source subtraction bias the rest of a global fit?
+5. Why is the BIC catalogue exercise a classroom proxy rather than evidence or
+   RJMCMC?
+6. What is the difference between an exact Gibbs update and a blocked
+   Metropolis-Hastings update?
+
+<details>
+<summary>Show the answer key</summary>
+
+1. LISA orbits and cartwheels, changing its line of sight and delayed-link
+   geometry. The resulting modulation encodes sky position and orientation.
+2. The foreground-dominated part of the band changes most because longer data
+   resolve and remove more Galactic binaries; instrumental noise alone is not
+   reduced by resolving sources.
+3. One bin, $1/T_\\mathrm{obs}$, sets an overlap scale. Longer observations make
+   bins narrower, while higher SNR lets the likelihood locate a frequency to a
+   fraction of that scale when the model is adequate.
+4. The residual retains the first source's error, so another source/noise block
+   can absorb it and become biased. Global methods repeatedly communicate via a
+   shared residual or sample parameters jointly.
+5. BIC uses a large-sample penalty and a fixed candidate list. It does not
+   integrate the prior-weighted likelihood, explore nonlinear source parameters,
+   or infer an unbounded catalogue size as a trans-dimensional method does.
+6. Gibbs draws directly from a block's conditional posterior. Blocked MH uses a
+   proposal and an accept/reject step that leaves the same conditional posterior
+   invariant. Both must repeatedly exchange updated residuals with the other
+   blocks to target the joint posterior.
+</details>"""),
     ],
 )
