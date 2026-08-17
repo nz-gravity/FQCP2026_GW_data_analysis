@@ -1,5 +1,6 @@
 # Generated website
 _site/
+_build/
 .DS_Store
 
 # Python bytecode and build products

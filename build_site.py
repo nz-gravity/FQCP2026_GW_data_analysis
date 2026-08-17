@@ -10,6 +10,6 @@ ROOT = Path(__file__).resolve().parent
 
 if __name__ == "__main__":
     subprocess.run(
-        ["jupyter-book", "build", str(ROOT), "--path-output", str(ROOT / "_build")],
+        ["jupyter-book", "build", str(ROOT), "--path-output", str(ROOT)],
         check=True,
     )
