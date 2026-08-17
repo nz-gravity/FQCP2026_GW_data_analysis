@@ -10,10 +10,14 @@ LISA sensitivity, response, and global fitting.
 
 | Chapter | Live time | Purpose |
 | --- | ---: | --- |
-| Basics: what is PE? | 30 min | Prior, likelihood, posterior, evidence, Whittle likelihood, PSD, and audio whitening |
-| LVK compact binaries | 45 min | CBC signals, animated response, manual network likelihood, Bilby, and localisation |
-| LISA and the global fit | 40 min | Moving TDI response, manual likelihood, `AnalysisContainer`, gaps, and the global fit |
+| Basics: what is PE? | 30 min | Prior, likelihood, posterior, evidence, MCMC, Fisher, nested sampling, Whittle likelihood, PSD, and audio whitening |
+| LVK compact binaries | 45 min | CBC signals, animated response, matched filtering, manual network likelihood, the distance–inclination degeneracy, Bilby, and localisation |
+| LISA and the global fit | 40 min | Moving TDI response, manual likelihood, Fisher forecasts, `AnalysisContainer`, gaps, and the global fit |
 | Questions and transitions | 5 min | Assumptions, limitations, and next steps |
+
+Each chapter contains more material than the live session covers. The sampling,
+Fisher, nested-sampling and calibration sections of the basics chapter, and the
+extension sections elsewhere, are written to be read afterwards as a reference.
 
 Use the {guilabel}`rocket` button on each chapter page to open the same
 notebook in Google Colab.
@@ -24,6 +28,12 @@ notebook in Google Colab.
   posterior with a point estimate, demonstrates evidence, and then introduces
   the stationary Gaussian Whittle model and PSD estimation. Its audio example
   is an analogy rather than detector strain converted to sound.
+- The samplers in the basics chapter are teaching implementations: a
+  random-walk Metropolis sampler and a nested sampler with MCMC-based
+  constrained replacement. They are validated against the exact grid rather
+  than proposed as substitutes for `dynesty`, `emcee`, or `bilby`.
+- Fisher-matrix sections state their own limits: exact for the linear model,
+  but only a high-SNR, near-linear approximation for real signals.
 - rippleGW supplies a physical CBC waveform, while the live LVK posterior
   deliberately frees only chirp mass.
 - The timing-only sky map is pedagogical; Bilby demonstrates detector
