@@ -1,9 +1,6 @@
 format: jb-book
 root: index
 chapters:
-  - file: notebooks/00_start_here
-  - file: notebooks/01_bayes_and_whittle
-  - file: notebooks/02_lvk_cbc_with_ripple
-  - file: notebooks/03_lvk_response_and_localisation
-  - file: notebooks/04_population_inference
-  - file: notebooks/05_lisa_response_and_global_fit
+  - file: notebooks/00_basics_parameter_estimation
+  - file: notebooks/01_lvk_compact_binary_parameter_estimation
+  - file: notebooks/02_lisa_parameter_estimation_and_global_fit
