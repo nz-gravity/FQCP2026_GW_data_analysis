@@ -1,100 +1,76 @@
-# FQCP 2026: Bayesian parameter estimation for compact binaries
+# FQCP 2026: Bayesian gravitational-wave parameter estimation
 
-A Colab-first, beginner-level mini-course for a two-hour lecture/tutorial at the 2026 International Training Workshop on Frontiers from Quanta to Cosmos Physics.
+A Colab-first mini-course for a two-hour lecture/tutorial at the 2026 International Training Workshop on Frontiers from Quanta to Cosmos Physics.
 
-## Recommended structure
+## Course structure
 
-The material is split into short, independently useful notebooks. `00` is the landing page; the live lecture follows the bold rows.
+The split notebooks are easier to teach and more useful as a later reference than one long notebook. The default live route omits the population chapter but preserves it for self-study.
 
 | Notebook | Live time | Purpose |
 | --- | ---: | --- |
-| `00_start_here.ipynb` | 5 min | Course map, setup check, vocabulary |
-| **`01_bayes_and_whittle.ipynb`** | **30 min** | Bayes' rule, PSD weighting, Whittle likelihood, posterior animation |
-| **`02_lvk_cbc_with_ripple.ipynb`** | **40 min** | IMRPhenomD with rippleGW, waveform animation, chirp-mass inference |
-| `03_population_inference.ipynb` | 15 min | Mock catalogue, hierarchical inference, selection effects |
-| **`04_lisa_global_fit.ipynb`** | **25 min** | Overlapping long-lived signals and a miniature joint/global fit |
-| Discussion and exits | 5 min | Assumptions, limitations, next steps |
-
-This is easier to teach and much better as a later reference than one long notebook. Each notebook repeats only the few helpers it needs, so students can revisit a chapter without reconstructing hidden state.
+| `00_start_here.ipynb` | 5 min | Map from source parameters to posterior |
+| **`01_bayes_and_whittle.ipynb`** | **25 min** | Estimate a PSD, whiten residuals, build a Whittle likelihood |
+| **`02_lvk_cbc_with_ripple.ipynb`** | **25 min** | CBC parameters and both IMRPhenomD polarisations |
+| **`03_lvk_response_and_localisation.ipynb`** | **30 min** | LVK antenna response, polarisation, timing localisation, PSDs, Bilby |
+| `04_population_inference.ipynb` | self-study | Mock catalogue and selection effects |
+| **`05_lisa_response_and_global_fit.ipynb`** | **35 min** | LISA orbit, real JaxGB TDI responses, mini global fit |
+| Questions/transitions | 15 min | Assumptions, limitations, next steps |
 
 ## Run in Google Colab
 
-Before a public repository exists, download a notebook and choose **File → Upload notebook** in [Google Colab](https://colab.research.google.com/). Once this directory is on GitHub, add one-click badges using:
+After the repository is public, every chapter has a one-click link on the course website. Direct links have this form:
 
 ```text
 https://colab.research.google.com/github/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/NOTEBOOK.ipynb
 ```
 
-Every notebook detects Colab. The ripple chapter installs pinned `rippleGW==0.2.1`; the others use packages already available in Colab. No GPU is required.
+The rippleGW, Bilby, and JaxGB notebooks contain pinned, conditional install cells. Python 3.12 or newer is required by JaxGB. No GPU is required.
 
-### Reusable helpers in Colab
+## Reusable Colab helpers
 
-`fqcp_helpers.py` is a deliberately small, dependency-light module. A Colab cell can fetch and import it without publishing a PyPI package:
+`fqcp_helpers.py` can be fetched without publishing a package:
 
 ```python
 import urllib.request
-
 url = "https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/v1.0.0/fqcp_helpers.py"
 urllib.request.urlretrieve(url, "fqcp_helpers.py")
 from fqcp_helpers import frequency_inner_product
 ```
 
-Use a release tag such as `v1.0.0`, not `main`, in released notebooks. That prevents future helper changes from silently altering an old worksheet.
+Use a release tag, not `main`, in released notebooks. A PyPI package is unnecessary until repeated, stable helpers justify its maintenance cost.
 
-## Run locally
+## Local build and validation
 
 ```bash
 python -m pip install -r requirements-core.txt
 python build_course.py
-jupyter lab notebooks/00_start_here.ipynb
+python validate_course.py
+python build_site.py
 ```
 
-## Why rippleGW?
-
-rippleGW supplies a genuine frequency-domain CBC waveform while keeping the likelihood readable. It is JAX-based, differentiable, Colab-friendly, and lighter than making LALSuite and Bilby live-class prerequisites. The course pins `0.2.1` because rippleGW is pre-1.0 and its API may change.
-
-- rippleGW generates `h(f; theta)`;
-- the notebook constructs the PSD, inner product, simulated data, prior, likelihood, and posterior;
-- Bilby is the next production-oriented step, not a live dependency.
-
-## Should this become a PyPI package?
-
-Not yet. A package would currently hide code students should read and add another versioned dependency. Teach the notebooks once, identify helpers that are genuinely repeated and stable, then extract a tiny package. Good eventual candidates are animation helpers, plotting style, PSD utilities, and notebook validation—not the likelihood itself.
-
-## Build and validation
-
-`build_course.py` is the reviewable notebook source.
-
-```bash
-python build_course.py
-MPLCONFIGDIR=/tmp/fqcp-mpl python -m jupyter nbconvert --execute --to notebook --inplace notebooks/01_bayes_and_whittle.ipynb
-```
-
-The ripple notebook needs an installed `rippleGW==0.2.1`, or a Colab runtime with network access for its setup cell.
+`build_course.py` is the reviewable notebook source. Saved outputs are validated before deployment.
 
 ## Website deployment
 
-`build_site.py` converts the saved, executed notebooks to static HTML and adds navigation plus Colab launch links. `.github/workflows/pages.yml` validates the notebooks, builds `_site`, uploads it as a Pages artifact, and deploys it through the official GitHub Pages actions on every push to `main`.
+`.github/workflows/pages.yml` validates notebooks, builds `_site`, and deploys it with the official GitHub Pages actions on pushes to `main`. In repository settings, select **GitHub Actions** as the Pages source.
 
-The intended standalone repository and site are:
-
-- repository: `https://github.com/nz-gravity/FQCP2026_GW_data_analysis`
-- website: `https://nz-gravity.github.io/FQCP2026_GW_data_analysis/`
-
-GitHub Pages must use **GitHub Actions** as its source in the repository settings. The local parent directory is not currently a Git repository, so creating/pushing the public repository remains a separate publication step.
+- Repository: `https://github.com/nz-gravity/FQCP2026_GW_data_analysis`
+- Intended site: `https://nz-gravity.github.io/FQCP2026_GW_data_analysis/`
 
 ## Scientific boundaries
 
-- Whittle examples assume stationary Gaussian noise and a known PSD.
-- The ripple chapter uses a real waveform model but simulated single-polarisation data and a small parameter space; it is not an LVK production analysis.
-- The population chapter simplifies event likelihoods and the selection function.
-- The LISA chapter is a one-channel two-sinusoid analogy, not a TDI response or trans-dimensional Galactic-binary pipeline.
+- The Whittle chapter assumes stationary Gaussian noise and a fixed PSD after its Welch estimate.
+- rippleGW supplies a physical CBC waveform, but the live inference is deliberately one-dimensional.
+- The timing-only sky map is pedagogical; Bilby demonstrates the full detector projection, not a full sampling run.
+- Population measurements and selection are simplified.
+- The LISA chapter uses a real orbit and JaxGB TDI response, but fits only three fixed-catalogue amplitude coefficients. It is not a trans-dimensional production global fit.
 
 ## Follow-on sources
 
+- [Bilby CBC tutorial](https://bilby-dev.github.io/bilby/compact-binary-coalescence-parameter-estimation.html)
 - [rippleGW documentation](https://ripplegw.readthedocs.io/)
-- [Bilby parameter-estimation basics](https://bilby-dev.github.io/bilby/basics-of-parameter-estimation.html)
-- [Bilby CBC parameter estimation](https://bilby-dev.github.io/bilby/compact-binary-coalescence-parameter-estimation.html)
 - [GWOSC tutorials](https://gwosc.org/tutorials/)
 - [GWTC-3 population paper](https://arxiv.org/abs/2111.03634)
-- [LISA Analysis Tools Workshop](https://github.com/mikekatz04/LATW)
+- [Global analysis of LISA data with GLASS](https://arxiv.org/abs/2301.03673)
+- [LISA Data Challenge files](https://lisa-ldc.in2p3.fr/file)
+- [JaxGB](https://pypi.org/project/jaxgb/)
