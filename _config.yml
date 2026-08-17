@@ -10,7 +10,7 @@ execute:
 
 repository:
   url: https://github.com/nz-gravity/FQCP2026_GW_data_analysis
-  path_to_book: .
+  path_to_book: ""
   branch: main
 
 launch_buttons:
@@ -22,6 +22,7 @@ html:
   use_repository_button: true
   home_page_in_sidebar: true
 
-sphinx:
-  extra_extensions:
-    - sphinx_inline_tabs
+exclude_patterns:
+  - _build
+  - _site
+  - README.md
