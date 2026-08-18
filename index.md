@@ -11,7 +11,7 @@ LISA sensitivity, response, and global fitting.
 | Chapter | Live time | Purpose |
 | --- | ---: | --- |
 | Basics: what is PE? | 30 min | Prior, likelihood, posterior, evidence, MCMC, nested sampling, Whittle likelihood, PSD, and audio whitening |
-| LVK compact binaries | 45 min | CBC signals, animated response, matched filtering, manual network likelihood, the distance–inclination degeneracy, Bilby, and localisation |
+| LVK compact binaries | 45 min | CBC signals, animated response, matched filtering, manual network likelihood, the distance–inclination degeneracy, a full Bilby run, and localisation |
 | LISA and the global fit | 40 min | Moving TDI response, manual likelihood, `AnalysisContainer`, gaps, blocked Gibbs updates, and the global fit |
 | Questions and transitions | 5 min | Assumptions, limitations, and next steps |
 
@@ -35,8 +35,9 @@ notebook in Google Colab.
 - Fisher-matrix material is outside the live route. Its extensions state the
   limits clearly: exact for the linear model, but only a high-SNR, near-linear
   approximation for real signals.
-- rippleGW supplies a physical CBC waveform, while the live LVK posterior
-  deliberately frees only chirp mass.
+- rippleGW supplies a physical CBC waveform. The live LVK posterior frees only
+  chirp mass; Section 7 then runs a genuine four-parameter Bilby/dynesty
+  analysis with the same waveform.
 - The timing-only sky map is pedagogical; Bilby demonstrates detector
   projection and wraps the manual likelihood rather than running a full
   sampler.
@@ -44,8 +45,10 @@ notebook in Google Colab.
   exactly measured.
 - The LISA chapter uses `lisatools` sensitivity curves and `AnalysisContainer`,
   plus a real JaxGB orbit/TDI response. Its gaps/non-stationarity laboratory is
-  intentionally toy, and its global fit uses a three-source candidate catalogue
-  rather than a production trans-dimensional analysis.
+  intentionally toy. Its miniature global fit does search a chirp and three
+  monochromatic binaries out of noise and sample them with blocked Gibbs, but
+  uses plain frequency-domain templates without the constellation response, and
+  keeps the source count fixed rather than trans-dimensional.
 
 ## Follow-on sources
 
