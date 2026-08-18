@@ -9,7 +9,7 @@ The material is consolidated into three self-contained notebooks, following the 
 | Notebook | Live time | Purpose |
 | --- | ---: | --- |
 | **`00_basics_parameter_estimation.ipynb`** | **30 min** | Prior, likelihood, posterior, evidence, MCMC, nested sampling, Whittle likelihood, PSD, and audio whitening |
-| **`01_lvk_compact_binary_parameter_estimation.ipynb`** | **45 min** | CBC signals, animated detector response, matched filtering, manual network likelihood, the distance–inclination degeneracy, Bilby, and localisation |
+| **`01_lvk_compact_binary_parameter_estimation.ipynb`** | **45 min** | CBC signals, animated detector response, matched filtering, manual network likelihood, the distance–inclination degeneracy, a full Bilby + dynesty run, and localisation |
 | **`02_lisa_parameter_estimation_and_global_fit.ipynb`** | **40 min** | LISA response, manual likelihood, `AnalysisContainer`, gaps, blocked Gibbs updates, and the global fit |
 | Questions/transitions | 5 min | Assumptions, limitations, next steps |
 
@@ -32,6 +32,8 @@ than take it on faith:
 | blocked Gibbs | 02 §5 | posterior mean agrees with joint weighted least squares |
 | P–P calibration | 00 extension | 400 simulations inside the 95% band |
 | matched filtering | 01 §3 | recovered SNR matches Bilby's optimal SNR |
+| full Bilby/dynesty run | 01 §7 | all four truths inside their 90% intervals |
+| search + blocked Gibbs | 02 §6 | all 11 parameters recovered; residual consistent with pure noise |
 
 ## Run in Google Colab
 
@@ -80,14 +82,16 @@ python build_site.py
   demonstrates evidence with an explicit prior-volume dependence, and states the
   assumptions behind the Whittle likelihood. The audio is an analogy, not
   detector strain converted to sound.
-- rippleGW supplies a physical CBC waveform, but the live LVK inference is deliberately one-dimensional.
-- The timing-only sky map is pedagogical; Bilby demonstrates the full detector
-  projection and wraps the manual likelihood, not a full sampling run.
+- rippleGW supplies a physical CBC waveform. The live LVK inference is deliberately one-dimensional; Section 7 then runs a genuine four-parameter Bilby/dynesty analysis with the same waveform.
+- The timing-only sky map is pedagogical. Bilby first wraps the manual
+  likelihood to verify it, and then runs a real nested-sampling analysis.
 - The population section treats event masses as exact so that selection bias remains visually transparent.
-- The LISA chapter uses `lisatools` sensitivity curves and
-  `AnalysisContainer`, plus a real JaxGB orbit/TDI response, but fits a
-  three-source candidate catalogue. BIC enumeration is explicitly only a
-  classroom proxy for RJMCMC/evidence.
+- The LISA chapter uses `lisatools` sensitivity curves and `AnalysisContainer`,
+  plus a real JaxGB orbit/TDI response. Its miniature global fit searches a
+  chirp and three monochromatic binaries out of noise and samples them with
+  blocked Gibbs, but uses plain frequency-domain templates without the
+  constellation response, and holds the source count fixed. BIC enumeration is
+  explicitly only a classroom proxy for RJMCMC/evidence.
 
 ## Follow-on sources
 

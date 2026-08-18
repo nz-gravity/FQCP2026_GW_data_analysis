@@ -1,5 +1,8 @@
 """Build the three Colab-first FQCP 2026 gravitational-wave PE notebooks."""
 
+import base64
+import mimetypes
+import re
 from pathlib import Path
 from textwrap import dedent
 
@@ -9,16 +12,31 @@ import nbformat as nbf
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "notebooks"
 
+# {{IMAGE:relative/path.png|alt text}} is inlined as a data URI so that local
+# figures survive in Colab, which downloads only the .ipynb and not the repo.
+IMAGE_TOKEN = re.compile(r"\{\{IMAGE:([^}|]+)\|([^}]*)\}\}")
+
 
 def clean_source(text):
     """Remove generator indentation and surrounding blank lines."""
     return dedent(text).strip()
 
 
+def inline_image(path, alt):
+    """Return Markdown for a repository image embedded as a data URI."""
+    target = ROOT / path.strip()
+    if not target.is_file():
+        raise SystemExit(f"build_course.py: missing image asset {target}")
+    media_type = mimetypes.guess_type(target.name)[0] or "image/png"
+    payload = base64.b64encode(target.read_bytes()).decode("ascii")
+    return f"![{alt.strip()}](data:{media_type};base64,{payload})"
+
+
 def md(text):
     """Create Markdown with display-math delimiters supported everywhere."""
     source = clean_source(text)
     source = source.replace(r"\[", "$$").replace(r"\]", "$$")
+    source = IMAGE_TOKEN.sub(lambda m: inline_image(m.group(1), m.group(2)), source)
     return nbf.v4.new_markdown_cell(source)
 
 
@@ -1213,25 +1231,29 @@ inspiral_animation=FuncAnimation(fig,animate_inspiral,frames=len(cartoon_time),i
 plt.close(fig); display(HTML(inspiral_animation.to_jshtml()))"""),
         md(r"""## 2. From source to a detector network
 
-For detector $I$,
-\[
-\tilde h_I=[F^I_+h_++F^I_\times h_\times]e^{-2\pi if\Delta t_I}.
-\]
-The antenna factors $F_+^I,F_\times^I$ depend on sky position, polarisation,
-detector orientation, and sidereal time; $\Delta t_I$ is the arrival-time delay.
-Bilby stores the detector geometry and PSDs and applies this projection.
-
-If detector noises are independent conditional on their PSDs, the network
-likelihood is a product, or equivalently a sum in log space:
+Each detector sees one projected combination of the two polarisations, delayed
+by its own light-travel time:
 
 \[
-\log\mathcal L_{\rm net}(d\mid\theta)
-=\sum_I\log\mathcal L_I(d_I\mid\theta)
-=-\frac12\sum_I(d_I-h_I(\theta)\mid d_I-h_I(\theta))_I+C.
+\tilde h_I=\left[F^I_+(\alpha,\delta,\psi,t)\,h_+
++F^I_\times(\alpha,\delta,\psi,t)\,h_\times\right]e^{-2\pi if\Delta t_I}.
 \]
 
-The source parameters are shared across detectors; only the response and noise
-weighting are detector-specific."""),
+If the detector noises are independent given their PSDs, the network likelihood
+is a product, so log-likelihoods simply add:
+
+\[
+\log\mathcal L_{\rm net}=\sum_I\log\mathcal L_I
+=-\frac12\sum_I(d_I-h_I\mid d_I-h_I)_I+C.
+\]
+
+- $F_+^I,F_\times^I$ depend on sky position, polarisation, detector
+  orientation, and sidereal time. Bilby stores the geometry and applies this.
+- $\Delta t_I$ is the arrival-time delay, and differences between detectors are
+  what localise the source (Section 5).
+- **Source parameters are shared**; only the response and the noise weighting
+  are detector-specific. That is the whole reason a network beats one detector.
+- Adding a detector adds its $(d\mid h)$ terms, so SNRs add in quadrature."""),
         code("""source_parameters=dict(ra=1.2,dec=-.4,psi=.7,geocent_time=gps_time)
 ifos=bilby.gw.detector.InterferometerList(["H1","L1","V1"])
 for ifo in ifos: ifo.set_strain_data_from_zero_noise(sampling_frequency=sample_rate,duration=duration,start_time=gps_time-2)
@@ -1478,14 +1500,15 @@ for ax in axes:
     ax.legend()
 plt.show()"""),
         md(
-            """### Animation: sliding the template through whitened data
+            r"""### Animation: sliding the template through whitened data
 
-Whitening divides each Fourier bin by the noise ASD so that every frequency
-carries comparable noise, exactly the weighting the likelihood applies. The
-left panel slides the whitened template across the whitened H1 data; the right
-panel traces the SNR that the overlap produces. The signal is invisible by eye
-in the data, yet the filter finds it because it adds the signal coherently over
-hundreds of cycles while the noise adds incoherently."""
+- Whitening divides each Fourier bin by the noise ASD, so every frequency
+  carries comparable noise. This is the weighting the likelihood applies.
+- Left: the whitened template slides across the whitened H1 data.
+  Right: the SNR that the overlap produces at each shift.
+- The signal is invisible by eye, yet the filter finds it: the template adds
+  the signal **coherently** over hundreds of cycles while noise adds
+  incoherently. That is the $\sqrt{N_{\rm cycles}}$ gain."""
         ),
         md(
             """**Predict before running:** Why can the filter find a signal that is
@@ -1553,11 +1576,13 @@ display(HTML(filter_animation.to_jshtml()))"""),
         md(
             """### A template only works if it is close enough
 
-A search cannot use the true waveform, because the true parameters are what we
-are trying to find. It uses a bank of templates and hopes one is close enough.
-The cell below filters the same data with deliberately wrong chirp masses. The
-recovered SNR falls away smoothly, and how fast it falls is exactly what sets
-how densely a real template bank must be packed."""
+- A search cannot use the true waveform: the true parameters are what we are
+  looking for. It uses a **bank** of templates and hopes one is close enough.
+- Below, the same data are filtered with deliberately wrong chirp masses.
+- How fast the recovered SNR falls sets how densely the bank must be packed.
+  Banks are built to lose no more than a few percent of SNR anywhere.
+- Compare with the dephasing animation in Section 1: the SNR loss here is that
+  dephasing, integrated over the band."""
         ),
         code("""mismatch_offsets = np.linspace(-4, 4, 25)
 recovered_peaks = []
@@ -1638,10 +1663,11 @@ print(f"SNR ratio      : {snr_network/snr_h1:.2f}  <- posterior width scales as 
         ),
         md("""### Put the same likelihood behind Bilby's interface
 
-Bilby does not require the likelihood to be a black box. A likelihood class
-declares the sampled parameters and a `log_likelihood` method. Here Bilby wraps
-the exact network calculation above; the assertion checks that the library
-interface and the manual values agree."""),
+- A Bilby likelihood is just a class with a `log_likelihood` method and a
+  declared parameter set. Nothing is hidden.
+- Here Bilby wraps the **exact** network calculation written above.
+- The assertion checks the library interface against the manual values, so the
+  transition from hand-rolled to production code is verified, not assumed."""),
         code("""class ChirpMassLikelihood(bilby.Likelihood):
     def __init__(self):
         super().__init__()
@@ -1881,26 +1907,201 @@ print(f"Detected-catalogue mean: {detected.mean():.2f}")
 print(f"Naive MAP: {mean_grid[np.argmax(naive)]:.2f}")
 print(f"Selection-aware MAP: {mean_grid[np.argmax(corrected)]:.2f}")"""),
         md(
-            """This compact example treats masses as exactly measured. Real population inference reweights uncertain event posteriors, estimates selection with injection campaigns, infers several hyperparameters and often the rate, and checks sensitivity to event-level priors and waveform systematics.
+            """This compact example treats masses as exactly measured. Real population inference reweights uncertain event posteriors, estimates selection with injection campaigns, infers several hyperparameters and often the rate, and checks sensitivity to event-level priors and waveform systematics."""
+        ),
+        md(r"""## 7. The full Bilby analysis
 
-## 7. Bilby production composition
+Everything so far kept one piece visible at a time. This section runs the real
+thing: a production `bilby` nested-sampling analysis over four parameters,
+using the same rippleGW waveform.
 
-```python
-waveform_generator = bilby.gw.WaveformGenerator(...)
-likelihood = bilby.gw.likelihood.GravitationalWaveTransient(
-    interferometers=ifos, waveform_generator=waveform_generator)
-result = bilby.run_sampler(likelihood, priors, sampler="dynesty", ...)
-```
+The pieces map onto the earlier sections exactly:
 
-Bilby then handles response projection, detector likelihoods, common parameters,
-priors, marginalisations, sampling, and result objects. For this live notebook,
-the grid calculation is the sampler: it is exact for the displayed
-one-dimensional discretisation and finishes quickly. A production run replaces
-the toy likelihood wrapper with a waveform generator and a stochastic sampler.
+| Bilby object | What it is | Earlier section |
+| --- | --- | --- |
+| `WaveformGenerator` | $\theta\rightarrow(h_+,h_\times)$ | 1 |
+| `Interferometer` | projection $F_+,F_\times,\Delta t$, PSD, data | 2 |
+| `GravitationalWaveTransient` | $\log\mathcal L=-\frac12\sum_I(d_I-h_I\mid d_I-h_I)$ | 3, 4 |
+| `PriorDict` | $\pi(\theta)$ | notebook 00 |
+| `run_sampler` | nested sampling for samples **and** $\log\mathcal Z$ | notebook 00 |
 
-## Boundary and extensions
+Two production tricks make this fast enough to run live:
 
-- The live posterior frees only chirp mass; production BBH analyses may have about fifteen parameters plus nuisance/systematic choices.
+- **JIT compilation.** `jax.jit` on the rippleGW call gives a waveform in well
+  under a millisecond, so the run takes a couple of minutes rather than hours.
+  This mirrors bilby's own `jax_fast_tutorial.py`.
+- **Analytic marginalisation.** The coalescence phase $\phi_c$ can be
+  integrated out exactly,
+
+\[
+\mathcal L_{\rm marg}(d\mid\theta)=\int_0^{2\pi}
+\mathcal L(d\mid\theta,\phi_c)\,\frac{d\phi_c}{2\pi}
+\;\propto\; I_0\!\left(|(d\mid h)|\right),
+\]
+
+  with $I_0$ a modified Bessel function. That is one fewer sampled dimension
+  for free. Distance can be marginalised the same way, but we keep it
+  **sampled** so the corner plot shows the distance-inclination degeneracy
+  found on a grid in Section 4."""),
+        code('''import time
+
+import jax
+
+# A rippleGW waveform in the form Bilby expects: theta -> (h_plus, h_cross).
+jitted_waveform = jax.jit(gen_IMRPhenomD_hphc)
+
+
+def ripple_bbh(
+    frequency_array,
+    chirp_mass,
+    mass_ratio,
+    luminosity_distance,
+    theta_jn,
+    phase,
+    chi_1,
+    chi_2,
+    **kwargs,
+):
+    """Bilby frequency-domain source model backed by rippleGW IMRPhenomD."""
+    minimum_frequency = kwargs.get("minimum_frequency", 20.0)
+    # Evaluate in band only. Clamping the array instead would create duplicate
+    # frequencies, and IMRPhenomD returns NaN for those.
+    in_band = frequency_array >= minimum_frequency
+    eta = mass_ratio / (1 + mass_ratio) ** 2
+    theta = jnp.array(
+        [chirp_mass, eta, chi_1, chi_2, luminosity_distance, 0.0, phase, theta_jn]
+    )
+    hp, hc = jitted_waveform(
+        jnp.asarray(frequency_array[in_band]), theta, jnp.asarray(minimum_frequency)
+    )
+    plus = np.zeros(frequency_array.size, dtype=complex)
+    cross = np.zeros(frequency_array.size, dtype=complex)
+    plus[in_band] = np.asarray(hp)
+    cross[in_band] = np.asarray(hc)
+    return dict(plus=plus, cross=cross)
+
+
+full_injection = dict(
+    chirp_mass=28.1,
+    mass_ratio=0.8,
+    luminosity_distance=800.0,
+    theta_jn=0.5,
+    phase=0.3,
+    chi_1=0.1,
+    chi_2=-0.1,
+    ra=1.2,
+    dec=-0.4,
+    psi=0.7,
+    geocent_time=gps_time,
+)
+
+waveform_generator = bilby.gw.WaveformGenerator(
+    duration=duration,
+    sampling_frequency=sample_rate,
+    frequency_domain_source_model=ripple_bbh,
+    parameter_conversion=lambda parameters: (parameters, []),
+    waveform_arguments=dict(minimum_frequency=f_min),
+)
+
+bilby.core.utils.random.seed(20260817)
+full_ifos = bilby.gw.detector.InterferometerList(["H1", "L1"])
+full_ifos.set_strain_data_from_power_spectral_densities(
+    sampling_frequency=sample_rate, duration=duration, start_time=gps_time - 2
+)
+full_polarizations = waveform_generator.frequency_domain_strain(full_injection)
+for ifo in full_ifos:
+    ifo.inject_signal_from_waveform_polarizations(full_injection, full_polarizations)
+
+network_snr = np.sqrt(sum(ifo.meta_data["optimal_SNR"] ** 2 for ifo in full_ifos))
+print("Injected network SNR:", round(float(network_snr), 2))'''),
+        code(r'''full_priors = bilby.core.prior.PriorDict()
+# Held fixed: sky position, polarisation, arrival time, and spins.
+for name in ["chi_1", "chi_2", "ra", "dec", "psi", "geocent_time"]:
+    full_priors[name] = full_injection[name]
+# Sampled: two mass parameters, orientation, and distance.
+full_priors["chirp_mass"] = bilby.core.prior.Uniform(
+    27.5, 28.7, name="chirp_mass", latex_label=r"$\mathcal{M}$"
+)
+full_priors["mass_ratio"] = bilby.core.prior.Uniform(
+    0.3, 1.0, name="mass_ratio", latex_label="$q$"
+)
+full_priors["theta_jn"] = bilby.core.prior.Sine(
+    name="theta_jn", latex_label=r"$\theta_{JN}$"
+)
+full_priors["luminosity_distance"] = bilby.gw.prior.UniformSourceFrame(
+    200, 3000, name="luminosity_distance", latex_label="$d_L$"
+)
+# Marginalised analytically rather than sampled.
+full_priors["phase"] = bilby.core.prior.Uniform(
+    0, 2 * np.pi, name="phase", boundary="periodic"
+)
+
+full_likelihood = bilby.gw.likelihood.GravitationalWaveTransient(
+    interferometers=full_ifos,
+    waveform_generator=waveform_generator,
+    priors=full_priors,
+    phase_marginalization=True,
+)
+
+full_likelihood.parameters.update(full_injection)
+start = time.time()
+for _ in range(50):
+    full_likelihood.parameters.update(full_priors.sample())
+    full_likelihood.log_likelihood_ratio()
+print(f"one likelihood evaluation: {(time.time() - start) / 50 * 1e3:.2f} ms")'''),
+        md("""Now the sampler. This is a genuine nested-sampling run, not a
+grid, and takes a couple of minutes. It returns posterior samples **and** the
+evidence."""),
+        code('''start = time.time()
+full_result = bilby.run_sampler(
+    likelihood=full_likelihood,
+    priors=full_priors,
+    sampler="dynesty",
+    nlive=250,
+    sample="acceptance-walk",
+    naccept=15,
+    injection_parameters=full_injection,
+    outdir="bilby_out",
+    label="fqcp_full",
+    result_class=bilby.gw.result.CBCResult,
+    clean=True,
+    plot=False,
+    save=False,
+    print_progress=False,
+)
+print(f"sampling wall time: {time.time() - start:.0f} s")
+print(f"log Bayes factor (signal vs noise): {full_result.log_bayes_factor:.1f}")
+print(f"posterior samples: {len(full_result.posterior)}")'''),
+        code('''sampled_names = ["chirp_mass", "mass_ratio", "theta_jn", "luminosity_distance"]
+print(f"{'parameter':22s}{'median':>10s}{'90% interval':>26s}{'truth':>10s}")
+for name in sampled_names:
+    low, median, high = full_result.posterior[name].quantile([0.05, 0.5, 0.95])
+    interval = f"[{low:.3f}, {high:.3f}]"
+    print(f"{name:22s}{median:10.3f}{interval:>26s}{full_injection[name]:10.3f}")
+
+full_result.plot_corner(
+    parameters=sampled_names,
+    truths=[full_injection[name] for name in sampled_names],
+    save=False,
+)
+plt.show()'''),
+        md("""- Every truth should land inside its 90% interval. For a single
+  noise realisation that is partly luck; the P-P test in notebook 00 is what
+  checks calibration properly.
+- The chirp mass is pinned to a fraction of a percent while the distance is
+  uncertain at the tens-of-percent level. That gap is the message of Sections 1
+  and 4: phase is measured precisely, amplitude is not.
+- `luminosity_distance` against `theta_jn` shows the same curved degeneracy the
+  grid produced in Section 4, now from a sampler that was never told about it.
+- The log Bayes factor is the signal-versus-noise evidence ratio, the same
+  quantity nested sampling produced in notebook 00.
+- Scaling up to a real analysis means freeing sky position, spins, and time
+  (about 15 parameters), which is why production runs take hours on many
+  cores rather than two minutes on one."""),
+        md(
+            """## Boundary and extensions
+
+- Section 7 frees four parameters; production BBH analyses free about fifteen, plus nuisance and systematic choices.
 - Design PSDs and zero noise are pedagogical. Real data contain PSD uncertainty, lines, glitches, non-stationarity, and calibration uncertainty.
 - Use the NZ workshop's GW150914 section or [GWOSC tutorials](https://gwosc.org/tutorials/) as a real-data follow-up.
 - Extend the mock catalogue by giving each event a mass posterior instead of an exact mass.
@@ -1968,6 +2169,7 @@ if any(importlib.util.find_spec(package) is None for package in needed):
         ),
         code(
             '''import itertools
+import time
 import warnings
 import numpy as np
 import matplotlib.pyplot as plt
@@ -2124,13 +2326,20 @@ fig.tight_layout(); plt.show()"""),
             r"""## 4. Inner product, SNR, and likelihood
 
 For independent A and E channels,
+
 \[
-(a\mid b)=4\Delta f\,\mathrm{Re}\sum_{X\in\{A,E\},k}\frac{a_{Xk}^*b_{Xk}}{S_X(f_k)},
-\quad\rho_{\rm opt}=\sqrt{(h\mid h)},
-\quad\log\mathcal L=-\tfrac12(d-h\mid d-h).
+(a\mid b)=4\Delta f\,\mathrm{Re}\!\!\sum_{X\in\{A,E\},\,k}\!\!
+\frac{a_{Xk}^*b_{Xk}}{S_X(f_k)},
+\qquad\rho_{\rm opt}=\sqrt{(h\mid h)},
+\qquad\log\mathcal L=-\tfrac12(d-h\mid d-h).
 \]
 
-These are the same objects as in LVK analysis. What changes is the instrument response, source durations, channels, band, and global model."""
+- These are **exactly** the objects from the LVK notebook. Bayes' theorem does
+  not change when the detector does.
+- What changes: the instrument response, the source durations, the channels,
+  the band, and the fact that the model is global rather than one source.
+- $\Delta f=1/T_{\rm obs}$, so a longer mission means finer frequency
+  resolution as well as more accumulated SNR."""
         ),
         md(
             """**Predict before running:** If two frequency templates are one Fourier bin
@@ -2405,7 +2614,7 @@ p(\theta_b\mid d,\theta_{-b})\propto
 \pi(\theta_b)\exp\!\left[-\frac12(r_b-h_b\mid r_b-h_b)\right].
 \]
 
-![Global Fit Wheel linking LISA source classes with instrument noise and calibration](../assets/global_fit_wheel.png)
+{{IMAGE:assets/global_fit_wheel.png|Global Fit Wheel linking LISA source classes with instrument noise and calibration}}
 
 *Global Fit Wheel from Katz et al.,
 [Phys. Rev. D 111, 024060 (2025)](https://doi.org/10.1103/PhysRevD.111.024060),
@@ -2506,8 +2715,396 @@ axes[1].set(xlabel="amplitude multiplier",ylabel="posterior density",title="Gibb
 for ax in axes: ax.legend(fontsize=8)
 plt.show()"""
         ),
+        md(r"""## 6. A realistic miniature global fit
+
+The three-amplitude demo above kept the source *shapes* fixed so every
+conditional was exactly Gaussian. Now we drop that: two source classes with
+unknown nonlinear parameters, an unknown noise level, and no idea where the
+sources are until we look.
+
+The data model is the one from the wheel, restricted to two classes:
+
+\[
+d(f)=\underbrace{A_{\rm MBHB}\,h(f;\mathcal M,t_c,\phi_c)}_{\text{one chirp}}
++\sum_{i}\underbrace{A_i\,g(f;f_{0,i},\phi_{0,i})}_{\text{monochromatic binaries}}
++\;n(f;\eta).
+\]
+
+- **Massive black-hole binary.** A restricted post-Newtonian inspiral in the
+  stationary-phase approximation, sweeping upward through the band:
+
+\[
+\tilde h(f)\propto f^{-7/6}\exp\left[i\left(2\pi f t_c-\phi_c-\frac{\pi}{4}
++\frac{3}{128}(\pi\mathcal M f)^{-5/3}\right)\right].
+\]
+
+- **Galactic binaries.** Monochromatic over the observation, so each one is a
+  sinc kernel of width $1/T_{\rm obs}$ centred on $f_0$. Real GBs also drift in
+  frequency and are modulated by the constellation motion; Section 4 used the
+  full JaxGB response for exactly that reason.
+- **Noise.** A smooth analytic LISA-like PSD with one unknown overall scale
+  $\eta$, so the noise level is inferred rather than assumed.
+
+We parametrise each source by its **signal-to-noise ratio** rather than a raw
+amplitude, so the numbers are directly interpretable and the truth is known.
+
+The pipeline is the real one, in miniature:
+
+1. **Search.** Find the sources. Nothing is known a priori.
+2. **Seed.** Use the search estimates as the starting point.
+3. **Gibbs.** Cycle blocks, each conditional on the current residual."""),
+        code(r'''from scipy.stats import gamma as gamma_dist
+
+T_OBS_GF = 90 * 86400.0
+DF_GF = 1.0 / T_OBS_GF
+K_LO, K_HI = int(2.0e-3 / DF_GF), int(6.0e-3 / DF_GF)
+gf_frequency = np.arange(K_LO, K_HI) * DF_GF
+N_BINS = gf_frequency.size
+# A smooth, analytic stand-in for the LISA noise PSD.
+BASE_PSD = 2.0e-40 * (1 + (4e-4 / gf_frequency) ** 2) + 4.0e-41
+MSUN_SECONDS = 4.9254909476412675e-6
+
+
+def gf_inner(a, b, psd=BASE_PSD):
+    return 4 * DF_GF * np.real(np.sum(np.conj(a) * b / psd))
+
+
+def gf_complex_inner(a, b, psd=BASE_PSD):
+    """Complex overlap; its modulus maximises over an overall phase."""
+    return 4 * DF_GF * np.sum(np.conj(a) * b / psd)
+
+
+def gb_shape(f0, phi0):
+    """Monochromatic source observed for a finite time: a sinc kernel."""
+    return np.exp(1j * phi0) * np.sinc((gf_frequency - f0) * T_OBS_GF)
+
+
+def mbhb_shape(chirp_mass, t_c, phi_c):
+    """Restricted post-Newtonian inspiral, stationary-phase approximation."""
+    mass_seconds = chirp_mass * MSUN_SECONDS
+    phase = (
+        2 * np.pi * gf_frequency * t_c
+        - phi_c
+        - np.pi / 4
+        + (3 / 128) * (np.pi * mass_seconds * gf_frequency) ** (-5 / 3)
+    )
+    return gf_frequency ** (-7 / 6) * np.exp(1j * phase)
+
+
+def unit_norm(shape):
+    return shape / np.sqrt(gf_inner(shape, shape))
+
+
+def gb_template(params):
+    """params = (f0, snr, phi0). The amplitude parameter *is* the SNR."""
+    return params[1] * unit_norm(gb_shape(params[0], params[2]))
+
+
+def mbhb_template(params):
+    """params = (chirp_mass, t_c, snr, phi_c)."""
+    return params[2] * unit_norm(mbhb_shape(params[0], params[1], params[3]))
+
+
+TRUE_GB = np.array(
+    [[3.0004e-3, 18.0, 0.7], [3.6207e-3, 25.0, 2.1], [4.7103e-3, 12.0, 4.4]]
+)
+TRUE_MBHB = np.array([4.0e5, 0.55 * T_OBS_GF, 60.0, 1.1])
+
+gf_rng = np.random.default_rng(7)
+injected = sum(gb_template(g) for g in TRUE_GB) + mbhb_template(TRUE_MBHB)
+gf_noise = np.sqrt(BASE_PSD / (4 * DF_GF)) * (
+    gf_rng.normal(size=N_BINS) + 1j * gf_rng.normal(size=N_BINS)
+)
+gf_data = injected + gf_noise
+
+print(f"analysis band: {gf_frequency[0]*1e3:.1f}-{gf_frequency[-1]*1e3:.1f} mHz")
+print(f"frequency bins: {N_BINS}   bin width 1/T_obs = {DF_GF:.3e} Hz")
+print(f"injected total SNR: {np.sqrt(gf_inner(injected, injected)):.1f}")
+print(f"noise check (n|n)/N_bins = {gf_inner(gf_noise, gf_noise)/N_BINS:.3f} (expect ~2)")'''),
+        code(r'''whitened_data = np.abs(gf_data) * np.sqrt(4 * DF_GF / BASE_PSD)
+whitened_mbhb = np.abs(mbhb_template(TRUE_MBHB)) * np.sqrt(4 * DF_GF / BASE_PSD)
+
+fig, ax = plt.subplots(figsize=(11, 3.6))
+ax.plot(gf_frequency * 1e3, whitened_data, lw=0.5, color="0.6", label="data")
+ax.plot(gf_frequency * 1e3, whitened_mbhb, lw=1.4, color="C3", label="MBHB (truth)")
+for i, g in enumerate(TRUE_GB):
+    ax.axvline(g[0] * 1e3, color="C0", ls="--", lw=1,
+               label="Galactic binaries (truth)" if i == 0 else None)
+ax.set(xlabel="frequency [mHz]", ylabel="whitened amplitude",
+       title="Everything at once: one chirp, three lines, one noise level")
+ax.legend()
+plt.show()'''),
+        md(r"""### Stage 1: search
+
+Nothing above is known to the analysis. Two searches, both reusing machinery
+from earlier notebooks:
+
+- **MBHB.** Maximise the overlap over $(\mathcal M,t_c)$. Amplitude and phase
+  come out analytically, and $t_c$ enters only as $e^{2\pi i f t_c}$, so **one
+  inverse FFT scans every arrival time at once**. This is exactly the
+  matched-filter trick from notebook 01, Section 3.
+- **Galactic binaries.** After removing the MBHB estimate, a monochromatic
+  source sitting exactly on a Fourier bin has all its power in that bin, so the
+  search statistic is just the **whitened periodogram**. Peaks above 7 are kept.
+- **Refinement.** Real sources do not sit on bin centres, so a candidate found
+  at a bin loses power to leakage. A sub-bin scan recovers it. Skipping this
+  step leaves the sampler stranded in the wrong Fourier bin."""),
+        code(r'''N_FFT = 1 << 17
+tc_axis = np.arange(N_FFT) / (N_FFT * DF_GF)
+
+
+def mbhb_search(residual, chirp_mass_grid):
+    """Grid over chirp mass; one inverse FFT covers all coalescence times."""
+    best = (-1.0, None, None, None)
+    for chirp_mass in chirp_mass_grid:
+        shape = mbhb_shape(chirp_mass, 0.0, 0.0)
+        norm = np.sqrt(gf_inner(shape, shape))
+        padded = np.zeros(N_FFT, dtype=complex)
+        padded[K_LO:K_HI] = np.conj(residual) * shape / BASE_PSD
+        overlap = 4 * DF_GF * N_FFT * np.fft.ifft(padded) / norm
+        peak = int(np.argmax(np.abs(overlap)))
+        if np.abs(overlap[peak]) > best[0]:
+            best = (np.abs(overlap[peak]), chirp_mass, tc_axis[peak],
+                    np.angle(overlap[peak]))
+    return best
+
+
+search_start = time.time()
+snr_hat, mass_hat, tc_hat, phase_hat = mbhb_search(
+    gf_data, np.geomspace(2.0e5, 8.0e5, 120)
+)
+snr_hat, mass_hat, tc_hat, phase_hat = mbhb_search(
+    gf_data, np.geomspace(mass_hat * 0.97, mass_hat * 1.03, 60)
+)
+mbhb_seed = np.array([mass_hat, tc_hat, snr_hat, phase_hat])
+print(f"MBHB found: SNR {snr_hat:.1f}, chirp mass {mass_hat:.4g} "
+      f"(true {TRUE_MBHB[0]:.4g}), t_c/T {tc_hat/T_OBS_GF:.5f} "
+      f"(true {TRUE_MBHB[1]/T_OBS_GF:.5f})")
+
+residual_after_mbhb = gf_data - mbhb_template(mbhb_seed)
+periodogram = np.abs(residual_after_mbhb) * np.sqrt(4 * DF_GF / BASE_PSD)
+candidates, index = [], 1
+while index < N_BINS - 1:
+    if (periodogram[index] > 7.0
+            and periodogram[index] >= periodogram[index - 1]
+            and periodogram[index] >= periodogram[index + 1]):
+        candidates.append(index)
+        index += 8
+    else:
+        index += 1
+
+gb_seed = []
+for index in candidates:
+    scan = gf_frequency[index] + np.linspace(-1.5, 1.5, 121) * DF_GF
+    best = (-1.0, None)
+    for f0 in scan:
+        shape = unit_norm(gb_shape(f0, 0.0))
+        overlap = gf_complex_inner(residual_after_mbhb, shape)
+        if np.abs(overlap) > best[0]:
+            best = (np.abs(overlap), [f0, np.abs(overlap), np.angle(overlap)])
+    gb_seed.append(best[1])
+gb_seed = np.array(gb_seed)
+print(f"\nGalactic binaries found: {len(gb_seed)}  (search took "
+      f"{time.time()-search_start:.1f} s)")
+for i, seed in enumerate(gb_seed):
+    print(f"  f0 = {seed[0]*1e3:.6f} mHz (true {TRUE_GB[i,0]*1e3:.6f}), "
+          f"SNR {seed[1]:.1f} (true {TRUE_GB[i,1]:.0f})")'''),
+        md(r"""### Stage 2: Gibbs, one block per source
+
+Blocks: the MBHB, each Galactic binary, and the noise level. One sweep visits
+all of them; each sees only its own conditional residual.
+
+**Proposals matter.** The MBHB parameters are correlated and fantastically
+well constrained: $t_c$ is measured to a second out of a 90-day window. An
+isotropic proposal is rejected essentially always. So we build the **Fisher
+matrix at the seed and propose along its eigen-directions** — the payoff for
+the Fisher extension in Section 4, and what production samplers actually do.
+
+The Fisher matrix here is numerically brutal: $\sigma(f_0)\sim10^{-9}$ while
+$\sigma(\rho)\sim1$, a condition number near $10^{18}$. We rescale to unit
+diagonal before inverting, otherwise the amplitude errors come out meaningless.
+
+**The noise block is a true Gibbs step.** With $\eta$ scaling the PSD,
+
+\[
+p(\eta\mid r)\propto\eta^{-N_{\rm bins}}
+\exp\left[-\frac{(r\mid r)_{\rm base}}{2\eta}\right],
+\]
+
+an inverse-gamma distribution we can draw from exactly. Source blocks use
+Metropolis steps — hence **Metropolis-within-Gibbs**."""),
+        code(r'''def fisher_proposal(template_fn, params, steps):
+    """Fisher inverse, rescaled to unit diagonal for numerical stability."""
+    derivatives = []
+    for i in range(len(params)):
+        up, down = params.copy(), params.copy()
+        up[i] += steps[i]
+        down[i] -= steps[i]
+        derivatives.append((template_fn(up) - template_fn(down)) / (2 * steps[i]))
+    fisher = np.array([[gf_inner(a, b) for b in derivatives] for a in derivatives])
+    scale = np.sqrt(np.diag(fisher))
+    covariance = np.linalg.inv(fisher / np.outer(scale, scale)) / np.outer(scale, scale)
+    return np.linalg.cholesky(covariance) * 2.4 / np.sqrt(len(params))
+
+
+mbhb_state = mbhb_seed.copy()
+gb_state = gb_seed.copy()
+noise_scale = 1.0
+n_sources = len(gb_state)
+
+mbhb_jump = fisher_proposal(
+    mbhb_template, mbhb_state, np.array([mbhb_state[0] * 1e-5, 0.05, 0.01, 1e-3])
+)
+gb_jumps = [
+    fisher_proposal(gb_template, g, np.array([1e-11, 0.01, 1e-3])) for g in gb_state
+]
+print("MBHB Fisher sigma (chirp mass, t_c, SNR, phase):",
+      np.round(np.sqrt(np.diag(mbhb_jump @ mbhb_jump.T)) * np.sqrt(4) / 2.4, 4))
+print("A pure amplitude should give sigma(SNR) = 1 exactly.")'''),
+        code(r'''N_SWEEPS, BURN_IN = 1800, 700
+mbhb_model = mbhb_template(mbhb_state)
+gb_models = [gb_template(g) for g in gb_state]
+
+chain_mbhb = np.zeros((N_SWEEPS, 4))
+chain_gb = np.zeros((N_SWEEPS, n_sources, 3))
+chain_noise = np.zeros(N_SWEEPS)
+accepted = np.zeros(1 + n_sources)
+gibbs_rng = np.random.default_rng(11)
+
+
+def scaled_chi_squared(residual, scale):
+    return gf_inner(residual, residual) / scale
+
+
+gibbs_start = time.time()
+for sweep in range(N_SWEEPS):
+    # --- block 1: the massive black-hole binary ---
+    conditional = gf_data - sum(gb_models)
+    current = scaled_chi_squared(conditional - mbhb_model, noise_scale)
+    proposal = mbhb_state + mbhb_jump @ gibbs_rng.normal(size=4)
+    if proposal[2] > 0:
+        trial = mbhb_template(proposal)
+        if np.log(gibbs_rng.uniform()) < -0.5 * (
+            scaled_chi_squared(conditional - trial, noise_scale) - current
+        ):
+            mbhb_state, mbhb_model = proposal, trial
+            accepted[0] += 1
+
+    # --- blocks 2..N: one per Galactic binary ---
+    for i in range(n_sources):
+        others = mbhb_model + sum(gb_models[j] for j in range(n_sources) if j != i)
+        conditional = gf_data - others
+        current = scaled_chi_squared(conditional - gb_models[i], noise_scale)
+        proposal = gb_state[i] + gb_jumps[i] @ gibbs_rng.normal(size=3)
+        if proposal[1] > 0:
+            trial = gb_template(proposal)
+            if np.log(gibbs_rng.uniform()) < -0.5 * (
+                scaled_chi_squared(conditional - trial, noise_scale) - current
+            ):
+                gb_state[i], gb_models[i] = proposal, trial
+                accepted[1 + i] += 1
+
+    # --- final block: the noise level, an exact inverse-gamma draw ---
+    residual = gf_data - mbhb_model - sum(gb_models)
+    noise_scale = (gf_inner(residual, residual) / 2) / gibbs_rng.gamma(N_BINS, 1.0)
+
+    chain_mbhb[sweep] = mbhb_state
+    chain_gb[sweep] = gb_state
+    chain_noise[sweep] = noise_scale
+
+print(f"{N_SWEEPS} sweeps in {time.time()-gibbs_start:.1f} s")
+print("block acceptance rates:", np.round(accepted / N_SWEEPS, 2))'''),
+        code(r'''samples_mbhb = chain_mbhb[BURN_IN:]
+samples_gb = chain_gb[BURN_IN:]
+samples_noise = chain_noise[BURN_IN:]
+
+
+def report(name, values, truth, fmt="12.6g"):
+    low, median, high = np.percentile(values, [5, 50, 95])
+    flag = "ok " if low <= truth <= high else "OUT"
+    print(f"  {name:12s}{median:{fmt}} [{low:{fmt}},{high:{fmt}}] "
+          f"truth {truth:{fmt}}  {flag}")
+
+
+print("MBHB block")
+for j, name in enumerate(["chirp mass", "t_c [s]", "SNR", "phase"]):
+    report(name, samples_mbhb[:, j], TRUE_MBHB[j])
+print("Galactic-binary blocks")
+for i in range(n_sources):
+    report(f"GB{i} f0 [mHz]", samples_gb[:, i, 0] * 1e3, TRUE_GB[i, 0] * 1e3, "12.7g")
+    report(f"GB{i} SNR", samples_gb[:, i, 1], TRUE_GB[i, 1])
+print("Noise block")
+report("PSD scale", samples_noise, 1.0)
+
+final_residual = gf_data - mbhb_model - sum(gb_models)
+print(f"\nfinal (r|r)/N_bins = "
+      f"{gf_inner(final_residual, final_residual)/N_BINS:.3f}  (pure noise gives ~2)")'''),
+        code(r'''fig, axes = plt.subplots(2, 2, figsize=(12, 6.4))
+
+axes[0, 0].plot(chain_mbhb[:, 0], lw=0.7)
+axes[0, 0].axhline(TRUE_MBHB[0], color="k", ls="--")
+axes[0, 0].axvspan(0, BURN_IN, color="C3", alpha=0.15)
+axes[0, 0].set(xlabel="Gibbs sweep", ylabel="chirp mass", title="MBHB block")
+
+for i in range(n_sources):
+    axes[0, 1].plot(chain_gb[:, i, 1], lw=0.7, color=f"C{i}", label=f"GB{i}")
+    axes[0, 1].axhline(TRUE_GB[i, 1], color=f"C{i}", ls="--", alpha=0.6)
+axes[0, 1].axvspan(0, BURN_IN, color="C3", alpha=0.15)
+axes[0, 1].set(xlabel="Gibbs sweep", ylabel="SNR", title="Galactic-binary blocks")
+axes[0, 1].legend(fontsize=8, ncol=3)
+
+axes[1, 0].hist(samples_noise, bins=40, density=True, histtype="step", color="C0")
+axes[1, 0].axvline(1.0, color="k", ls="--")
+axes[1, 0].set(xlabel=r"noise scale $\eta$", ylabel="posterior density",
+               title="Noise block (exact Gibbs draws)")
+
+axes[1, 1].plot(gf_frequency * 1e3, whitened_data, lw=0.5, color="0.7", label="data")
+axes[1, 1].plot(gf_frequency * 1e3,
+                np.abs(final_residual) * np.sqrt(4 * DF_GF / BASE_PSD),
+                lw=0.5, color="C2", label="residual")
+axes[1, 1].set(xlabel="frequency [mHz]", ylabel="whitened amplitude",
+               title="All sources removed")
+axes[1, 1].legend(fontsize=8)
+fig.tight_layout()
+plt.show()'''),
+        md(r"""**Look at the GB2 trace before trusting any number.** The
+weakest source (injected at SNR 12) collapses to zero amplitude early on and
+stays there for several hundred sweeps before recovering. Once its amplitude
+is near zero its frequency is unconstrained, so $f_0$ random-walks away and the
+block has to find its way back.
+
+- This is a genuine sampling pathology, not a plotting artefact, and it is
+  common in global fits with weak sources.
+- **The slowest block sets the burn-in for the whole chain.** The MBHB block
+  converged within a few sweeps; GB2 needed roughly 500. Discarding a burn-in
+  chosen from the MBHB trace alone would contaminate every GB2 summary.
+- Production codes attack this with parallel tempering and with
+  reversible-jump moves that delete and re-add sources deliberately, rather
+  than waiting for a fixed-dimension chain to wander back.
+- It is also the honest form of the question "is this source really there?",
+  which Section 7 takes up.
+
+What this miniature keeps from a real global fit:
+
+- Sources are **found**, not assumed, and the fit is seeded from the search.
+- Every block conditions on a residual containing the current estimate of every
+  other block, so errors propagate exactly as the wheel describes.
+- The noise level is inferred jointly with the signals.
+- The final residual is statistically consistent with pure noise, which is the
+  standard global-fit sanity check.
+
+What it still leaves out:
+
+- Constellation response and TDI: these are plain frequency-domain templates,
+  whereas Section 4 used the real moving JaxGB response.
+- Sky position, inclination, polarisation, and frequency drift $\dot f_0$.
+- A **fixed** source count. Real analyses add and delete sources with
+  reversible-jump moves inside the Galactic-binary block.
+- Tens of thousands of overlapping sources rather than three, with a confusion
+  foreground that is itself part of the noise model.
+- Data gaps and non-stationarity, from Section 3."""),
         md(
-            """## 6. A miniature unknown-source-count challenge
+            """## 7. A miniature unknown-source-count challenge
 
 LATW Tutorial 6 uses RJMCMC so the number of Galactic binaries is inferred. Here we enumerate all eight subsets of three candidate templates and use BIC only as a fast classroom proxy—not as a replacement for evidence or RJMCMC."""
         ),
