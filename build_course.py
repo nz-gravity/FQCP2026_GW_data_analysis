@@ -99,19 +99,21 @@ the end of this notebook you should be able to distinguish the four pieces of
 Bayes' theorem, calculate a small posterior by hand, and explain why a noise PSD
 appears in a gravitational-wave likelihood.
 
-::::{admonition} Live route — 30 minutes
+:::{admonition} Live route — 30 minutes
 :class: tip
 
-:::{tab-set}
-:::{tab-item} In the room
+Use the dropdowns immediately below to separate the in-room sequence from the
+reference material.
+:::
+
+:::{dropdown} In the room
 Sections 1–4: model, prior predictive check, likelihood/grid posterior, and
 posterior predictive check. End with the PSD/Whittle bridge in Section 7.
 :::
-:::{tab-item} Read afterwards
+:::{dropdown} Read afterwards
 Sections 5–6 explain MCMC and nested sampling; the Fisher and P–P sections are
 reference material for returning to the notebook later.
 :::
-::::
 
 **One map for the whole course:**
 
@@ -1108,19 +1110,21 @@ filtering**, the search stage that finds the signal and produces the trigger.
 Section 4 then estimates parameters from it, including a two-dimensional
 posterior that shows the distance-inclination degeneracy behind
 gravitational-wave distance uncertainties."""),
-        md(r"""::::{admonition} Live route — 45 minutes
+        md(r""":::{admonition} Live route — 45 minutes
 :class: tip
 
-:::{tab-set}
-:::{tab-item} In the room
+Use the dropdowns immediately below to separate the in-room sequence from the
+reference material.
+:::
+
+:::{dropdown} In the room
 Sections 1–5: CBC parameters, detector response, matched filtering, the manual
 likelihood, and network localisation. Run the distance–inclination posterior.
 :::
-:::{tab-item} Read afterwards
+:::{dropdown} Read afterwards
 Section 6 is a compact population-inference bridge; Section 7 is a genuine
 Bilby/dynesty run and can take a few minutes in Colab.
 :::
-::::
 
 :::{admonition} Do not collapse these three questions
 :class: important
@@ -1139,15 +1143,16 @@ question and must account for what the detectors were able to find.
         code(
             """import os,sys,subprocess,importlib.util
 IN_COLAB="COLAB_RELEASE_TAG" in os.environ
-missing=[p for p in ("ripplegw","bilby") if importlib.util.find_spec(p) is None]
+missing=[p for p in ("ripplegw","bilby","gwpy") if importlib.util.find_spec(p) is None]
 if missing:
-    if IN_COLAB: subprocess.check_call([sys.executable,"-m","pip","install","-q","rippleGW==0.2.1","bilby==2.8.0"])
-    else: raise ImportError("Install rippleGW==0.2.1 and bilby==2.8.0, or run in Colab.")"""
+    if IN_COLAB: subprocess.check_call([sys.executable,"-m","pip","install","-q","rippleGW==0.2.1","bilby==2.8.0","gwpy>=3.0,<4"])
+    else: raise ImportError("Install rippleGW==0.2.1, bilby==2.8.0, and gwpy>=3.0,<4, or run in Colab.")"""
         ),
         code("""import logging
 import numpy as np
 import matplotlib.pyplot as plt
 import bilby
+from gwpy.timeseries import TimeSeries
 from IPython.display import HTML,display
 from matplotlib.animation import FuncAnimation
 from jax import config
@@ -2181,6 +2186,116 @@ plt.show()'''),
   (about 15 parameters), which is why production runs take hours on many
   cores rather than two minutes on one."""),
         md(
+            r"""## 8. Real data: GW150914
+
+The controlled injection above makes a known answer useful for debugging. This
+is the real-data case study: download public H1/L1 strain, estimate an
+off-source PSD, inspect the time--frequency data, then compare a deliberately
+restricted classroom estimate with the official LVK posterior. The comparison
+is a **model check**, not an attempted reproduction of the LVK analysis.
+
+:::{admonition} What differs from the LVK result?
+:class: warning
+
+The official posterior marginalises over a far broader waveform, calibration,
+noise, prior, and parameter model. Agreement in the mass scale is encouraging;
+matching every marginal is neither expected nor a valid success criterion.
+:::
+"""
+        ),
+        code(r'''import h5py
+from pathlib import Path
+from urllib.request import urlretrieve
+
+GW150914_GPS = 1126259462.4
+GWTC1_POSTERIOR_URL = "https://dcc.ligo.org/public/0157/P1800370/005/GW150914_GWTC-1.hdf5"
+cache = Path("gw150914_cache"); cache.mkdir(exist_ok=True)
+
+def gw150914_strain(detector, start, end):
+    path = cache / f"{detector}-{int(start)}-{int(end-start)}.hdf5"
+    if path.exists():
+        return TimeSeries.read(path)
+    strain = TimeSeries.fetch_open_data(detector, start, end, sample_rate=2048)
+    strain.write(path)
+    return strain
+
+raw = {ifo: gw150914_strain(ifo, GW150914_GPS-16, GW150914_GPS+16) for ifo in ("H1", "L1")}
+off_source = {ifo: gw150914_strain(ifo, GW150914_GPS+32, GW150914_GPS+160) for ifo in ("H1", "L1")}
+print("Downloaded/cached 32 s analysis and 128 s off-source data for H1 and L1.")
+'''),
+        code(r'''fig, axes = plt.subplots(1, 2, figsize=(12, 3.5), sharey=True)
+for ax, ifo in zip(axes, ("H1", "L1")):
+    filtered = raw[ifo].bandpass(35, 300).notch(60).notch(120)
+    time_from_event = filtered.times.value - GW150914_GPS
+    ax.plot(time_from_event, filtered.value, lw=0.7)
+    ax.set(xlim=(-0.25, 0.08), xlabel="time from GW150914 [s]", title=f"{ifo}: band-passed strain")
+axes[0].set_ylabel("strain")
+plt.show()
+
+fig, axes = plt.subplots(1, 2, figsize=(12, 3.8))
+for ax, ifo in zip(axes, ("H1", "L1")):
+    q = raw[ifo].q_transform(outseg=(GW150914_GPS-0.25, GW150914_GPS+0.08), frange=(30, 350), qrange=(4, 64))
+    image = ax.pcolormesh(q.times.value-GW150914_GPS, q.frequencies.value, q.value, shading="auto", cmap="magma")
+    ax.set(yscale="log", xlabel="time from event [s]", ylabel="frequency [Hz]", title=f"{ifo}: Q-transform")
+    fig.colorbar(image, ax=ax, label="normalised energy")
+plt.show()'''),
+        code(r'''posterior_path = cache / "GW150914_GWTC-1.hdf5"
+if not posterior_path.exists():
+    urlretrieve(GWTC1_POSTERIOR_URL, posterior_path)
+
+def named_posteriors(h5):
+    found = []
+    def visit(_, obj):
+        if isinstance(obj, h5py.Dataset) and obj.dtype.names:
+            names = set(obj.dtype.names)
+            if {"mass_1_source", "mass_2_source"} <= names or {"mass_1", "mass_2"} <= names:
+                found.append(obj[...])
+    h5.visititems(visit)
+    if not found:
+        raise KeyError("Could not locate a named mass posterior in the GWTC-1 file")
+    return found[0]
+
+with h5py.File(posterior_path, "r") as h5:
+    lvk = named_posteriors(h5)
+m1_name = "mass_1_source" if "mass_1_source" in lvk.dtype.names else "mass_1"
+m2_name = "mass_2_source" if "mass_2_source" in lvk.dtype.names else "mass_2"
+lvk_chirp_mass = (lvk[m1_name]*lvk[m2_name])**(3/5)/(lvk[m1_name]+lvk[m2_name])**(1/5)
+
+# `full_result` is the restricted classroom run from Section 7; it is not an LVK reproduction.
+fig, ax = plt.subplots(figsize=(7.5, 3.4))
+bins = np.linspace(20, 36, 60)
+ax.hist(lvk_chirp_mass, bins=bins, density=True, histtype="step", lw=2, label="LVK GWTC-1 posterior")
+ax.hist(full_result.posterior["chirp_mass"], bins=bins, density=True, histtype="step", lw=2, label="our restricted classroom model")
+ax.set(xlabel=r"chirp mass [$M_\odot$]", ylabel="posterior density", title="GW150914: compare models before comparing answers")
+ax.legend(); plt.show()
+
+for label, values in (("LVK", lvk_chirp_mass), ("classroom", full_result.posterior["chirp_mass"])):
+    low, median, high = np.percentile(values, [5, 50, 95])
+    print(f"{label:10s}: {median:.2f} [{low:.2f}, {high:.2f}] solar masses")'''),
+        md(
+            """### Frequency-domain posterior prediction
+
+For each detector, compare the analysis-data ASD, the off-source noise ASD, and
+the frequency-domain waveform posterior from the restricted run. This is a
+posterior-predictive visual diagnostic: a plausible signal contribution should
+occupy the informative band, but it does not prove that the noise, waveform, or
+prior model is complete."""
+        ),
+        code(r'''fig, axes = plt.subplots(1, 2, figsize=(12, 3.5), sharey=True)
+posterior_draws = full_result.posterior.sample(min(30, len(full_result.posterior)), random_state=4)
+for ax, ifo in zip(axes, ("H1", "L1")):
+    data_fft = np.fft.rfft(raw[ifo].value * np.hanning(len(raw[ifo])))
+    freqs = np.fft.rfftfreq(len(raw[ifo]), raw[ifo].dt.value)
+    psd = off_source[ifo].psd(fftlength=4, overlap=2, window=("tukey", 0.1))
+    ax.loglog(freqs[1:], np.sqrt(2*raw[ifo].dt.value/len(raw[ifo]))*np.abs(data_fft[1:]), color="0.55", label="analysis data ASD proxy")
+    ax.loglog(psd.frequencies.value[1:], np.sqrt(psd.value[1:]), color="k", lw=1.4, label="off-source ASD")
+    for _, draw in posterior_draws.iterrows():
+        # Shape-only draw: detector projection/extrinsic parameters remain fixed in this classroom model.
+        hp = polarizations(ripple_parameters(chirp_mass=draw.chirp_mass, distance=draw.luminosity_distance, inclination=draw.theta_jn))["plus"]
+        ax.loglog(frequency[mask], 2*np.sqrt(frequency[mask])*np.abs(hp[mask]), color="C3", alpha=.12)
+    ax.set(xlim=(30, 350), ylim=(2e-24, 2e-20), xlabel="frequency [Hz]", title=f"{ifo}: posterior-predictive frequency view")
+axes[0].set_ylabel(r"amplitude spectral density [1/$\sqrt{\rm Hz}$]"); axes[0].legend(fontsize=8); plt.show()'''),
+        md(
             """## Boundary and extensions
 
 - Section 7 frees four parameters; production BBH analyses free about fifteen, plus nuisance and systematic choices.
@@ -2240,27 +2355,29 @@ JaxGB for an actual moving-constellation Galactic-binary response. You will
 first calculate a frequency likelihood manually, then verify the same objects
 through the LISA Analysis Tools interface. The final exercise is a miniature
 version of the LATW global-fit challenge."""),
-        md(r"""::::{admonition} Live route — 40 minutes
+        md(r""":::{admonition} Live route — 40 minutes
 :class: tip
 
-:::{tab-set}
-:::{tab-item} In the room
+Use the dropdowns immediately below to separate the in-room sequence from the
+reference material.
+:::
+
+:::{dropdown} In the room
 Sections 1–4: moving response, sensitivity/foreground, the complications lab,
 and a manual likelihood. Then follow the global-fit wheel in Section 5.
 :::
-:::{tab-item} Read afterwards
+:::{dropdown} Read afterwards
 The Fisher extension, the package-level route in Section 4b, the realistic
 miniature fit, and unknown-source-count challenge are designed for follow-up.
 :::
-::::
 """),
         code(
             """import os,sys,subprocess,importlib.util
 IN_COLAB="COLAB_RELEASE_TAG" in os.environ
-needed=("lisatools","gpubackendtools","jaxgb","eryn")
+needed=("lisatools","gpubackendtools","jaxgb","eryn","wdm_transform")
 if any(importlib.util.find_spec(package) is None for package in needed):
     if IN_COLAB:
-        subprocess.check_call([sys.executable,"-m","pip","install","-q","lisaanalysistools==1.2.5","gpubackendtools==0.1.1","jaxgb==0.2.1","astropy==7.2.0","eryn==1.2.6"])
+        subprocess.check_call([sys.executable,"-m","pip","install","-q","lisaanalysistools==1.2.5","gpubackendtools==0.1.1","jaxgb==0.2.1","astropy==7.2.0","eryn==1.2.6","wdm-transform==0.5.0"])
     else: raise ImportError("Install the pinned LISA requirements, or run in Colab.")"""
         ),
         code(
@@ -2279,6 +2396,7 @@ from lisatools.utils.constants import YRSID_SI
 from lisaorbits import EqualArmlengthOrbits
 from jaxgb.jaxgb import JaxGB
 from jaxgb.params import GBObject
+from wdm_transform import TimeSeries as WDMTimeSeries, WDM, wdm_inner_product, wdm_noise_variance
 rng=np.random.default_rng(20260817); plt.style.use("seaborn-v0_8-whitegrid"); plt.rcParams["animation.html"]="jshtml"'''
         ),
         md(
@@ -2423,6 +2541,46 @@ axes[1,0].semilogy(1e3*fft_frequency[near],fft_gap[near],label="gap zero-filled"
 band=(f_spec>2.7e-3)&(f_spec<3.4e-3); image=axes[1,1].pcolormesh(t_spec/86400,1e3*f_spec[band],np.log10(p_spec[band]+1e-30),shading="auto")
 axes[1,1].set(xlabel="mission time [days]",ylabel="frequency [mHz]",title="Drifting line + gap in time–frequency"); fig.colorbar(image,ax=axes[1,1],label="log power")
 fig.tight_layout(); plt.show()"""),
+        md(
+            r"""### WDM time--frequency map and likelihood
+
+The WDM transform gives localised real coefficients $w_{nm}$ on a
+time--frequency grid. For stationary Gaussian noise and a diagonal WDM
+approximation,
+
+$$logmathcal L_{m WDM}=-rac12sum_{n,m}
+\frac{(w^d_{nm}-w^h_{nm})^2}{\sigma_{nm}^2}+\mathrm{constant}.$$
+
+This is the WDM counterpart of the diagonal frequency-domain Whittle
+likelihood. It is useful because the map makes a drifting signal, changing
+noise, and a gap visible. It is not magically exact: a gap and non-stationary
+noise correlate pixels, so the diagonal form below is a controlled teaching
+approximation.
+"""
+        ),
+        code(r'''toy_signal = 1.5*np.sin(phase)
+WDM_NT = 280  # 28 days at 60 s cadence gives an exactly rectangular 280 x 144 grid.
+wdm_data = WDM.from_time_series(WDMTimeSeries(continuous_data, dt=cadence), nt=WDM_NT)
+wdm_gap = WDM.from_time_series(WDMTimeSeries(gapped_data, dt=cadence), nt=WDM_NT)
+wdm_model = WDM.from_time_series(WDMTimeSeries(toy_signal, dt=cadence), nt=WDM_NT)
+wdm_coeffs = np.asarray(wdm_data.coeffs[0]); wdm_gap_coeffs = np.asarray(wdm_gap.coeffs[0]); wdm_model_coeffs = np.asarray(wdm_model.coeffs[0])
+wdm_nf = wdm_coeffs.shape[1]-1
+wdm_frequency = np.arange(wdm_nf+1)/(wdm_nf*cadence)
+# Unit-variance sampled white noise has one-sided PSD 2*dt.  We deliberately use
+# this stationary reference even though the toy noise grows with time.
+wdm_stationary_var = wdm_noise_variance(np.full(wdm_nf+1, 2*cadence), nt=WDM_NT, nf=wdm_nf, dt=cadence)
+wdm_residual = wdm_coeffs-wdm_model_coeffs
+logL_wdm = -.5*wdm_inner_product(wdm_residual, wdm_residual, wdm_stationary_var)
+print(f"WDM grid: {WDM_NT} time pixels x {wdm_nf+1} frequency columns")
+print(f"Diagonal stationary-noise WDM log likelihood (up to a constant): {logL_wdm:.1f}")
+
+fig, axes = plt.subplots(1, 2, figsize=(12, 3.8), sharey=True)
+show = (wdm_frequency>2.4e-3)&(wdm_frequency<3.7e-3)
+for ax, coeffs, title in zip(axes, (wdm_coeffs, wdm_gap_coeffs), ("continuous data", "zero-filled gap")):
+    image=ax.pcolormesh(np.linspace(0, mission_days, WDM_NT), 1e3*wdm_frequency[show], np.log10(coeffs[:,show].T**2+1e-12), shading="nearest", cmap="magma")
+    ax.set(xlabel="mission time [days]", ylabel="frequency [mHz]", title=f"WDM coefficient power: {title}")
+    fig.colorbar(image, ax=ax, label=r"$\log_{10} w_{nm}^2$")
+plt.show()'''),
         md(
             """**Do not interpret zero-filling as the recommended gap treatment.** It is used here because its spectral leakage is immediately visible. A research analysis must define how gaps, edges, non-stationarity, and missing-data uncertainty enter the likelihood.
 
