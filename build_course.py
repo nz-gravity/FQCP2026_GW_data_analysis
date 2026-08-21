@@ -2212,10 +2212,12 @@ GWTC1_POSTERIOR_URL = "https://dcc.ligo.org/public/0157/P1800370/005/GW150914_GW
 cache = Path("gw150914_cache"); cache.mkdir(exist_ok=True)
 
 def gw150914_strain(detector, start, end):
-    path = cache / f"{detector}-{int(start)}-{int(end-start)}.hdf5"
+    # GWOSC provides the GW150914 event files at 4096 Hz (not 2048 Hz).
+    # Include the rate in the cache key so stale data cannot be reused.
+    path = cache / f"{detector}-{int(start)}-{int(end-start)}-4096Hz.hdf5"
     if path.exists():
         return TimeSeries.read(path)
-    strain = TimeSeries.fetch_open_data(detector, start, end, sample_rate=2048)
+    strain = TimeSeries.fetch_open_data(detector, start, end, sample_rate=4096)
     strain.write(path)
     return strain
 
@@ -2235,7 +2237,7 @@ plt.show()
 fig, axes = plt.subplots(1, 2, figsize=(12, 3.8))
 for ax, ifo in zip(axes, ("H1", "L1")):
     q = raw[ifo].q_transform(outseg=(GW150914_GPS-0.25, GW150914_GPS+0.08), frange=(30, 350), qrange=(4, 64))
-    image = ax.pcolormesh(q.times.value-GW150914_GPS, q.frequencies.value, q.value, shading="auto", cmap="magma")
+    image = ax.pcolormesh(q.times.value-GW150914_GPS, q.frequencies.value, q.value.T, shading="nearest", cmap="magma")
     ax.set(yscale="log", xlabel="time from event [s]", ylabel="frequency [Hz]", title=f"{ifo}: Q-transform")
     fig.colorbar(image, ax=ax, label="normalised energy")
 plt.show()'''),
@@ -2248,7 +2250,11 @@ def named_posteriors(h5):
     def visit(_, obj):
         if isinstance(obj, h5py.Dataset) and obj.dtype.names:
             names = set(obj.dtype.names)
-            if {"mass_1_source", "mass_2_source"} <= names or {"mass_1", "mass_2"} <= names:
+            if (
+                {"mass_1_source", "mass_2_source"} <= names
+                or {"mass_1", "mass_2"} <= names
+                or {"m1_detector_frame_Msun", "m2_detector_frame_Msun"} <= names
+            ):
                 found.append(obj[...])
     h5.visititems(visit)
     if not found:
@@ -2257,8 +2263,8 @@ def named_posteriors(h5):
 
 with h5py.File(posterior_path, "r") as h5:
     lvk = named_posteriors(h5)
-m1_name = "mass_1_source" if "mass_1_source" in lvk.dtype.names else "mass_1"
-m2_name = "mass_2_source" if "mass_2_source" in lvk.dtype.names else "mass_2"
+m1_name = next(name for name in ("mass_1_source", "mass_1", "m1_detector_frame_Msun") if name in lvk.dtype.names)
+m2_name = next(name for name in ("mass_2_source", "mass_2", "m2_detector_frame_Msun") if name in lvk.dtype.names)
 lvk_chirp_mass = (lvk[m1_name]*lvk[m2_name])**(3/5)/(lvk[m1_name]+lvk[m2_name])**(1/5)
 
 # `full_result` is the restricted classroom run from Section 7; it is not an LVK reproduction.
@@ -2548,7 +2554,7 @@ The WDM transform gives localised real coefficients $w_{nm}$ on a
 time--frequency grid. For stationary Gaussian noise and a diagonal WDM
 approximation,
 
-$$logmathcal L_{m WDM}=-rac12sum_{n,m}
+$$\\log \\mathcal L_{\\rm WDM}=-\\frac12\\sum_{n,m}
 \frac{(w^d_{nm}-w^h_{nm})^2}{\sigma_{nm}^2}+\mathrm{constant}.$$
 
 This is the WDM counterpart of the diagonal frequency-domain Whittle

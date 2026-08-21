@@ -1,0 +1,28 @@
+[project]
+name = "fqcp2026-gw-data-analysis"
+version = "0.1.0"
+description = "Colab-first FQCP 2026 gravitational-wave parameter-estimation course"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "astropy==7.2.0",
+  "bilby==2.8.0",
+  "black>=25.1",
+  "corner>=2.2",
+  "eryn==1.2.6",
+  "gpubackendtools==0.1.1",
+  "gwpy>=3.0,<4",
+  "ipykernel>=6.29",
+  "jaxgb==0.2.1",
+  "jupyter-book>=1.0,<2.0",
+  "jupyterlab>=4.0",
+  "lisaanalysistools==1.2.5",
+  "matplotlib>=3.8",
+  "nbclient>=0.10",
+  "numpy>=2.0,<2.4",
+  "rippleGW==0.2.1",
+  "scipy>=1.11",
+  "wdm-transform==0.5.0",
+]
+
+[tool.uv]
+package = false
