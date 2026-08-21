@@ -15,7 +15,9 @@ dependencies = [
   "jaxgb==0.2.1",
   "jupyter-book>=1.0,<2.0",
   "jupyterlab>=4.0",
-  "lisaanalysistools==1.2.5",
+  # The published 1.2.5 wheels are macOS-only.  Pages CI renders saved
+  # notebook outputs on Linux and does not execute this optional LISA runtime.
+  "lisaanalysistools==1.2.5 ; sys_platform == 'darwin'",
   "matplotlib>=3.8",
   "nbclient>=0.10",
   "numpy>=2.0,<2.4",
