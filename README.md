@@ -61,13 +61,26 @@ Use a release tag, not `main`, in released notebooks. A PyPI package is unnecess
 ## Local build and validation
 
 ```bash
-python -m pip install -r requirements-core.txt
-python build_course.py
-python validate_course.py
-python build_site.py
+uv sync --locked
+uv run --locked python build_course.py
+uv run --locked python validate_course.py
+uv run --locked python build_site.py
 ```
 
-`build_course.py` is the reviewable notebook source. Saved outputs are validated before deployment. `build_site.py` builds the JupyterBook into `_build/html`; the book configuration and navigation are in `_config.yml` and `_toc.yml`.
+`uv.lock` is the authoritative, reproducible local environment; update it deliberately with `uv lock` after changing `pyproject.toml`. `build_course.py` is the reviewable notebook source. Saved outputs are validated before deployment. `build_site.py` builds the JupyterBook into `_build/html`; the book configuration and navigation are in `_config.yml` and `_toc.yml`.
+
+### One-command pre-push check
+
+Install [uv](https://docs.astral.sh/uv/), then run:
+
+```bash
+bash scripts/prepush_course.sh
+```
+
+The script checks the lockfile, synchronises the environment, regenerates and executes all three notebooks, including the live
+GW150914 downloads in the LVK chapter, validates saved outputs, builds the
+JupyterBook, and runs `git diff --check`. It needs internet access and may take
+several minutes.
 
 ## Website deployment
 
