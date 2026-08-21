@@ -2,25 +2,26 @@
 
 This is a guided entry point to GW research. It preserves the full research workflow while keeping the reading list short. Items marked **first read** are the best starting points; other links are the next paper or tool to reach for.
 
-::::{admonition} Use this as a reading map, not a fourth lecture
+:::{admonition} Use this as a reading map, not a fourth lecture
 :class: tip
 
-:::{tab-set}
-:::{tab-item} After Notebook 00 — inference basics
+Follow the notebook-specific dropdowns below after the corresponding live chapter.
+:::
+
+:::{dropdown} After Notebook 00 — inference basics
 Read Thrane & Talbot first; then Christensen & Meyer for a GW-specific PE
 overview. Return to BayesLine/BayesWave when the PSD and likelihood assumptions
 become important.
 :::
-:::{tab-item} After Notebook 01 — LVK compact binaries
+:::{dropdown} After Notebook 01 — LVK compact binaries
 Start with Bilby and GWOSC, then read the population material only after the
 selection-effects exercise. Search papers explain how a trigger precedes PE.
 :::
-:::{tab-item} After Notebook 02 — LISA global fitting
+:::{dropdown} After Notebook 02 — LISA global fitting
 Start with the LISA mission and TDI papers, then GLASS and the LISA Data
 Challenge archive. The global-fit work makes most sense after the shared-
 residual exercise.
 :::
-::::
 
 ## Module 0: Foundational theory and fundamentals
 

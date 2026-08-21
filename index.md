@@ -27,7 +27,7 @@ $$\text{data} + \text{signal model} + \text{noise model}
 \longrightarrow \text{checks} \longrightarrow \text{claim}.$$
 
 The notebooks progress by changing the data, response, and noise model—not by
-changing Bayesian logic. Their live-route cards use JupyterBook tabs to separate
+changing Bayesian logic. Their live-route cards use JupyterBook dropdowns to separate
 the in-room sequence from follow-up material.
 :::
 
