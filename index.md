@@ -19,6 +19,18 @@ Each chapter contains more material than the live session covers. Advanced
 sampling, Fisher, and calibration material is marked as optional or extension
 content to read afterwards.
 
+:::{admonition} One inference map for the whole course
+:class: important
+
+$$\text{data} + \text{signal model} + \text{noise model}
+\longrightarrow \text{likelihood} \longrightarrow \text{posterior}
+\longrightarrow \text{checks} \longrightarrow \text{claim}.$$
+
+The notebooks progress by changing the data, response, and noise model—not by
+changing Bayesian logic. Their live-route cards use JupyterBook tabs to separate
+the in-room sequence from follow-up material.
+:::
+
 Use the {guilabel}`rocket` button on each chapter page to open the same
 notebook in Google Colab.
 

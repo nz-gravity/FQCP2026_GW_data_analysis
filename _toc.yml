@@ -4,3 +4,4 @@ chapters:
   - file: notebooks/00_basics_parameter_estimation
   - file: notebooks/01_lvk_compact_binary_parameter_estimation
   - file: notebooks/02_lisa_parameter_estimation_and_global_fit
+  - file: notebooks/03_literature

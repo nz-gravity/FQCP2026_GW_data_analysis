@@ -53,7 +53,8 @@ def write(name, title, cells):
 **FQCP 2026 · Bayesian parameter estimation for gravitational-wave sources**
 
 > Google Colab worksheet for early-stage graduate students. Run from top to
-> bottom; **Extension** sections may be skipped live.
+> bottom. In the JupyterBook, **Live route** cards identify the material for the
+> session; **Extension** sections may be skipped live.
 """)
     notebook = nbf.v4.new_notebook(cells=[header, *cells])
     notebook.metadata = {
@@ -97,6 +98,29 @@ Parameter estimation (PE) means learning about unknown parameters from data. By
 the end of this notebook you should be able to distinguish the four pieces of
 Bayes' theorem, calculate a small posterior by hand, and explain why a noise PSD
 appears in a gravitational-wave likelihood.
+
+::::{admonition} Live route — 30 minutes
+:class: tip
+
+:::{tab-set}
+:::{tab-item} In the room
+Sections 1–4: model, prior predictive check, likelihood/grid posterior, and
+posterior predictive check. End with the PSD/Whittle bridge in Section 7.
+:::
+:::{tab-item} Read afterwards
+Sections 5–6 explain MCMC and nested sampling; the Fisher and P–P sections are
+reference material for returning to the notebook later.
+:::
+::::
+
+**One map for the whole course:**
+
+$$\text{data} + \text{signal model} + \text{noise model}
+\longrightarrow \text{likelihood} \longrightarrow \text{posterior}
+\longrightarrow \text{checks} \longrightarrow \text{claim}.$$
+
+The LVK and LISA notebooks change the data, response, and noise model—not this
+logic.
 
 We will follow the teaching sequence used in the NZ Bilby CBC workshop:
 
@@ -224,6 +248,22 @@ for ax,grid,density,name,truth in zip(axes,[m_grid,c_grid],[p_m,p_c],["m","c"],t
     ax.axvspan(q[0],q[2],alpha=.2); ax.set(xlabel=name,ylabel="marginal posterior",title=f"median {q[1]:.2f}; 90% [{q[0]:.2f}, {q[2]:.2f}]")
 plt.show()"""
         ),
+        md(r""":::{admonition} A correct sampler cannot repair a wrong likelihood
+:class: warning
+
+Keep the same data but tell the likelihood that the noise standard deviation is
+half its true value. The posterior becomes narrower because the calculation
+thinks the data are more informative—not because it learned more. This is why
+we check residuals and the noise/PSD model, rather than treating a sharp
+posterior as success.
+:::
+"""),
+        code("""wrong_sigma=sigma/2
+wrong_logL=np.array([[-.5*np.sum(((data-signal_model(time,m,c))/wrong_sigma)**2) for c in c_grid] for m in m_grid])
+wrong_posterior=np.exp(wrong_logL-wrong_logL.max()); wrong_posterior/=np.trapezoid(np.trapezoid(wrong_posterior,c_grid,axis=1),m_grid)
+wrong_p_m=np.trapezoid(wrong_posterior,c_grid,axis=1)
+fig,ax=plt.subplots(figsize=(7,3.2)); ax.plot(m_grid,p_m,label="correct noise model"); ax.plot(m_grid,wrong_p_m,label="assumed noise is too small"); ax.axvline(true_parameters["m"],color="k",ls="--",label="injected slope")
+ax.set(xlabel="slope m",ylabel="marginal posterior density",title="Wrong noise model: overconfident, not more informed"); ax.legend(); plt.show()"""),
         md(r"""### What does the evidence do?
 
 For a model $M$, the evidence averages the likelihood over its **normalised**
@@ -888,6 +928,20 @@ plt.show()
 print(f"Fisher   sd: m = {fisher_sd[0]:.4f}, c = {fisher_sd[1]:.4f}")
 print(f"Sampler  sd: m = {samples[:, 0].std():.4f}, c = {samples[:, 1].std():.4f}")
 print(f"m-c correlation coefficient: {correlation:+.3f}")"""),
+        md(r""":::{admonition} Different checks answer different questions
+:class: warning
+
+| Check | What it can support | What it cannot establish alone |
+| --- | --- | --- |
+| trace / ESS / convergence diagnostic | whether this numerical run explored its target | whether the target model describes nature |
+| posterior predictive check | whether simulated data resemble observed data in chosen summaries | coverage across repeated datasets |
+| truth inside one 90% interval | a useful debugging observation | a calibrated 90% interval |
+| P–P test over many simulations | end-to-end coverage under the simulated model | robustness to unmodelled systematics |
+
+Never promote “the injected truth was inside the interval once” to a validation
+claim. The P–P experiment below is the right scale of test for calibration.
+:::
+"""),
         md(
             """## Extension: is the posterior actually calibrated?
 
@@ -1054,6 +1108,34 @@ filtering**, the search stage that finds the signal and produces the trigger.
 Section 4 then estimates parameters from it, including a two-dimensional
 posterior that shows the distance-inclination degeneracy behind
 gravitational-wave distance uncertainties."""),
+        md(r"""::::{admonition} Live route — 45 minutes
+:class: tip
+
+:::{tab-set}
+:::{tab-item} In the room
+Sections 1–5: CBC parameters, detector response, matched filtering, the manual
+likelihood, and network localisation. Run the distance–inclination posterior.
+:::
+:::{tab-item} Read afterwards
+Section 6 is a compact population-inference bridge; Section 7 is a genuine
+Bilby/dynesty run and can take a few minutes in Colab.
+:::
+::::
+
+:::{admonition} Do not collapse these three questions
+:class: important
+
+| Task | Question | Typical output |
+| --- | --- | --- |
+| detection/search | Is there a candidate inconsistent with noise? | trigger, ranking statistic, false-alarm control |
+| parameter estimation | Which source parameters remain plausible? | posterior, credible intervals, posterior predictions |
+| population inference | What generated many detected events? | hyperposterior, selection-aware population model |
+
+Matched filtering in Section 3 is the **search** bridge. The likelihood in
+Section 4 begins **parameter estimation**. Section 6 asks the population
+question and must account for what the detectors were able to find.
+:::
+"""),
         code(
             """import os,sys,subprocess,importlib.util
 IN_COLAB="COLAB_RELEASE_TAG" in os.environ
@@ -2158,6 +2240,20 @@ JaxGB for an actual moving-constellation Galactic-binary response. You will
 first calculate a frequency likelihood manually, then verify the same objects
 through the LISA Analysis Tools interface. The final exercise is a miniature
 version of the LATW global-fit challenge."""),
+        md(r"""::::{admonition} Live route — 40 minutes
+:class: tip
+
+:::{tab-set}
+:::{tab-item} In the room
+Sections 1–4: moving response, sensitivity/foreground, the complications lab,
+and a manual likelihood. Then follow the global-fit wheel in Section 5.
+:::
+:::{tab-item} Read afterwards
+The Fisher extension, the package-level route in Section 4b, the realistic
+miniature fit, and unknown-source-count challenge are designed for follow-up.
+:::
+::::
+"""),
         code(
             """import os,sys,subprocess,importlib.util
 IN_COLAB="COLAB_RELEASE_TAG" in os.environ
@@ -2192,6 +2288,22 @@ Ground-based detectors observe roughly tens of Hz to kHz. LISA targets approxima
 
 Unlike a static right-angle detector, LISA is a heliocentric triangle that cartwheels as it orbits. Six delayed one-way laser links are combined into time-delay interferometry (TDI) variables. Orbital modulation helps localisation, while finite arms create a frequency-dependent response."""
         ),
+        md(r""":::{admonition} What is the LISA data object?
+:class: important
+
+$$\text{inter-spacecraft phase measurements}
+\longrightarrow \text{delayed TDI combinations}
+\longrightarrow (A,E,T)\ \text{channels}
+\longrightarrow \text{response + PSD}
+\longrightarrow \text{likelihood}.$$
+
+TDI is not a cosmetic re-labelling of a strain time series: delayed link
+measurements cancel laser frequency noise and define the channels whose
+response and noise enter inference. In the simple likelihood below we use A and
+E as independent channels; this is an analysis approximation to state and
+check, not a property of every possible data product.
+:::
+"""),
         md("""### Why LISA parameter estimation is unusually coupled
 
 | Feature | Typical transient LVK CBC analysis | LISA analysis |
@@ -3067,6 +3179,16 @@ axes[1, 1].set(xlabel="frequency [mHz]", ylabel="whitened amplitude",
 axes[1, 1].legend(fontsize=8)
 fig.tight_layout()
 plt.show()'''),
+        md(r""":::{admonition} Residuals carry the history of a global fit
+:class: warning
+
+After subtracting one imperfect source, its remaining error is no longer
+labelled “source 1”: it is structure in the residual. The next source block or
+the noise block can absorb it, biasing their inferences. That is why global
+methods repeatedly update shared residuals (or sample all blocks jointly), and
+why “the residual looks quiet” is a necessary but not sufficient check.
+:::
+"""),
         md(r"""**Look at the GB2 trace before trusting any number.** The
 weakest source (injected at SNR 12) collapses to zero amplitude early on and
 stays there for several hundred sweeps before recovering. Once its amplitude
