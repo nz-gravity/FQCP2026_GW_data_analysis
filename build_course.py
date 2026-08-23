@@ -219,6 +219,44 @@ axes[1].set(xlabel="time",ylabel="observation",title="Prior predictive curves");
 
 Changing the assumed noise scale changes the width of the posterior. If the noise model is wrong, a mathematically correct sampler still gives a misleading answer."""
         ),
+        md(
+            r"""### Code studio: write the Gaussian log likelihood
+
+Take 5 minutes in pairs. Translate the equation above into NumPy.
+
+- Compute the residual with `signal_model`.
+- Return one scalar log likelihood.
+- Keep the normalisation term: it matters when noise models are compared.
+- Run the self-check. A correct function reports `check passed`.
+
+The cell is deliberately safe to run before you fill it in."""
+        ),
+        code("""def student_log_likelihood(m, c):
+    # YOUR CODE HERE
+    return None
+
+student_value = student_log_likelihood(true_parameters["m"], true_parameters["c"])
+if student_value is None:
+    print("Your turn: replace the placeholder in student_log_likelihood.")
+else:
+    residual = data - signal_model(time, true_parameters["m"], true_parameters["c"])
+    expected = -0.5 * np.sum((residual / sigma) ** 2 + np.log(2 * np.pi * sigma**2))
+    np.testing.assert_allclose(student_value, expected)
+    print("check passed")"""),
+        md(
+            r"""<details>
+<summary>Show one possible solution</summary>
+
+```python
+def student_log_likelihood(m, c):
+    residual = data - signal_model(time, m, c)
+    return -0.5 * np.sum(
+        (residual / sigma) ** 2 + np.log(2 * np.pi * sigma**2)
+    )
+```
+
+</details>"""
+        ),
         code("""def log_likelihood(m,c):
     residual=data-signal_model(time,m,c)
     return -.5*np.sum((residual/sigma)**2+np.log(2*np.pi*sigma**2))
@@ -1671,6 +1709,42 @@ display(HTML(filter_animation.to_jshtml()))"""),
 - Compare with the dephasing animation in Section 1: the SNR loss here is that
   dephasing, integrated over the band."""
         ),
+        md(
+            """### Code studio: build a tiny template bank
+
+Write a function that loops over chirp-mass offsets, builds each trial waveform,
+runs `matched_filter`, and stores the largest recovered SNR. Use only the
+objects already defined above. The peak should lie close to zero offset."""
+        ),
+        code("""def student_template_bank_scan(offsets):
+    # YOUR CODE HERE
+    return None
+
+student_bank = student_template_bank_scan(np.linspace(-2, 2, 9))
+if student_bank is None:
+    print("Your turn: return one peak SNR for every trial chirp-mass offset.")
+else:
+    student_bank = np.asarray(student_bank)
+    assert student_bank.shape == (9,)
+    best_offset = np.linspace(-2, 2, 9)[np.argmax(student_bank)]
+    assert abs(best_offset) <= 0.5
+    print(f"check passed; best template offset = {best_offset:+.1f} solar masses")"""),
+        md(
+            r"""<details>
+<summary>Show one possible solution</summary>
+
+```python
+def student_template_bank_scan(offsets):
+    peaks = []
+    for offset in offsets:
+        trial = polarizations(theta_true.at[0].set(float(theta_true[0]) + offset))
+        snr_series, _ = matched_filter(h1, trial)
+        peaks.append(snr_series.max())
+    return np.asarray(peaks)
+```
+
+</details>"""
+        ),
         code("""mismatch_offsets = np.linspace(-4, 4, 25)
 recovered_peaks = []
 for offset in mismatch_offsets:
@@ -2186,22 +2260,36 @@ plt.show()'''),
   (about 15 parameters), which is why production runs take hours on many
   cores rather than two minutes on one."""),
         md(
-            r"""## 8. Real data: GW150914
+            r"""## 8. Real data: a restricted GW150914 analysis
 
-The controlled injection above makes a known answer useful for debugging. This
-is the real-data case study: download public H1/L1 strain, estimate an
-off-source PSD, inspect the time--frequency data, then compare a deliberately
-restricted classroom estimate with the official LVK posterior. The comparison
-is a **model check**, not an attempted reproduction of the LVK analysis.
+The controlled injection above tests the sampler against a known answer. We now
+start a **new analysis** using public H1/L1 strain around GW150914 and noise
+PSDs estimated from separate off-source data.
 
-:::{admonition} What differs from the LVK result?
+To keep this live exercise fast, we scan detector-frame chirp mass
+$\mathcal M^{\rm det}$ and mass ratio $q$ with a non-spinning IMRPhenomD
+template. At every grid point we maximise over a small arrival-time window and
+over one complex amplitude per detector:
+
+$$
+\log\Lambda_{\rm prof}(\mathcal M^{\rm det},q)
+=\frac12\sum_I\max_{\tau_I}\rho_I^2(\tau_I).
+$$
+
+The complex amplitude profiles over phase and amplitude. We then integrate the
+profile likelihood over a flat $q$ grid. This is a genuine real-data
+matched-filter inference, but the resulting **restricted density is not the
+full LVK posterior**: profiling is not marginalisation, and independent
+detector amplitudes discard coherent sky and polarisation information.
+
+:::{admonition} Scientific boundary
 :class: warning
 
-The official posterior marginalises over a far broader waveform, calibration,
-noise, prior, and parameter model. Agreement in the mass scale is encouraging;
-matching every marginal is neither expected nor a valid success criterion.
-:::
-"""
+Use this calculation to recover and interpret the detector-frame chirp-mass
+scale. A production analysis samples coherent extrinsic parameters, spins,
+calibration and nuisance models, and marginalises rather than profiling over
+unknowns.
+:::"""
         ),
         code(r'''import h5py
 from pathlib import Path
@@ -2241,72 +2329,279 @@ for ax, ifo in zip(axes, ("H1", "L1")):
     ax.set(yscale="log", xlabel="time from event [s]", ylabel="frequency [Hz]", title=f"{ifo}: Q-transform")
     fig.colorbar(image, ax=ax, label="normalised energy")
 plt.show()'''),
+        md(
+            r"""### Build the real-data likelihood
+
+- Downsample the cached 4096-Hz strain to the notebook's 1024-Hz working rate.
+- Analyse the four seconds centred on the event.
+- Estimate each detector PSD from a separate 128-second segment using median
+  Welch averaging.
+- Search only within $\pm60$ ms of the nominal event time, wide enough for the
+  H1--L1 delay and the restricted waveform's timing uncertainty."""
+        ),
+        code(r'''from scipy.special import logsumexp
+
+REAL_SAMPLE_RATE = 1024
+REAL_DURATION = 4.0
+REAL_F_MIN = 30.0
+REAL_F_MAX = 350.0
+REAL_START = GW150914_GPS - REAL_DURATION / 2
+
+real_ifos = bilby.gw.detector.InterferometerList([])
+for name in ("H1", "L1"):
+    analysis = raw[name].resample(REAL_SAMPLE_RATE).crop(
+        REAL_START, REAL_START + REAL_DURATION
+    )
+    noise = off_source[name].resample(REAL_SAMPLE_RATE)
+    noise_psd = noise.psd(
+        fftlength=REAL_DURATION,
+        overlap=REAL_DURATION / 2,
+        window=("tukey", 0.2),
+        method="median",
+    )
+    ifo = bilby.gw.detector.get_empty_interferometer(name)
+    ifo.minimum_frequency = REAL_F_MIN
+    ifo.maximum_frequency = REAL_F_MAX
+    ifo.power_spectral_density = bilby.gw.detector.PowerSpectralDensity(
+        frequency_array=noise_psd.frequencies.value,
+        psd_array=noise_psd.value,
+    )
+    ifo.set_strain_data_from_gwpy_timeseries(analysis)
+    real_ifos.append(ifo)
+
+real_frequency = real_ifos[0].frequency_array
+real_df = real_frequency[1] - real_frequency[0]
+real_n_samples = int(REAL_SAMPLE_RATE * REAL_DURATION)
+real_band = (real_frequency >= REAL_F_MIN) & (real_frequency <= REAL_F_MAX)
+real_time_offsets = (
+    np.arange(real_n_samples) - real_n_samples // 2
+) / REAL_SAMPLE_RATE
+real_time_window = np.abs(real_time_offsets) <= 0.060
+event_time_in_segment = GW150914_GPS - real_ifos[0].strain_data.start_time
+
+
+def real_template(chirp_mass_detector, mass_ratio):
+    """Non-spinning IMRPhenomD plus polarisation on the real-data grid."""
+    symmetric_mass_ratio = mass_ratio / (1 + mass_ratio) ** 2
+    parameters = jnp.array(
+        [
+            chirp_mass_detector,
+            symmetric_mass_ratio,
+            0.0,
+            0.0,
+            1.0,
+            event_time_in_segment,
+            0.0,
+            0.0,
+        ]
+    )
+    plus, _ = jitted_waveform(
+        jnp.asarray(real_frequency[real_band]),
+        parameters,
+        jnp.asarray(REAL_F_MIN),
+    )
+    template = np.zeros(real_frequency.size, dtype=complex)
+    template[real_band] = np.asarray(plus)
+    return template
+
+
+def profile_detector(ifo, template, return_model=False):
+    """Profile one detector over a complex amplitude and a narrow time shift."""
+    psd = ifo.power_spectral_density_array
+    usable = real_band & np.isfinite(psd) & (psd > 0)
+    integrand = np.zeros(real_frequency.size, dtype=complex)
+    integrand[usable] = (
+        ifo.frequency_domain_strain[usable]
+        * np.conj(template[usable])
+        / psd[usable]
+    )
+    padded = np.zeros(real_n_samples, dtype=complex)
+    padded[: integrand.size] = integrand
+    complex_overlap = np.fft.fftshift(
+        4 * real_df * real_n_samples * np.fft.ifft(padded)
+    )
+    template_norm = 4 * real_df * np.sum(
+        np.abs(template[usable]) ** 2 / psd[usable]
+    )
+    allowed_indices = np.flatnonzero(real_time_window)
+    peak_index = allowed_indices[
+        np.argmax(np.abs(complex_overlap[real_time_window]))
+    ]
+    peak_snr = np.abs(complex_overlap[peak_index]) / np.sqrt(template_norm)
+    peak_time = real_time_offsets[peak_index]
+    if not return_model:
+        return float(peak_snr), float(peak_time)
+    complex_scale = complex_overlap[peak_index] / template_norm
+    shifted_template = template * np.exp(-2j * np.pi * real_frequency * peak_time)
+    return float(peak_snr), float(peak_time), complex_scale * shifted_template
+
+
+real_mc_grid = np.linspace(29.0, 33.5, 91)
+real_q_grid = np.linspace(0.4, 1.0, 25)
+real_log_profile = np.empty((real_mc_grid.size, real_q_grid.size))
+for i, chirp_mass_detector in enumerate(real_mc_grid):
+    for j, mass_ratio in enumerate(real_q_grid):
+        template = real_template(chirp_mass_detector, mass_ratio)
+        squared_network_snr = sum(
+            profile_detector(ifo, template)[0] ** 2 for ifo in real_ifos
+        )
+        real_log_profile[i, j] = 0.5 * squared_network_snr
+
+# Flat priors on the displayed detector-frame chirp-mass and mass-ratio grids.
+real_log_mc_density = logsumexp(real_log_profile, axis=1)
+real_mc_density = np.exp(real_log_mc_density - real_log_mc_density.max())
+real_mc_density /= np.trapezoid(real_mc_density, real_mc_grid)
+real_low, real_median, real_high = credible_interval(
+    real_mc_grid, real_mc_density
+)
+best_i, best_j = np.unravel_index(
+    np.argmax(real_log_profile), real_log_profile.shape
+)
+real_best_mc = real_mc_grid[best_i]
+real_best_q = real_q_grid[best_j]
+real_best_template = real_template(real_best_mc, real_best_q)
+real_best_snr = np.sqrt(2 * real_log_profile[best_i, best_j])
+
+print(f"profile maximum: Mc_det={real_best_mc:.2f} Msun, q={real_best_q:.2f}")
+print(
+    f"restricted Mc_det density: {real_median:.2f} "
+    f"[{real_low:.2f}, {real_high:.2f}] Msun"
+)
+print(f"profiled H1+L1 network SNR: {real_best_snr:.1f}")'''),
+        md(
+            r"""### Compare like with like
+
+The release contains several posterior datasets. Select `Overall_posterior`
+explicitly and use its `m1_detector_frame_Msun` and
+`m2_detector_frame_Msun` fields. We therefore compare detector-frame chirp
+mass with detector-frame chirp mass; no accidental source/detector-frame mixing
+is allowed."""
+        ),
         code(r'''posterior_path = cache / "GW150914_GWTC-1.hdf5"
 if not posterior_path.exists():
     urlretrieve(GWTC1_POSTERIOR_URL, posterior_path)
 
-def named_posteriors(h5):
-    found = []
-    def visit(_, obj):
-        if isinstance(obj, h5py.Dataset) and obj.dtype.names:
-            names = set(obj.dtype.names)
-            if (
-                {"mass_1_source", "mass_2_source"} <= names
-                or {"mass_1", "mass_2"} <= names
-                or {"m1_detector_frame_Msun", "m2_detector_frame_Msun"} <= names
-            ):
-                found.append(obj[...])
-    h5.visititems(visit)
-    if not found:
-        raise KeyError("Could not locate a named mass posterior in the GWTC-1 file")
-    return found[0]
-
 with h5py.File(posterior_path, "r") as h5:
-    lvk = named_posteriors(h5)
-m1_name = next(name for name in ("mass_1_source", "mass_1", "m1_detector_frame_Msun") if name in lvk.dtype.names)
-m2_name = next(name for name in ("mass_2_source", "mass_2", "m2_detector_frame_Msun") if name in lvk.dtype.names)
-lvk_chirp_mass = (lvk[m1_name]*lvk[m2_name])**(3/5)/(lvk[m1_name]+lvk[m2_name])**(1/5)
+    if "Overall_posterior" not in h5:
+        raise KeyError("GWTC-1 file does not contain Overall_posterior")
+    lvk = h5["Overall_posterior"][...]
 
-# `full_result` is the restricted classroom run from Section 7; it is not an LVK reproduction.
-fig, ax = plt.subplots(figsize=(7.5, 3.4))
-bins = np.linspace(20, 36, 60)
-ax.hist(lvk_chirp_mass, bins=bins, density=True, histtype="step", lw=2, label="LVK GWTC-1 posterior")
-ax.hist(full_result.posterior["chirp_mass"], bins=bins, density=True, histtype="step", lw=2, label="our restricted classroom model")
-ax.set(xlabel=r"chirp mass [$M_\odot$]", ylabel="posterior density", title="GW150914: compare models before comparing answers")
-ax.legend(); plt.show()
+required_mass_fields = {"m1_detector_frame_Msun", "m2_detector_frame_Msun"}
+if not required_mass_fields <= set(lvk.dtype.names or ()):
+    raise KeyError(f"Missing detector-frame mass fields: {required_mass_fields}")
 
-for label, values in (("LVK", lvk_chirp_mass), ("classroom", full_result.posterior["chirp_mass"])):
-    low, median, high = np.percentile(values, [5, 50, 95])
-    print(f"{label:10s}: {median:.2f} [{low:.2f}, {high:.2f}] solar masses")'''),
+lvk_m1_detector = lvk["m1_detector_frame_Msun"]
+lvk_m2_detector = lvk["m2_detector_frame_Msun"]
+lvk_chirp_mass_detector = (
+    (lvk_m1_detector * lvk_m2_detector) ** (3 / 5)
+    / (lvk_m1_detector + lvk_m2_detector) ** (1 / 5)
+)
+lvk_low, lvk_median, lvk_high = np.percentile(
+    lvk_chirp_mass_detector, [5, 50, 95]
+)
+
+fig, axes = plt.subplots(1, 2, figsize=(12, 3.6))
+levels = real_log_profile.max() - np.array([8.0, 4.5, 2.0, 0.5])
+axes[0].contour(
+    real_mc_grid,
+    real_q_grid,
+    real_log_profile.T,
+    levels=np.sort(levels),
+    cmap="magma",
+)
+axes[0].plot(real_best_mc, real_best_q, "C3*", ms=10, label="profile maximum")
+axes[0].set(
+    xlabel=r"detector-frame chirp mass $\mathcal{M}^{\rm det}$ [$M_\odot$]",
+    ylabel="mass ratio q",
+    title="Real H1/L1 profile likelihood",
+)
+axes[0].legend()
+
+lvk_bins = np.linspace(28.5, 34.0, 70)
+axes[1].hist(
+    lvk_chirp_mass_detector,
+    bins=lvk_bins,
+    density=True,
+    histtype="step",
+    lw=2,
+    label="LVK GWTC-1 Overall posterior",
+)
+axes[1].plot(
+    real_mc_grid,
+    real_mc_density,
+    lw=2,
+    label="restricted real-data density",
+)
+axes[1].set(
+    xlabel=r"detector-frame chirp mass $\mathcal{M}^{\rm det}$ [$M_\odot$]",
+    ylabel="density",
+    title="Same event and same mass frame",
+)
+axes[1].legend()
+plt.show()
+
+print(
+    f"LVK Overall: {lvk_median:.2f} "
+    f"[{lvk_low:.2f}, {lvk_high:.2f}] Msun"
+)
+print(
+    f"restricted:  {real_median:.2f} "
+    f"[{real_low:.2f}, {real_high:.2f}] Msun"
+)
+assert lvk_low <= real_median <= lvk_high
+print("frame-and-scale check passed")'''),
         md(
-            """### Frequency-domain posterior prediction
+            """### Frequency-domain model check
 
-For each detector, compare the analysis-data ASD, the off-source noise ASD, and
-the frequency-domain waveform posterior from the restricted run. This is a
-posterior-predictive visual diagnostic: a plausible signal contribution should
-occupy the informative band, but it does not prove that the noise, waveform, or
-prior model is complete."""
+At the profile maximum, reconstruct each detector's independently profiled
+waveform. Data, noise ASD, and model are plotted in the same
+strain-per-square-root-Hz convention. This checks where the fitted waveform
+draws its support; it is not a posterior-predictive distribution."""
         ),
         code(r'''fig, axes = plt.subplots(1, 2, figsize=(12, 3.5), sharey=True)
-posterior_draws = full_result.posterior.sample(min(30, len(full_result.posterior)), random_state=4)
-for ax, ifo in zip(axes, ("H1", "L1")):
-    data_fft = np.fft.rfft(raw[ifo].value * np.hanning(len(raw[ifo])))
-    freqs = np.fft.rfftfreq(len(raw[ifo]), raw[ifo].dt.value)
-    psd = off_source[ifo].psd(fftlength=4, overlap=2, window=("tukey", 0.1))
-    ax.loglog(freqs[1:], np.sqrt(2*raw[ifo].dt.value/len(raw[ifo]))*np.abs(data_fft[1:]), color="0.55", label="analysis data ASD proxy")
-    ax.loglog(psd.frequencies.value[1:], np.sqrt(psd.value[1:]), color="k", lw=1.4, label="off-source ASD")
-    for _, draw in posterior_draws.iterrows():
-        # Shape-only draw: detector projection/extrinsic parameters remain fixed in this classroom model.
-        hp = polarizations(ripple_parameters(chirp_mass=draw.chirp_mass, distance=draw.luminosity_distance, inclination=draw.theta_jn))["plus"]
-        ax.loglog(frequency[mask], 2*np.sqrt(frequency[mask])*np.abs(hp[mask]), color="C3", alpha=.12)
-    ax.set(xlim=(30, 350), ylim=(2e-24, 2e-20), xlabel="frequency [Hz]", title=f"{ifo}: posterior-predictive frequency view")
-axes[0].set_ylabel(r"amplitude spectral density [1/$\sqrt{\rm Hz}$]"); axes[0].legend(fontsize=8); plt.show()'''),
+for ax, ifo in zip(axes, real_ifos):
+    peak_snr, peak_time, best_model = profile_detector(
+        ifo, real_best_template, return_model=True
+    )
+    amplitude_factor = np.sqrt(2 / REAL_DURATION)
+    ax.loglog(
+        real_frequency[real_band],
+        amplitude_factor * np.abs(ifo.frequency_domain_strain[real_band]),
+        color="0.65",
+        lw=0.7,
+        label="four-second data amplitude",
+    )
+    ax.loglog(
+        real_frequency[real_band],
+        np.sqrt(ifo.power_spectral_density_array[real_band]),
+        color="k",
+        lw=1.3,
+        label="off-source ASD",
+    )
+    ax.loglog(
+        real_frequency[real_band],
+        amplitude_factor * np.abs(best_model[real_band]),
+        color="C3",
+        lw=1.5,
+        label="profiled best-fit model",
+    )
+    ax.set(
+        xlim=(30, 350),
+        ylim=(2e-24, 3e-21),
+        xlabel="frequency [Hz]",
+        title=f"{ifo.name}: SNR {peak_snr:.1f}, time shift {1e3*peak_time:+.1f} ms",
+    )
+    tidy_log_frequency(ax, ticks=(30, 50, 100, 200, 350))
+axes[0].set_ylabel(r"amplitude equivalent [strain/$\sqrt{\rm Hz}$]")
+axes[0].legend(fontsize=8)
+plt.show()'''),
         md(
             """## Boundary and extensions
 
 - Section 7 frees four parameters; production BBH analyses free about fifteen, plus nuisance and systematic choices.
-- Design PSDs and zero noise are pedagogical. Real data contain PSD uncertainty, lines, glitches, non-stationarity, and calibration uncertainty.
-- Use the NZ workshop's GW150914 section or [GWOSC tutorials](https://gwosc.org/tutorials/) as a real-data follow-up.
+- Section 8 uses real strain but profiles detector amplitudes, phases and times independently. It is intentionally less complete than coherent Bayesian PE.
+- Real data contain PSD uncertainty, lines, glitches, non-stationarity, and calibration uncertainty; none is marginalised here.
+- Replace the profile grid with a coherent Bilby likelihood to turn this into a full real-data follow-up.
 - Extend the mock catalogue by giving each event a mass posterior instead of an exact mass.
 
 Adapted substantially from `nz_bilby_cbc_workshop_2024`, with its injection → PSD → prior → likelihood → result structure."""
@@ -2399,7 +2694,9 @@ config.update("jax_enable_x64",True)
 warnings.filterwarnings("ignore", message="IProgress not found.*")
 from lisatools.sensitivity import A1TDISens,E1TDISens,SensitivityMatrix,get_sensitivity
 from lisatools.utils.constants import YRSID_SI
-from lisaorbits import EqualArmlengthOrbits
+from lisaorbits import EqualArmlengthOrbits,KeplerianOrbits,LINKS
+from lisaorbits.utils import emitter,receiver
+from lisaconstants import c as C_SI
 from jaxgb.jaxgb import JaxGB
 from jaxgb.params import GBObject
 from wdm_transform import TimeSeries as WDMTimeSeries, WDM, wdm_inner_product, wdm_noise_variance
@@ -2458,8 +2755,27 @@ shorter massive-black-hole-binary signals.
 [LISA Data Challenge](https://lisa-ldc.in2p3.fr/). The key lesson is visual:
 there is no pristine data segment belonging to only one source class.*"""
         ),
+        md(
+            """### 1a. Choose the orbit model
+
+The orbit object supplies spacecraft positions, directed link vectors, and
+retarded light-travel times. The default below keeps the approximately
+equal-arm configuration. To regenerate the link and TDI data with flexing,
+unequal arms, comment the first assignment and uncomment the second, then rerun
+from this cell."""
+        ),
         code(
-            """year=YRSID_SI; AU=149597870700.; orbits=EqualArmlengthOrbits(); times=np.linspace(0,year,240)
+            """year=YRSID_SI; AU=149597870700.
+
+# Default executed configuration: approximately equal arms.
+orbits=EqualArmlengthOrbits()
+
+# BREATHING-ORBIT RE-RUN: comment the line above, uncomment this one, and
+# rerun from here through the XYZ/AET cells below.
+# orbits=KeplerianOrbits()
+
+print(f"active orbit model: {type(orbits).__name__}")
+times=np.linspace(0,year,240)
 positions=np.asarray(orbits.compute_position(times,[1,2,3])); fig,ax=plt.subplots(figsize=(5.4,5.4))
 for i,label in enumerate(["spacecraft 1","spacecraft 2","spacecraft 3"]): ax.plot(positions[:,i,0]/AU,positions[:,i,1]/AU,label=label)
 ax.plot(0,0,"o",color="gold",mec="k",label="Sun"); ax.set(xlabel="heliocentric x [AU]",ylabel="heliocentric y [AU]",title="An explicit LISA orbit model",aspect="equal"); ax.legend(); plt.show()"""
@@ -2484,6 +2800,273 @@ def animate_constellation(frame):
     ax.set_title(f"LISA constellation: day {times[i]/86400:.0f}"); return (triangle,*trail_lines)
 orbit_animation=FuncAnimation(fig,animate_constellation,frames=len(orbit_frames),interval=90)
 plt.close(fig); display(HTML(orbit_animation.to_jshtml()))"""
+        ),
+        md(
+            r"""### 1b. Orbits become six directed delays
+
+For a measurement received at time $t$ on spacecraft $j$, a photon was emitted
+from spacecraft $i$ at the retarded time $t-L_{ij}(t)$, where
+$L_{ij}$ is the **light-travel time in seconds**:
+
+$$
+L_{ij}(t)=t_{\rm receive}-t_{\rm emit},\qquad
+\hat{\mathbf n}_{ij}(t)=
+\frac{\mathbf x_j(t)-\mathbf x_i(t-L_{ij})}
+{cL_{ij}(t)}.
+$$
+
+The two directions along one geometric arm are distinct links. Even an
+approximately equal-arm moving constellation has small directional differences
+from the constellation motion. `KeplerianOrbits` adds visible arm flexing."""
+        ),
+        code(
+            """link_codes=np.asarray(LINKS)
+link_labels=[f"{int(emitter(code))} to {int(receiver(code))}" for code in link_codes]
+delay_times=np.linspace(0,year,366)
+selected_light_times=np.asarray(orbits.compute_ltt(delay_times,link_codes))
+
+# This cheap reference comparison shows breathing without changing the active
+# data-generation configuration selected above.
+equal_reference=EqualArmlengthOrbits()
+breathing_reference=KeplerianOrbits()
+equal_delays=np.asarray(equal_reference.compute_ltt(delay_times,link_codes))
+breathing_delays=np.asarray(breathing_reference.compute_ltt(delay_times,link_codes))
+
+fig,axes=plt.subplots(1,2,figsize=(12,3.6))
+for column,label in enumerate(link_labels):
+    axes[0].plot(delay_times/86400,1e3*(selected_light_times[:,column]-selected_light_times.mean()),label=label)
+axes[0].set(xlabel="mission time [days]",ylabel="delay minus six-link mean [ms]",title=f"Directed delays: {type(orbits).__name__}")
+axes[0].legend(ncol=2,fontsize=7)
+
+# Average the two directions on each geometric arm before comparing flexing.
+arm_pairs=[(0,5),(1,4),(2,3)]
+for first,second in arm_pairs:
+    axes[1].plot(delay_times/86400,C_SI*0.5*(equal_delays[:,first]+equal_delays[:,second])/1e9,color="C0",alpha=.65)
+    axes[1].plot(delay_times/86400,C_SI*0.5*(breathing_delays[:,first]+breathing_delays[:,second])/1e9,color="C3",alpha=.75)
+axes[1].plot([],[],color="C0",label="equal-arm reference")
+axes[1].plot([],[],color="C3",label="breathing reference")
+axes[1].set(xlabel="mission time [days]",ylabel="two-way-averaged arm length [Gm]",title="Keplerian model visibly breathes")
+axes[1].legend(); fig.tight_layout(); plt.show()
+
+print(f"active six-link delay span: {1e3*np.ptp(selected_light_times):.3f} ms")
+print(f"breathing-reference delay span: {1e3*np.ptp(breathing_delays):.3f} ms")"""
+        ),
+        md(
+            r"""### 1c. Generate the one-way link data
+
+We now generate a compact **GW-only fractional-frequency link dataset** for a
+single monochromatic plane wave. For the convention used here, $i\to j$ means
+emitter $i$, receiver $j$, and
+
+$$
+y^{\rm GW}_{ij}(t)=\frac12
+\frac{\hat{\mathbf n}_{ij}\!\cdot
+\left[\mathbf h(u_j)-\mathbf h(u_i)\right]\!\cdot
+\hat{\mathbf n}_{ij}}
+{1-\hat{\mathbf k}\cdot\hat{\mathbf n}_{ij}},
+$$
+
+with $u_j=t-\hat{\mathbf k}\cdot\mathbf x_j(t)/c$ and
+$u_i=t-L_{ij}(t)-\hat{\mathbf k}\cdot
+\mathbf x_i(t-L_{ij})/c$. The two metric samples are the reception and
+emission endpoints of one laser link.
+
+This cell does not simulate the full phasemeter budget: laser, proof-mass,
+optical-path, clock, and other noises are deliberately omitted so the geometry
+and delay algebra remain visible."""
+        ),
+        code(
+            r'''TDI_DT=2.0
+TDI_DURATION_DAYS=0.25
+TDI_START_DAY=90.0
+TDI_MARGIN=60.0  # longer than the four nested light-time delays used below
+tdi_start=TDI_START_DAY*86400
+tdi_duration=TDI_DURATION_DAYS*86400
+tdi_time_full=np.arange(tdi_start-TDI_MARGIN,tdi_start+tdi_duration+TDI_DT,TDI_DT)
+tdi_light_times=np.asarray(orbits.compute_ltt(tdi_time_full,link_codes))
+
+GW_LINK_FREQUENCY=3e-3
+GW_LINK_AMPLITUDE=1e-20
+source_ra,source_dec=1.0,0.4
+source_direction=np.array([
+    np.cos(source_dec)*np.cos(source_ra),
+    np.cos(source_dec)*np.sin(source_ra),
+    np.sin(source_dec),
+])
+propagation_direction=-source_direction
+reference_axis=np.array([0.0,0.0,1.0])
+polarisation_p=np.cross(propagation_direction,reference_axis)
+polarisation_p/=np.linalg.norm(polarisation_p)
+polarisation_q=np.cross(propagation_direction,polarisation_p)
+plus_tensor=np.outer(polarisation_p,polarisation_p)-np.outer(polarisation_q,polarisation_q)
+
+link_data={}; link_delays={}
+for column,code in enumerate(link_codes):
+    emitting=int(emitter(code)); receiving=int(receiver(code))
+    light_time=tdi_light_times[:,column]
+    link_vector=np.asarray(orbits.compute_unit_vector(tdi_time_full,[code]))[:,0,:]
+    receiver_position=np.asarray(orbits.compute_position(tdi_time_full,[receiving]))[:,0,:]
+    emitter_position=np.asarray(orbits.compute_position(tdi_time_full-light_time,[emitting]))[:,0,:]
+    receiver_phase=2*np.pi*GW_LINK_FREQUENCY*(
+        tdi_time_full-receiver_position@propagation_direction/C_SI
+    )
+    emitter_phase=2*np.pi*GW_LINK_FREQUENCY*(
+        tdi_time_full-light_time-emitter_position@propagation_direction/C_SI
+    )
+    projection=0.5*np.einsum(
+        "ni,ij,nj->n",link_vector,plus_tensor,link_vector
+    )/(1-link_vector@propagation_direction)
+    pair=(emitting,receiving)
+    link_data[pair]=GW_LINK_AMPLITUDE*projection*(
+        np.cos(receiver_phase)-np.cos(emitter_phase)
+    )
+    link_delays[pair]=light_time
+
+plot_window=(tdi_time_full>=tdi_start)&(tdi_time_full<tdi_start+1800)
+fig,ax=plt.subplots(figsize=(10,3.6))
+for pair,series in link_data.items():
+    ax.plot((tdi_time_full[plot_window]-tdi_start)/60,1e22*series[plot_window],label=f"{pair[0]} to {pair[1]}")
+ax.set(xlabel="minutes after data start",ylabel=r"one-way $y_{ij}^{GW}$ [$10^{-22}$]",title=f"Six GW-only link measurements: {type(orbits).__name__}")
+ax.legend(ncol=3,fontsize=8); plt.show()'''
+        ),
+        md(
+            r"""### 1d. Apply time-dependent delay operators
+
+The basic TDI operation is not an integer array shift. Each directed link has
+its own time-dependent delay:
+
+$$
+\mathcal D_{ij}a(t)=a\!\left(t-L_{ij}(t)\right).
+$$
+
+The interpolation below makes that retarded-time evaluation explicit. Nested
+delays are applied one at a time; for breathing arms their order matters."""
+        ),
+        code(
+            r'''def delay_link(series,pair):
+    """Apply D_ij using the active orbit's time-dependent i-to-j delay."""
+    query_time=tdi_time_full-link_delays[pair]
+    finite=np.isfinite(series)
+    return np.interp(
+        query_time,tdi_time_full[finite],series[finite],left=np.nan,right=np.nan
+    )
+
+example_pair=(3,1)
+example_return=(1,3)
+link_once_delayed=delay_link(link_data[example_return],example_pair)
+link_round_trip=delay_link(link_once_delayed,example_return)
+fig,ax=plt.subplots(figsize=(10,3.4))
+ax.plot((tdi_time_full[plot_window]-tdi_start)/60,1e22*link_data[example_return][plot_window],label="raw 1 to 3 link")
+ax.plot((tdi_time_full[plot_window]-tdi_start)/60,1e22*link_once_delayed[plot_window],label="after D_31")
+ax.plot((tdi_time_full[plot_window]-tdi_start)/60,1e22*link_round_trip[plot_window],label="after D_13 D_31")
+ax.set(xlabel="minutes after data start",ylabel=r"fractional frequency [$10^{-22}$]",title="A delayed link is evaluated at a retarded time")
+ax.legend(); plt.show()'''
+        ),
+        md(
+            r"""### 1e. Build Michelson $X,Y,Z$
+
+With $y_{ij}$ denoting emitter $i\to$ receiver $j$, the first-generation
+unequal-arm Michelson channel centred on spacecraft 1 is
+
+$$
+\begin{aligned}
+X={}&y_{31}+\mathcal D_{31}y_{13}
++\mathcal D_{31}\mathcal D_{13}y_{21}
++\mathcal D_{31}\mathcal D_{13}\mathcal D_{21}y_{12}\\
+&-y_{21}-\mathcal D_{21}y_{12}
+-\mathcal D_{21}\mathcal D_{12}y_{31}
+-\mathcal D_{21}\mathcal D_{12}\mathcal D_{31}y_{13}.
+\end{aligned}
+$$
+
+$Y$ and $Z$ follow by cycling the spacecraft indices. The code deliberately
+mirrors the equation rather than hiding the delay paths in a package call."""
+        ),
+        code(
+            r'''def michelson_xyz_channel(central,first_arm,second_arm):
+    """First-generation Michelson TDI centred on `central`."""
+    y=lambda emitting,receiving: link_data[(emitting,receiving)]
+    d=lambda values,emitting,receiving: delay_link(values,(emitting,receiving))
+    positive=(
+        y(second_arm,central)
+        +d(y(central,second_arm),second_arm,central)
+        +d(d(y(first_arm,central),central,second_arm),second_arm,central)
+        +d(d(d(y(central,first_arm),first_arm,central),central,second_arm),second_arm,central)
+    )
+    negative=(
+        y(first_arm,central)
+        +d(y(central,first_arm),first_arm,central)
+        +d(d(y(second_arm,central),central,first_arm),first_arm,central)
+        +d(d(d(y(central,second_arm),second_arm,central),central,first_arm),first_arm,central)
+    )
+    return positive-negative
+
+X_full=michelson_xyz_channel(1,2,3)
+Y_full=michelson_xyz_channel(2,3,1)
+Z_full=michelson_xyz_channel(3,1,2)
+tdi_keep=tdi_time_full>=tdi_start
+tdi_time=tdi_time_full[tdi_keep]-tdi_start
+X,Y,Z=(channel[tdi_keep] for channel in (X_full,Y_full,Z_full))
+assert not any(np.isnan(channel).any() for channel in (X,Y,Z))
+
+fig,ax=plt.subplots(figsize=(10,3.5))
+show=tdi_time<3600
+for channel,label in zip((X,Y,Z),("X","Y","Z")):
+    ax.plot(tdi_time[show]/60,1e22*channel[show],label=label)
+ax.set(xlabel="minutes after data start",ylabel=r"Michelson response [$10^{-22}$]",title="Delayed links form XYZ")
+ax.legend(); plt.show()'''
+        ),
+        md(
+            r"""### 1f. Rotate $X,Y,Z$ into $A,E,T$
+
+Using the same orthonormal convention as JaxGB and LISA Analysis Tools,
+
+$$
+A=\frac{Z-X}{\sqrt2},\qquad
+E=\frac{X-2Y+Z}{\sqrt6},\qquad
+T=\frac{X+Y+Z}{\sqrt3}.
+$$
+
+This matrix rotation is orthonormal. Calling the resulting channels
+statistically independent additionally requires the appropriate symmetric
+$XYZ$ noise covariance; breathing unequal arms can reintroduce A/E/T cross
+spectra.
+
+For an equal-arm constellation and wavelengths long compared with the arms,
+$T$ is an approximate GW-null channel. Unequal breathing arms spoil the exact
+symmetry, so uncommenting `KeplerianOrbits` above and rerunning increases the
+low-frequency $T$ leakage in this first-generation construction."""
+        ),
+        code(
+            r'''A=(Z-X)/np.sqrt(2)
+E=(X-2*Y+Z)/np.sqrt(6)
+T=(X+Y+Z)/np.sqrt(3)
+
+fig,axes=plt.subplots(1,2,figsize=(12,3.5))
+for channel,label in zip((X,Y,Z),("X","Y","Z")):
+    axes[0].plot(tdi_time[show]/60,1e22*channel[show],label=label)
+for channel,label in zip((A,E,T),("A","E","T")):
+    axes[1].plot(tdi_time[show]/60,1e22*channel[show],label=label)
+axes[0].set(xlabel="minutes",ylabel=r"response [$10^{-22}$]",title="Michelson basis")
+axes[1].set(xlabel="minutes",title="Orthogonal AET basis")
+for ax in axes: ax.legend()
+fig.tight_layout(); plt.show()
+
+print(f"active orbit model: {type(orbits).__name__}")
+for label,channel in zip(("A","E","T"),(A,E,T)):
+    print(f"RMS {label}: {np.std(channel):.3e}")
+print(f"T/A RMS ratio: {np.std(T)/np.std(A):.3e}")'''
+        ),
+        md(
+            r""":::{admonition} TDI generation boundary
+:class: warning
+
+This transparent laboratory uses GW-only links and first-generation Michelson
+TDI. It demonstrates the orbit, link, retarded-delay, XYZ, and AET data objects.
+It does **not** demonstrate laser-noise cancellation for a flexing constellation:
+time-dependent delay operators do not commute, and production breathing-arm
+data require the correctly ordered second-generation TDI combinations.
+:::"""
         ),
         md(
             """## 2. Sensitivity and Galactic confusion
@@ -2637,6 +3220,38 @@ axes[0].plot(1e3*frequency,np.abs(template[0]),label="A"); axes[0].plot(1e3*freq
 axes[0].set(xlabel="frequency [mHz]",ylabel="response magnitude",title="JaxGB second-generation TDI"); axes[0].legend()
 axes[1].semilogy(1e3*frequency,4*df*np.sum(np.abs(template)**2/psd,axis=0))
 axes[1].set(xlabel="frequency [mHz]",ylabel=r"contribution to $\\rho^2$",title="PSD-weighted information by bin"); plt.show()"""
+        ),
+        md(
+            r"""### Code studio: turn the inner product into a likelihood
+
+Implement the Gaussian log likelihood
+$\log\mathcal L=-\tfrac12(d-h\mid d-h)$ using the `inner` function above.
+The checks use two limiting cases: a perfect model has zero residual, while a
+zero model is worse by $\rho_{\rm opt}^2/2$."""
+        ),
+        code("""def student_lisa_log_likelihood(model, observed=template):
+    # YOUR CODE HERE
+    return None
+
+perfect_logl = student_lisa_log_likelihood(template)
+zero_logl = student_lisa_log_likelihood(np.zeros_like(template))
+if perfect_logl is None or zero_logl is None:
+    print("Your turn: construct the residual and return -0.5 times its inner product.")
+else:
+    np.testing.assert_allclose(perfect_logl, 0.0, atol=1e-10)
+    np.testing.assert_allclose(zero_logl, -0.5 * optimal_snr**2, rtol=1e-10)
+    print("check passed")"""),
+        md(
+            r"""<details>
+<summary>Show one possible solution</summary>
+
+```python
+def student_lisa_log_likelihood(model, observed=template):
+    residual = observed - model
+    return -0.5 * inner(residual, residual)
+```
+
+</details>"""
         ),
         md(r"""### Manual one-parameter likelihood
 
