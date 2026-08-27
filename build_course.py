@@ -3137,8 +3137,12 @@ The WDM transform gives localised real coefficients $w_{nm}$ on a
 time--frequency grid. For stationary Gaussian noise and a diagonal WDM
 approximation,
 
-$$\\log \\mathcal L_{\\rm WDM}=-\\frac12\\sum_{n,m}
-\frac{(w^d_{nm}-w^h_{nm})^2}{\sigma_{nm}^2}+\mathrm{constant}.$$
+\[
+\log \mathcal L_{\rm WDM}=-\frac12\sum_{n,m}
+\frac{(w^d_{nm}-w^h_{nm})^2}{\sigma_{nm}^2}+\mathrm{constant},
+\qquad
+\sigma_{nm}^2=\frac{N\,S(f_m)}{2\,\Delta t}.
+\]
 
 This is the WDM counterpart of the diagonal frequency-domain Whittle
 likelihood. It is useful because the map makes a drifting signal, changing
@@ -3154,7 +3158,9 @@ wdm_gap = WDM.from_time_series(WDMTimeSeries(gapped_data, dt=cadence), nt=WDM_NT
 wdm_model = WDM.from_time_series(WDMTimeSeries(toy_signal, dt=cadence), nt=WDM_NT)
 wdm_coeffs = np.asarray(wdm_data.coeffs[0]); wdm_gap_coeffs = np.asarray(wdm_gap.coeffs[0]); wdm_model_coeffs = np.asarray(wdm_model.coeffs[0])
 wdm_nf = wdm_coeffs.shape[1]-1
-wdm_frequency = np.arange(wdm_nf+1)/(wdm_nf*cadence)
+# Use the transform's own grid: the row spacing is nyquist/nf = 1/(2*nf*dt),
+# not 1/(nf*dt).  Building it by hand is off by a factor of two.
+wdm_frequency = np.asarray(wdm_data.freq_grid)
 # Unit-variance sampled white noise has one-sided PSD 2*dt.  We deliberately use
 # this stationary reference even though the toy noise grows with time.
 wdm_stationary_var = wdm_noise_variance(np.full(wdm_nf+1, 2*cadence), nt=WDM_NT, nf=wdm_nf, dt=cadence)
@@ -3164,12 +3170,144 @@ print(f"WDM grid: {WDM_NT} time pixels x {wdm_nf+1} frequency columns")
 print(f"Diagonal stationary-noise WDM log likelihood (up to a constant): {logL_wdm:.1f}")
 
 fig, axes = plt.subplots(1, 2, figsize=(12, 3.8), sharey=True)
-show = (wdm_frequency>2.4e-3)&(wdm_frequency<3.7e-3)
-for ax, coeffs, title in zip(axes, (wdm_coeffs, wdm_gap_coeffs), ("continuous data", "zero-filled gap")):
-    image=ax.pcolormesh(np.linspace(0, mission_days, WDM_NT), 1e3*wdm_frequency[show], np.log10(coeffs[:,show].T**2+1e-12), shading="nearest", cmap="magma")
-    ax.set(xlabel="mission time [days]", ylabel="frequency [mHz]", title=f"WDM coefficient power: {title}")
-    fig.colorbar(image, ax=ax, label=r"$\log_{10} w_{nm}^2$")
-plt.show()'''),
+show = (wdm_frequency > 2.4e-3) & (wdm_frequency < 3.7e-3)
+pixel_time = np.linspace(0, mission_days, WDM_NT)
+# One shared colour scale, or the two panels cannot be compared by eye.
+scale = np.percentile(np.abs(wdm_coeffs[:, show]), 99.5)
+for ax, coeffs, title in zip(
+    axes, (wdm_coeffs, wdm_gap_coeffs), ("continuous data", "zero-filled gap")
+):
+    image = ax.pcolormesh(
+        pixel_time, 1e3*wdm_frequency[show], np.abs(coeffs[:, show].T),
+        shading="nearest", cmap="magma", vmin=0, vmax=scale,
+    )
+    ax.set(xlabel="mission time [days]", ylabel="frequency [mHz]",
+           title=f"WDM coefficients: {title}")
+fig.colorbar(image, ax=axes, label=r"$|w_{nm}|$", pad=0.02)
+plt.show()
+
+print(f"pixel size: {wdm_data.delta_t/3600:.2f} h x {wdm_data.delta_f*1e3:.3f} mHz")
+print(f"line drift over the mission: {FREQUENCY_DRIFT*toy_time[-1]*1e3:.3f} mHz")
+print("Raise FREQUENCY_DRIFT until the drift exceeds one pixel and the track tilts.")'''),
+        md(r"""### Frequency domain versus WDM: the same inner product
+
+Before trusting the wavelet picture, check that it is the *same analysis*. Both
+domains compute one number, the noise-weighted inner product, and an orthogonal
+change of basis must leave it unchanged:
+
+\[
+(h\mid h)_{\rm freq}=4\Delta f\sum_k\frac{|\tilde h_k|^2}{S(f_k)}
+\qquad\text{versus}\qquad
+(h\mid h)_{\rm WDM}=\sum_{n,m}\frac{w_{nm}^2}{\sigma_{nm}^2}.
+\]
+
+If those disagree, the wavelet normalisation is wrong and nothing built on top
+of it can be believed. They should agree to several decimal places."""),
+        code(r'''from wdm_transform import matched_filter_snr_rfft, matched_filter_snr_wdm
+
+# A clean, gap-free signal in stationary white noise, so both domains are valid.
+check_psd_value = 2 * cadence  # one-sided PSD of unit-variance sampled noise
+check_frequency = np.fft.rfftfreq(toy_time.size, cadence)
+
+snr_frequency_domain = matched_filter_snr_rfft(
+    np.fft.rfft(toy_signal),
+    np.full(check_frequency.size, check_psd_value),
+    check_frequency,
+    dt=cadence,
+)
+snr_wdm_domain = matched_filter_snr_wdm(wdm_model_coeffs, wdm_stationary_var)
+
+print(f"optimal SNR, frequency domain : {snr_frequency_domain:.5f}")
+print(f"optimal SNR, WDM domain       : {snr_wdm_domain:.5f}")
+print(f"ratio                         : {snr_wdm_domain/snr_frequency_domain:.6f}")
+print("\nSame signal, same noise model, two different bases.")'''),
+        md(r"""### What the wavelet domain actually buys you
+
+The two domains agree on clean, stationary data, so WDM is not a better
+analysis in general. It earns its place when the *assumptions* behind the
+frequency-domain likelihood fail, and both failures are on display in this
+laboratory:
+
+- **A gap is local in time, but every Fourier basis function is global.** One
+  missing stretch therefore corrupts every frequency bin at once, which is the
+  leakage seen earlier. In WDM the corruption is confined to the pixel columns
+  that overlap the gap, so it can simply be **masked**.
+- **Non-stationary noise is local in time too.** The frequency-domain Whittle
+  likelihood has one $S(f)$ for the whole mission. In WDM the variance carries
+  a time index, $\sigma_{nm}^2$, so a drifting noise level is just a
+  column-dependent weight.
+
+The next cell puts a number on the first point: recover the same injected
+signal from gapped data, once by zero-filling in the frequency domain and once
+by masking pixels in WDM."""),
+        code(r'''gap_pixels = (pixel_time >= GAP_DAYS[0] - wdm_data.delta_t / 86400) & (
+    pixel_time <= GAP_DAYS[1] + wdm_data.delta_t / 86400
+)
+masked_var = wdm_stationary_var.copy()
+masked_var[gap_pixels, :] = np.nan  # NaN variance drops those pixels entirely
+
+
+def recovered_snr(data_coeffs, variance):
+    """Matched-filter SNR of the known template against the data."""
+    numerator = wdm_inner_product(wdm_model_coeffs, data_coeffs, variance)
+    normalisation = np.sqrt(wdm_inner_product(wdm_model_coeffs, wdm_model_coeffs, variance))
+    return numerator / normalisation
+
+
+retained = available.mean()
+print(f"data retained outside the gap : {retained:.3f}")
+print(f"best achievable SNR           : {snr_frequency_domain*np.sqrt(retained):6.2f}")
+print()
+print(f"complete data                 : {recovered_snr(wdm_coeffs, wdm_stationary_var):6.2f}")
+print(f"gap zero-filled, no mask      : {recovered_snr(wdm_gap_coeffs, wdm_stationary_var):6.2f}")
+print(f"gap masked in WDM             : {recovered_snr(wdm_gap_coeffs, masked_var):6.2f}")
+print(f"\nmasked pixel columns: {gap_pixels.sum()} of {WDM_NT}"
+      f" = {gap_pixels.mean():.1%} of the mission")'''),
+        md(r"""### Tracking a noise level that changes
+
+The likelihood above deliberately used one stationary variance even though the
+toy noise grows by `NOISE_GROWTH` across the mission. In the frequency domain
+fixing that means segmenting the data and re-estimating a PSD per segment. In
+WDM the grid is *already* segmented: each pixel column is a short stretch of
+time, so the noise level per column follows from the coefficients themselves.
+
+Estimating it from off-signal frequency rows recovers the injected growth."""),
+        code(r'''# Use every frequency row above the line, so the estimate is signal-free and
+# averages enough pixels to be stable.
+quiet_rows = (wdm_frequency > 3.8e-3) & (wdm_frequency < 8.0e-3)
+column_variance = np.nanmean(wdm_coeffs[:, quiet_rows] ** 2, axis=1)
+# Each column still averages only ~70 pixels, so smooth lightly over time.
+smoothing = np.ones(9) / 9
+column_variance = np.convolve(column_variance, smoothing, mode="same")
+column_variance[:4] = column_variance[4]
+column_variance[-4:] = column_variance[-5]
+# Convert pixel variance back to a noise scale relative to the stationary value.
+reference = np.nanmean(wdm_stationary_var[:, quiet_rows], axis=1)
+recovered_scale = np.sqrt(column_variance / reference)
+
+injected_scale = np.interp(
+    pixel_time * 86400, toy_time, noise_scale
+)
+
+fig, ax = plt.subplots(figsize=(8, 3.3))
+ax.plot(pixel_time, recovered_scale, lw=1, label="recovered from WDM columns")
+ax.plot(pixel_time, injected_scale, "k--", lw=2, label="injected noise scale")
+ax.set(xlabel="mission time [days]", ylabel="noise level (relative)",
+       title="A time-varying PSD is a column-dependent weight in WDM")
+ax.legend()
+plt.show()
+
+slope = np.polyfit(pixel_time, recovered_scale, 1)[0] * mission_days
+print(f"recovered growth across the mission : {slope:.3f}")
+print(f"injected NOISE_GROWTH               : {NOISE_GROWTH:.3f}")'''),
+        md(r"""**Where this stops being a teaching toy.** The diagonal WDM
+likelihood is an approximation, not an identity. Masking whole pixel columns
+throws away slightly more data than the gap itself, gap edges leave partially
+contaminated pixels, and a real analysis must decide whether to mask, taper,
+inpaint, or model the missing stretch, and propagate that choice into the
+uncertainties. The resolution trade is also fixed by hand here: choosing `nt`
+sets the pixel aspect ratio, and a signal drifting by less than one pixel
+height looks stationary no matter which basis you use."""),
         md(
             """**Do not interpret zero-filling as the recommended gap treatment.** It is used here because its spectral leakage is immediately visible. A research analysis must define how gaps, edges, non-stationarity, and missing-data uncertainty enter the likelihood.
 
