@@ -4,9 +4,13 @@ author: Avi Vajpeyi
 copyright: "2026"
 
 execute:
-  # Notebooks are committed with reviewed outputs.  Building the book must not
-  # require the optional teaching packages or external data access.
-  execute_notebooks: "off"
+  # Notebooks are committed WITHOUT outputs; the build executes them.  This keeps
+  # ~11 MB of base64 figures out of every commit.  The locked environment already
+  # carries the teaching packages, and notebooks/gw150914_cache/ supplies the
+  # GWOSC strain, so no external data access is needed.
+  execute_notebooks: force
+  timeout: 900
+  allow_errors: false
 
 repository:
   url: https://github.com/nz-gravity/FQCP2026_GW_data_analysis
