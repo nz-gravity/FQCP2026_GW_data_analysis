@@ -57,6 +57,10 @@ def write(name, title, cells):
 > session; **Extension** sections may be skipped live.
 """)
     notebook = nbf.v4.new_notebook(cells=[header, *cells])
+    # nbformat assigns a random id per cell, which would rewrite every notebook
+    # on every build.  Number them by position so regeneration is a no-op in git.
+    for position, cell in enumerate(notebook.cells):
+        cell.id = f"cell-{position:03d}"
     notebook.metadata = {
         "kernelspec": {
             "display_name": "Python 3",
