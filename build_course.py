@@ -40,11 +40,40 @@ def md(text):
     return nbf.v4.new_markdown_cell(source)
 
 
-def code(text):
-    """Create a consistently formatted, reader-facing Python cell."""
+# Reference figures are extracted from the executed notebooks by
+# publish_assets.py and served from the force-pushed `assets` branch, so they
+# cost the notebook a URL rather than ~90 KB of base64 each.
+ASSET_URL = (
+    "https://raw.githubusercontent.com/nz-gravity/"
+    "FQCP2026_GW_data_analysis/assets/expected"
+)
+
+
+def code(text, figure=None):
+    """Create a consistently formatted, reader-facing Python cell.
+
+    `figure` names a reference image for this cell's output. The slug is
+    recorded in cell metadata so publish_assets.py can find the output again
+    after execution, and write() inserts the collapsed reference below.
+    """
     source = clean_source(text)
     source = black.format_str(source, mode=black.Mode(line_length=88)).rstrip()
-    return nbf.v4.new_code_cell(source)
+    cell = nbf.v4.new_code_cell(source)
+    if figure:
+        cell.metadata["fqcp_figure"] = figure
+    return cell
+
+
+def reference_block(slug):
+    """Collapsed 'expected output' image, rendered by both Colab and Sphinx."""
+    return nbf.v4.new_markdown_cell(
+        "<details>\n"
+        "<summary><i>Expected output &mdash; open this if your cell has not "
+        "run yet</i></summary>\n\n"
+        f'<img src="{ASSET_URL}/{slug}.png" alt="expected output: {slug}" '
+        'style="max-width:100%">\n\n'
+        "</details>"
+    )
 
 
 def write(name, title, cells):
@@ -56,7 +85,13 @@ def write(name, title, cells):
 > bottom. In the JupyterBook, **Live route** cards identify the material for the
 > session; **Extension** sections may be skipped live.
 """)
-    notebook = nbf.v4.new_notebook(cells=[header, *cells])
+    expanded = []
+    for cell in [header, *cells]:
+        expanded.append(cell)
+        slug = cell.get("metadata", {}).get("fqcp_figure")
+        if slug:
+            expanded.append(reference_block(slug))
+    notebook = nbf.v4.new_notebook(cells=expanded)
     # nbformat assigns a random id per cell, which would rewrite every notebook
     # on every build.  Number them by position so regeneration is a no-op in git.
     for position, cell in enumerate(notebook.cells):
@@ -283,7 +318,7 @@ fig,axes=plt.subplots(1,3,figsize=(12,3.4),sharex=True,sharey=True)
 for ax,values,title in zip(axes,[np.exp(log_prior),np.exp(logL-logL.max()),posterior],["prior","likelihood","posterior"]):
     image=ax.contourf(m_grid,c_grid,values.T,levels=24,cmap="magma")
     ax.plot(true_parameters["m"],true_parameters["c"],"c*",ms=10); ax.set(title=title,xlabel="slope m")
-axes[0].set_ylabel("intercept c"); plt.show()"""),
+axes[0].set_ylabel("intercept c"); plt.show()""", figure="basics-grid-posterior"),
         md(
             """The posterior is a ridge: increasing the slope can be compensated by decreasing the intercept. Marginalisation integrates over the other parameter; it is not the same as holding it at a best-fit value."""
         ),
@@ -426,7 +461,7 @@ rx.plot(time, np.median(data - curves, axis=0), color="C3", label="observed resi
 rx.set(xlabel="time", ylabel="data - signal", title="No structure left over")
 rx.legend(fontsize=8)
 plt.show()
-'''
+''', figure="basics-posterior-predictive"
         ),
         md(
             r"""### When the model is wrong
@@ -509,7 +544,7 @@ for name, p_value in p_values.items():
 log_bf = evidences["exponential (true)"] - evidences["linear (wrong)"]
 print(f"log Bayes factor, exponential over linear: {log_bf:.1f}")
 print(f"the two prior volumes differ by only {np.log(240 / 36):.1f} in log evidence")
-'''
+''', figure="basics-wrong-model"
         ),
         md(
             r"""The line is not merely worse, it is excluded. Its *p*-value is zero to three
@@ -795,7 +830,7 @@ corner_figure.suptitle("MCMC samples vs exact grid marginals (orange)", y=1.02)
 plt.show()
 
 print(f"grid    : m = {np.trapezoid(p_m * m_grid, m_grid):.4f}")
-print(f"sampler : m = {samples[:, 0].mean():.4f}")"""),
+print(f"sampler : m = {samples[:, 0].mean():.4f}")""", figure="basics-corner-check"),
         md(r"""## 6. Nested sampling: where the evidence comes from
 
 MCMC gives parameters but not $\mathcal Z$. Nested sampling gives both, by
@@ -1412,7 +1447,7 @@ axes[0].set(xlabel="frequency [Hz]",ylabel="strain / Hz",title="Radiation has tw
 axes[1].semilogx(frequency[mask],np.unwrap(np.angle(injection_polarizations["plus"][mask])))
 axes[1].set(xlabel="frequency [Hz]",ylabel="phase [rad]",title="Hundreds of radians accumulate in band")
 for ax in axes: tidy_log_frequency(ax)
-plt.show()"""
+plt.show()""", figure="lvk-network-response"
         ),
         md(
             r"""For a non-precessing circular binary, approximately
@@ -2149,7 +2184,7 @@ print(f"90% interval      : [{low:.0f}, {high:.0f}] Mpc")
 print(
     "Fractional distance precision: "
     f"{(high - low) / (2 * median):.0%}, far worse than the chirp mass."
-)"""),
+)""", figure="lvk-distance-inclination"),
         md(
             r"""## 5. Why a network localises the sky
 
@@ -2197,7 +2232,7 @@ for ax,(names,title) in zip(axes,panels):
 plt.show()
 print("Sky area allowed by timing alone shrinks with each added detector.")
 print("One detector constrains direction only through its antenna pattern,")
-print("which is why a single-detector alert has a nearly all-sky map.")"""
+print("which is why a single-detector alert has a nearly all-sky map.")""", figure="lvk-sky-localisation"
         ),
         md(
             r"""## 6. From events to a population
@@ -2410,7 +2445,7 @@ full_result.plot_corner(
     truths=[full_injection[name] for name in sampled_names],
     save=False,
 )
-plt.show()'''),
+plt.show()''', figure="lvk-bilby-corner"),
         md("""- Every truth should land inside its 90% interval. For a single
   noise realisation that is partly luck; the P-P test in notebook 00 is what
   checks calibration properly.
@@ -2857,7 +2892,7 @@ print(f"\nchirp-mass offset: {offset:.2f} sigma of the LVK posterior")
 assert lvk_low <= real_median <= lvk_high
 assert real_low <= lvk_median <= real_high
 assert offset < 1.0
-print("like-for-like check passed")'''
+print("like-for-like check passed")''', figure="lvk-gw150914"
         ),
         md(
             r"""### Frequency-domain model check
@@ -3404,7 +3439,7 @@ fig,ax=plt.subplots(figsize=(8,3.6))
 ax.loglog(f_curve,np.sqrt(instrument.sens_mat[0]),label="instrument only")
 ax.loglog(f_curve,np.sqrt(one_year.sens_mat[0]),label="+ 1-year Galactic foreground")
 ax.loglog(f_curve,np.sqrt(four_year.sens_mat[0]),label="+ 4-year Galactic foreground")
-ax.set(xlabel="frequency [Hz]",ylabel=r"TDI A ASD [1/$\\sqrt{\\mathrm{Hz}}$]",title="Sensitivity is part of the likelihood"); ax.legend(); plt.show()"""
+ax.set(xlabel="frequency [Hz]",ylabel=r"TDI A ASD [1/$\\sqrt{\\mathrm{Hz}}$]",title="Sensitivity is part of the likelihood"); ax.legend(); plt.show()""", figure="lisa-sensitivity"
         ),
         md(
             """## 3. Real LISA data will be more complicated
@@ -3505,7 +3540,7 @@ plt.show()
 
 print(f"pixel size: {wdm_data.delta_t/3600:.2f} h x {wdm_data.delta_f*1e3:.3f} mHz")
 print(f"line drift over the mission: {FREQUENCY_DRIFT*toy_time[-1]*1e3:.3f} mHz")
-print("Raise FREQUENCY_DRIFT until the drift exceeds one pixel and the track tilts.")'''),
+print("Raise FREQUENCY_DRIFT until the drift exceeds one pixel and the track tilts.")''', figure="lisa-wdm-map"),
         md(r"""### Frequency domain versus WDM: the same inner product
 
 Before trusting the wavelet picture, check that it is the *same analysis*. Both
@@ -4179,7 +4214,7 @@ for i, g in enumerate(TRUE_GB):
 ax.set(xlabel="frequency [mHz]", ylabel="whitened amplitude",
        title="Everything at once: one chirp, three lines, one noise level")
 ax.legend()
-plt.show()'''),
+plt.show()''', figure="lisa-global-fit"),
         md(r"""### Stage 1: search
 
 Nothing above is known to the analysis. Two searches, both reusing machinery

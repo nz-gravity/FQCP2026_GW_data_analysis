@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # force-push the executed-notebook mirror to `colab`
   pages: write
   id-token: write
 
@@ -34,11 +34,33 @@ jobs:
       - name: Synchronise locked environment
         run: uv sync --locked
 
-      - name: Validate saved notebook outputs
+      - name: Validate notebooks
         run: uv run --locked python validate_course.py
+
+      - name: Execute notebooks
+        run: |
+          for notebook in notebooks/*.ipynb; do
+            uv run --locked jupyter nbconvert --execute --to notebook \
+              --inplace "$notebook" --ExecutePreprocessor.timeout=900
+          done
 
       - name: Build static site
         run: uv run --locked python build_site.py
+
+      # The notebooks link to these figures so a reader in Colab can see what a
+      # cell should produce before running it.  Force-pushing a single orphan
+      # commit keeps the branch from accumulating history, and keeps the images
+      # out of main entirely.
+      - name: Publish reference figures to the assets branch
+        run: |
+          uv run --locked python publish_assets.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan assets
+          git rm -rq --cached .
+          git add -f assets/expected
+          git commit -q -m "Reference figures (main @ ${GITHUB_SHA:0:7})"
+          git push --force origin assets
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

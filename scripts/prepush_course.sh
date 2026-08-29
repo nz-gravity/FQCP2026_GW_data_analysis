@@ -18,10 +18,22 @@ uv run --locked python build_course.py
 echo "==> Validating notebooks"
 uv run --locked python validate_course.py
 
-# The JupyterBook build executes every notebook, so a cell that raises fails here
-# exactly as it would in CI.  Notebooks stay stripped in git.
-echo "==> Building JupyterBook (executes all notebooks)"
+echo "==> Executing notebooks for the build"
+for notebook in notebooks/*.ipynb; do
+  uv run --locked jupyter nbconvert --execute --to notebook --inplace "$notebook" \
+    --ExecutePreprocessor.timeout=900
+done
+
+echo "==> Building JupyterBook"
 uv run --locked python build_site.py
+
+# Catches a figure= marker on a cell that no longer draws anything.
+echo "==> Extracting reference figures"
+uv run --locked python publish_assets.py
+
+# Outputs are for the site and the assets branch, never for a commit.
+echo "==> Re-stripping notebooks"
+uv run --locked python build_course.py
 
 echo "==> Checking whitespace"
 git diff --check

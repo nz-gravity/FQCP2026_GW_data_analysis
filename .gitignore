@@ -57,3 +57,6 @@ results/
 bilby_out/
 notebooks/bilby_out/
 .distance_marginalization_lookup.npz
+
+# Reference figures, published to the force-pushed `assets` branch
+assets/expected/
