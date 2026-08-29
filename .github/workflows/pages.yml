@@ -16,7 +16,10 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # lisaanalysistools publishes macOS-only wheels, so notebook 02 cannot even
+    # be installed on Linux, let alone executed.  macOS runners are free for
+    # public repositories.
+    runs-on: macos-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -30,6 +33,11 @@ jobs:
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           enable-cache: true
+
+      # matplotlib needs ffmpeg for to_html5_video(); without it show_animation
+      # falls back to one PNG per frame, which quadruples the rendered pages.
+      - name: Install ffmpeg
+        run: brew install ffmpeg
 
       - name: Synchronise locked environment
         run: uv sync --locked
