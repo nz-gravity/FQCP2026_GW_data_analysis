@@ -15,9 +15,9 @@ dependencies = [
   "jaxgb==0.2.1",
   "jupyter-book>=1.0,<2.0",
   "jupyterlab>=4.0",
-  # The published 1.2.5 wheels are macOS-only, which is why the Pages workflow
-  # runs on macos-latest: it executes this notebook rather than rendering saved
-  # outputs, so the runtime has to be installable there.
+  # The published 1.2.5 wheels are macOS-only, so this notebook can only be
+  # executed on a Mac.  That is why the course is built and published locally by
+  # scripts/prepush_course.sh --publish rather than in CI.
   "lisaanalysistools==1.2.5 ; sys_platform == 'darwin'",
   "matplotlib>=3.8",
   "nbclient>=0.10",

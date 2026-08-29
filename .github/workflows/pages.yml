@@ -1,25 +1,22 @@
-name: Build and deploy course website
+name: Validate course notebooks
 
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
-  contents: write   # force-push the executed-notebook mirror to `colab`
-  pages: write
-  id-token: write
+  contents: read
 
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
+# The site and the reference figures are built and published from a Mac by
+# scripts/prepush_course.sh --publish.  lisaanalysistools ships macOS-only
+# wheels, so notebook 02 cannot even be installed on a Linux runner, and
+# executing the course here would cost ~20 minutes a push to reproduce work
+# that already happened locally.  CI only checks what is cheap to check.
 jobs:
-  build:
-    # lisaanalysistools publishes macOS-only wheels, so notebook 02 cannot even
-    # be installed on Linux, let alone executed.  macOS runners are free for
-    # public repositories.
-    runs-on: macos-latest
+  validate:
+    runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -29,62 +26,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
-        with:
-          enable-cache: true
+      - name: Install validation dependencies
+        run: pip install nbformat "black>=25.1"
 
-      # matplotlib needs ffmpeg for to_html5_video(); without it show_animation
-      # falls back to one PNG per frame, which quadruples the rendered pages.
-      - name: Install ffmpeg
-        run: brew install ffmpeg
-
-      - name: Synchronise locked environment
-        run: uv sync --locked
-
+      # Checks the notebooks are valid, carry no outputs, use $$ delimiters, and
+      # still match build_course.py.  Takes seconds and needs none of the
+      # scientific stack.
       - name: Validate notebooks
-        run: uv run --locked python validate_course.py
-
-      - name: Execute notebooks
-        run: |
-          for notebook in notebooks/*.ipynb; do
-            uv run --locked jupyter nbconvert --execute --to notebook \
-              --inplace "$notebook" --ExecutePreprocessor.timeout=900
-          done
-
-      - name: Build static site
-        run: uv run --locked python build_site.py
-
-      # The notebooks link to these figures so a reader in Colab can see what a
-      # cell should produce before running it.  Force-pushing a single orphan
-      # commit keeps the branch from accumulating history, and keeps the images
-      # out of main entirely.
-      - name: Publish reference figures to the assets branch
-        run: |
-          uv run --locked python publish_assets.py
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout --orphan assets
-          git rm -rq --cached .
-          git add -f assets/expected
-          git commit -q -m "Reference figures (main @ ${GITHUB_SHA:0:7})"
-          git push --force origin assets
-
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: _build/html
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+        run: python validate_course.py
