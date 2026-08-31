@@ -64,7 +64,7 @@ PUBLISH_DIR="$(mktemp -d)/expected"
 mkdir -p "$PUBLISH_DIR"
 cp assets/expected/*.png "$PUBLISH_DIR"
 # Hand-made explainers live at the branch root, beside the expected/ figures.
-cp assets/pspline_explainer.gif "$PUBLISH_DIR/.."
+cp assets/global_fit_wheel.png assets/pspline_explainer.gif "$PUBLISH_DIR/.."
 git -C "$PUBLISH_DIR/.." init -q
 git -C "$PUBLISH_DIR/.." add -A
 git -C "$PUBLISH_DIR/.." commit -qm "Reference figures ($(git rev-parse --short HEAD))"

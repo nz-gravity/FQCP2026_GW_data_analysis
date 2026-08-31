@@ -22,6 +22,11 @@ for path in notebooks:
     nbformat.validate(notebook)
     for index, cell in enumerate(notebook.cells):
         if cell.cell_type == "markdown":
+            if "data:image/" in cell.source or ";base64," in cell.source:
+                raise SystemExit(
+                    f"{path.name}: markdown cell {index} embeds an inline image; "
+                    "link to the GitHub assets branch instead"
+                )
             if "\\[" in cell.source or "\\]" in cell.source:
                 raise SystemExit(
                     f"{path.name}: markdown cell {index} uses \\[ or \\]; "

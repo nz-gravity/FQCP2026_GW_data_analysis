@@ -1,7 +1,6 @@
 """Build the eight Colab-first FQCP 2026 gravitational-wave PE notebooks."""
 
-import base64
-import mimetypes
+import html
 import re
 from copy import deepcopy
 from pathlib import Path
@@ -13,8 +12,14 @@ import nbformat as nbf
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "notebooks"
 
-# {{IMAGE:relative/path.png|alt text}} is inlined as a data URI so that local
-# figures survive in Colab, which downloads only the .ipynb and not the repo.
+# Notebook display assets are published to the dedicated `assets` branch so
+# Colab can render them without filling the notebook JSON with base64 payloads.
+ASSET_BRANCH_URL = (
+    "https://raw.githubusercontent.com/nz-gravity/"
+    "FQCP2026_GW_data_analysis/assets"
+)
+
+# {{IMAGE:relative/path.png|alt text}} becomes a short remote <img> element.
 IMAGE_TOKEN = re.compile(r"\{\{IMAGE:([^}|]+)\|([^}]*)\}\}")
 
 
@@ -23,31 +28,37 @@ def clean_source(text):
     return dedent(text).strip()
 
 
-def inline_image(path, alt):
-    """Return Markdown for a repository image embedded as a data URI."""
-    target = ROOT / path.strip()
+def asset_image(path, alt):
+    """Return Markdown HTML for an image hosted on the assets branch."""
+    relative_path = Path(path.strip())
+    target = ROOT / relative_path
     if not target.is_file():
         raise SystemExit(f"build_course.py: missing image asset {target}")
-    media_type = mimetypes.guess_type(target.name)[0] or "image/png"
-    payload = base64.b64encode(target.read_bytes()).decode("ascii")
-    return f"![{alt.strip()}](data:{media_type};base64,{payload})"
+    try:
+        published_path = relative_path.relative_to("assets")
+    except ValueError as error:
+        raise SystemExit(
+            f"build_course.py: notebook image must live under assets/: {target}"
+        ) from error
+    url = f"{ASSET_BRANCH_URL}/{published_path.as_posix()}"
+    return (
+        f'<img src="{url}" alt="{html.escape(alt.strip(), quote=True)}" '
+        'style="max-width:100%">'
+    )
 
 
 def md(text):
     """Create Markdown with display-math delimiters supported everywhere."""
     source = clean_source(text)
     source = source.replace(r"\[", "$$").replace(r"\]", "$$")
-    source = IMAGE_TOKEN.sub(lambda m: inline_image(m.group(1), m.group(2)), source)
+    source = IMAGE_TOKEN.sub(lambda m: asset_image(m.group(1), m.group(2)), source)
     return nbf.v4.new_markdown_cell(source)
 
 
 # Reference figures are extracted from the executed notebooks by
 # publish_assets.py and served from the force-pushed `assets` branch, so they
 # cost the notebook a URL rather than ~90 KB of base64 each.
-ASSET_URL = (
-    "https://raw.githubusercontent.com/nz-gravity/"
-    "FQCP2026_GW_data_analysis/assets/expected"
-)
+ASSET_URL = f"{ASSET_BRANCH_URL}/expected"
 
 
 def code(text, figure=None):
