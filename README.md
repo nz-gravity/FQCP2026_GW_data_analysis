@@ -65,19 +65,6 @@ https://colab.research.google.com/github/nz-gravity/FQCP2026_GW_data_analysis/bl
 The LVK and LISA notebooks contain pinned, conditional install cells. Python
 3.12 is used by the locked environment. No GPU is required.
 
-## Reusable Colab helpers
-
-`fqcp_helpers.py` can be fetched without publishing a package:
-
-```python
-import urllib.request
-url = "https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/v1.0.0/fqcp_helpers.py"
-urllib.request.urlretrieve(url, "fqcp_helpers.py")
-from fqcp_helpers import frequency_inner_product
-```
-
-Use a release tag, not `main`, in released notebooks. A PyPI package is unnecessary until repeated, stable helpers justify its maintenance cost.
-
 ## Local build and validation
 
 ```bash

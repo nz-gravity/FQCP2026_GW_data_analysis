@@ -2274,715 +2274,6 @@ print(f"Selection-aware MAP: {mean_grid[np.argmax(corrected)]:.2f}")"""),
         md(
             """This compact example treats masses as exactly measured. Real population inference reweights uncertain event posteriors, estimates selection with injection campaigns, infers several hyperparameters and often the rate, and checks sensitivity to event-level priors and waveform systematics."""
         ),
-        md(r"""## 7. The full Bilby analysis
-
-Everything so far kept one piece visible at a time. This section runs the real
-thing: a production `bilby` nested-sampling analysis over four parameters,
-using the same rippleGW waveform.
-
-The pieces map onto the earlier sections exactly:
-
-| Bilby object | What it is | Earlier section |
-| --- | --- | --- |
-| `WaveformGenerator` | $\theta\rightarrow(h_+,h_\times)$ | 1 |
-| `Interferometer` | projection $F_+,F_\times,\Delta t$, PSD, data | 2 |
-| `GravitationalWaveTransient` | $\log\mathcal L=-\frac12\sum_I(d_I-h_I\mid d_I-h_I)$ | 3, 4 |
-| `PriorDict` | $\pi(\theta)$ | notebook 00 |
-| `run_sampler` | nested sampling for samples **and** $\log\mathcal Z$ | notebook 00 |
-
-Two production tricks make this fast enough to run live:
-
-- **JIT compilation.** `jax.jit` on the rippleGW call gives a waveform in well
-  under a millisecond, so the run takes a couple of minutes rather than hours.
-  This mirrors bilby's own `jax_fast_tutorial.py`.
-- **Analytic marginalisation.** The coalescence phase $\phi_c$ can be
-  integrated out exactly,
-
-\[
-\mathcal L_{\rm marg}(d\mid\theta)=\int_0^{2\pi}
-\mathcal L(d\mid\theta,\phi_c)\,\frac{d\phi_c}{2\pi}
-\;\propto\; I_0\!\left(|(d\mid h)|\right),
-\]
-
-  with $I_0$ a modified Bessel function. That is one fewer sampled dimension
-  for free. Distance can be marginalised the same way, but we keep it
-  **sampled** so the corner plot shows the distance-inclination degeneracy
-  found on a grid in Section 4."""),
-        code('''import time
-
-import jax
-
-# A rippleGW waveform in the form Bilby expects: theta -> (h_plus, h_cross).
-jitted_waveform = jax.jit(gen_IMRPhenomD_hphc)
-
-
-def ripple_bbh(
-    frequency_array,
-    chirp_mass,
-    mass_ratio,
-    luminosity_distance,
-    theta_jn,
-    phase,
-    chi_1,
-    chi_2,
-    **kwargs,
-):
-    """Bilby frequency-domain source model backed by rippleGW IMRPhenomD."""
-    minimum_frequency = kwargs.get("minimum_frequency", 20.0)
-    # Evaluate in band only. Clamping the array instead would create duplicate
-    # frequencies, and IMRPhenomD returns NaN for those.
-    in_band = frequency_array >= minimum_frequency
-    eta = mass_ratio / (1 + mass_ratio) ** 2
-    theta = jnp.array(
-        [chirp_mass, eta, chi_1, chi_2, luminosity_distance, 0.0, phase, theta_jn]
-    )
-    hp, hc = jitted_waveform(
-        jnp.asarray(frequency_array[in_band]), theta, jnp.asarray(minimum_frequency)
-    )
-    plus = np.zeros(frequency_array.size, dtype=complex)
-    cross = np.zeros(frequency_array.size, dtype=complex)
-    plus[in_band] = np.asarray(hp)
-    cross[in_band] = np.asarray(hc)
-    return dict(plus=plus, cross=cross)
-
-
-full_injection = dict(
-    chirp_mass=28.1,
-    mass_ratio=0.8,
-    luminosity_distance=800.0,
-    theta_jn=0.5,
-    phase=0.3,
-    chi_1=0.1,
-    chi_2=-0.1,
-    ra=1.2,
-    dec=-0.4,
-    psi=0.7,
-    geocent_time=gps_time,
-)
-
-waveform_generator = bilby.gw.WaveformGenerator(
-    duration=duration,
-    sampling_frequency=sample_rate,
-    frequency_domain_source_model=ripple_bbh,
-    parameter_conversion=lambda parameters: (parameters, []),
-    waveform_arguments=dict(minimum_frequency=f_min),
-)
-
-bilby.core.utils.random.seed(20260817)
-full_ifos = bilby.gw.detector.InterferometerList(["H1", "L1"])
-full_ifos.set_strain_data_from_power_spectral_densities(
-    sampling_frequency=sample_rate, duration=duration, start_time=gps_time - 2
-)
-full_polarizations = waveform_generator.frequency_domain_strain(full_injection)
-for ifo in full_ifos:
-    ifo.inject_signal_from_waveform_polarizations(full_injection, full_polarizations)
-
-network_snr = np.sqrt(sum(ifo.meta_data["optimal_SNR"] ** 2 for ifo in full_ifos))
-print("Injected network SNR:", round(float(network_snr), 2))'''),
-        code(r'''full_priors = bilby.core.prior.PriorDict()
-# Held fixed: sky position, polarisation, arrival time, and spins.
-for name in ["chi_1", "chi_2", "ra", "dec", "psi", "geocent_time"]:
-    full_priors[name] = full_injection[name]
-# Sampled: two mass parameters, orientation, and distance.
-full_priors["chirp_mass"] = bilby.core.prior.Uniform(
-    27.5, 28.7, name="chirp_mass", latex_label=r"$\mathcal{M}$"
-)
-full_priors["mass_ratio"] = bilby.core.prior.Uniform(
-    0.3, 1.0, name="mass_ratio", latex_label="$q$"
-)
-full_priors["theta_jn"] = bilby.core.prior.Sine(
-    name="theta_jn", latex_label=r"$\theta_{JN}$"
-)
-full_priors["luminosity_distance"] = bilby.gw.prior.UniformSourceFrame(
-    200, 3000, name="luminosity_distance", latex_label="$d_L$"
-)
-# Marginalised analytically rather than sampled.
-full_priors["phase"] = bilby.core.prior.Uniform(
-    0, 2 * np.pi, name="phase", boundary="periodic"
-)
-
-full_likelihood = bilby.gw.likelihood.GravitationalWaveTransient(
-    interferometers=full_ifos,
-    waveform_generator=waveform_generator,
-    priors=full_priors,
-    phase_marginalization=True,
-)
-
-full_likelihood.parameters.update(full_injection)
-start = time.time()
-for _ in range(50):
-    full_likelihood.parameters.update(full_priors.sample())
-    full_likelihood.log_likelihood_ratio()
-print(f"one likelihood evaluation: {(time.time() - start) / 50 * 1e3:.2f} ms")'''),
-        md("""Now the sampler. This is a genuine nested-sampling run, not a
-grid, and takes a couple of minutes. It returns posterior samples **and** the
-evidence."""),
-        code('''start = time.time()
-full_result = bilby.run_sampler(
-    likelihood=full_likelihood,
-    priors=full_priors,
-    sampler="dynesty",
-    nlive=250,
-    sample="acceptance-walk",
-    naccept=15,
-    injection_parameters=full_injection,
-    outdir="bilby_out",
-    label="fqcp_full",
-    result_class=bilby.gw.result.CBCResult,
-    clean=True,
-    plot=False,
-    save=False,
-    print_progress=False,
-)
-print(f"sampling wall time: {time.time() - start:.0f} s")
-print(f"log Bayes factor (signal vs noise): {full_result.log_bayes_factor:.1f}")
-print(f"posterior samples: {len(full_result.posterior)}")'''),
-        code('''sampled_names = ["chirp_mass", "mass_ratio", "theta_jn", "luminosity_distance"]
-print(f"{'parameter':22s}{'median':>10s}{'90% interval':>26s}{'truth':>10s}")
-for name in sampled_names:
-    low, median, high = full_result.posterior[name].quantile([0.05, 0.5, 0.95])
-    interval = f"[{low:.3f}, {high:.3f}]"
-    print(f"{name:22s}{median:10.3f}{interval:>26s}{full_injection[name]:10.3f}")
-
-full_result.plot_corner(
-    parameters=sampled_names,
-    truths=[full_injection[name] for name in sampled_names],
-    save=False,
-)
-plt.show()''', figure="lvk-bilby-corner"),
-        md("""- Every truth should land inside its 90% interval. For a single
-  noise realisation that is partly luck; the P-P test in notebook 00 is what
-  checks calibration properly.
-- The chirp mass is pinned to a fraction of a percent while the distance is
-  uncertain at the tens-of-percent level. That gap is the message of Sections 1
-  and 4: phase is measured precisely, amplitude is not.
-- `luminosity_distance` against `theta_jn` shows the same curved degeneracy the
-  grid produced in Section 4, now from a sampler that was never told about it.
-- The log Bayes factor is the signal-versus-noise evidence ratio, the same
-  quantity nested sampling produced in notebook 00.
-- Scaling up to a real analysis means freeing sky position, spins, and time
-  (about 15 parameters), which is why production runs take hours on many
-  cores rather than two minutes on one."""),
-        md(
-            r"""## 8. Real data: a restricted GW150914 analysis
-
-The controlled injection above tests the sampler against a known answer. We now
-start a **new analysis** using public H1/L1 strain around GW150914 and noise
-PSDs estimated from separate off-source data.
-
-To keep this live exercise fast, we scan detector-frame chirp mass
-$\mathcal M^{\rm det}$ and mass ratio $q$ with a non-spinning IMRPhenomD
-template. At every grid point we maximise over a small arrival-time window and
-over one complex amplitude per detector:
-
-$$
-\log\Lambda_{\rm prof}(\mathcal M^{\rm det},q)
-=\frac12\sum_I\max_{\tau_I}\rho_I^2(\tau_I).
-$$
-
-The complex amplitude profiles over phase and amplitude. We then integrate the
-profile likelihood over a flat $q$ grid. This is a genuine real-data
-matched-filter inference, but the resulting **restricted density is not the
-full LVK posterior**: profiling is not marginalisation, and independent
-detector amplitudes discard coherent sky and polarisation information.
-
-**Why the template must have spin.** Detector-frame chirp mass and effective
-spin are degenerate: in the GWTC-1 samples they correlate at $r = 0.94$. A
-non-spinning template slices that ridge at right angles, which manufactures a
-sharp fake peak and a spurious second mode -- it looks precise and is an
-artifact. So we grid $\chi_{\rm eff}$ (setting $\chi_1=\chi_2$ makes the grid
-axis exactly $\chi_{\rm eff}$), weight it by the $\chi_{\rm eff}$ distribution
-that LVK's isotropic spin prior induces, and marginalise. The left panel below
-is that degeneracy plane, with LVK's answer marked on it.
-
-Grid resolution is part of the physics here, not a detail: the ridge is narrow
-in $q$ and $\chi_{\rm eff}$, and a coarse grid aliases it into lumps that look
-like structure.
-
-**It still will not match exactly, and should not.** We profile rather than
-marginalise over each detector's amplitude, phase and time; we fix the sky
-position and inclination; we force $\chi_1=\chi_2$ and allow no precession; and
-we estimate the PSD off-source. What survives all that is agreement at about
-half a standard deviation of the LVK posterior, with each median inside the
-other's 90% interval.
-
-Two things this notebook checked and found *not* to be the cause, which are
-worth knowing because both are plausible: imposing a fully coherent likelihood
-(one complex amplitude and one geocentric $t_c$, with the H1/L1 relative phase
-locked by the antenna patterns) changes the answer by 0.02 $M_\odot$; and
-widening the band to 20--900 Hz over 8 s makes the agreement slightly *worse*,
-not better."""
-        ),
-        code(
-            r'''import h5py
-from pathlib import Path
-from urllib.request import urlretrieve
-
-GW150914_GPS = 1126259462.4
-GWTC1_POSTERIOR_URL = (
-    "https://dcc.ligo.org/public/0157/P1800370/005/GW150914_GWTC-1.hdf5"
-)
-cache = Path("gw150914_cache")
-cache.mkdir(exist_ok=True)
-
-
-def gw150914_strain(detector, start, end):
-    # GWOSC provides the GW150914 event files at 4096 Hz (not 2048 Hz).
-    # Include the rate in the cache key so stale data cannot be reused.
-    path = cache / f"{detector}-{int(start)}-{int(end-start)}-4096Hz.hdf5"
-    if path.exists():
-        return TimeSeries.read(path)
-    strain = TimeSeries.fetch_open_data(detector, start, end, sample_rate=4096)
-    strain.write(path)
-    return strain
-
-
-raw = {
-    ifo: gw150914_strain(ifo, GW150914_GPS - 16, GW150914_GPS + 16)
-    for ifo in ("H1", "L1")
-}
-off_source = {
-    ifo: gw150914_strain(ifo, GW150914_GPS + 32, GW150914_GPS + 160)
-    for ifo in ("H1", "L1")
-}
-print("Downloaded/cached 32 s analysis and 128 s off-source data for H1 and L1.")'''
-        ),
-        code(
-            r'''fig, axes = plt.subplots(1, 2, figsize=(12, 3.5), sharey=True)
-for ax, ifo in zip(axes, ("H1", "L1")):
-    # Whiten first: band-passing alone leaves the 35-50 Hz noise wall, which is
-    # far louder than the signal. Autoscaling also blows up on the filter's
-    # ring-up at the 32 s segment edges, so fix the limits.
-    filtered = raw[ifo].whiten(4, 2).bandpass(35, 300).notch(60).notch(120)
-    time_from_event = filtered.times.value - GW150914_GPS
-    ax.plot(time_from_event, filtered.value, lw=0.9)
-    ax.set(
-        xlim=(-0.25, 0.08),
-        ylim=(-6, 6),
-        xlabel="time from GW150914 [s]",
-        title=f"{ifo}: whitened, band-passed strain",
-    )
-axes[0].set_ylabel("whitened strain [sigma]")
-plt.show()
-
-fig, axes = plt.subplots(1, 2, figsize=(12, 3.8))
-for ax, ifo in zip(axes, ("H1", "L1")):
-    q = raw[ifo].q_transform(
-        outseg=(GW150914_GPS - 0.25, GW150914_GPS + 0.08),
-        frange=(30, 350),
-        qrange=(4, 64),
-    )
-    image = ax.pcolormesh(
-        q.times.value - GW150914_GPS,
-        q.frequencies.value,
-        q.value.T,
-        shading="nearest",
-        cmap="magma",
-    )
-    ax.set(
-        yscale="log",
-        xlabel="time from event [s]",
-        ylabel="frequency [Hz]",
-        title=f"{ifo}: Q-transform",
-    )
-    fig.colorbar(image, ax=ax, label="normalised energy")
-plt.show()'''
-        ),
-        md(
-            r"""### Build the real-data likelihood
-
-- Downsample the cached 4096-Hz strain to the notebook's 1024-Hz working rate.
-- Analyse the four seconds centred on the event.
-- Estimate each detector PSD from a separate 128-second segment using median
-  Welch averaging.
-- Search only within $\pm60$ ms of the nominal event time, wide enough for the
-  H1--L1 delay and the restricted waveform's timing uncertainty."""
-        ),
-        code(
-            r'''from scipy.special import logsumexp
-
-REAL_SAMPLE_RATE = 1024
-REAL_DURATION = 4.0
-REAL_F_MIN = 30.0
-REAL_F_MAX = 350.0
-REAL_START = GW150914_GPS - REAL_DURATION / 2
-
-real_ifos = bilby.gw.detector.InterferometerList([])
-for name in ("H1", "L1"):
-    analysis = (
-        raw[name]
-        .resample(REAL_SAMPLE_RATE)
-        .crop(REAL_START, REAL_START + REAL_DURATION)
-    )
-    noise = off_source[name].resample(REAL_SAMPLE_RATE)
-    noise_psd = noise.psd(
-        fftlength=REAL_DURATION,
-        overlap=REAL_DURATION / 2,
-        window=("tukey", 0.2),
-        method="median",
-    )
-    ifo = bilby.gw.detector.get_empty_interferometer(name)
-    ifo.minimum_frequency = REAL_F_MIN
-    ifo.maximum_frequency = REAL_F_MAX
-    ifo.power_spectral_density = bilby.gw.detector.PowerSpectralDensity(
-        frequency_array=noise_psd.frequencies.value,
-        psd_array=noise_psd.value,
-    )
-    ifo.set_strain_data_from_gwpy_timeseries(analysis)
-    real_ifos.append(ifo)
-
-real_frequency = real_ifos[0].frequency_array
-real_df = real_frequency[1] - real_frequency[0]
-real_n_samples = int(REAL_SAMPLE_RATE * REAL_DURATION)
-real_band = (real_frequency >= REAL_F_MIN) & (real_frequency <= REAL_F_MAX)
-real_time_offsets = (np.arange(real_n_samples) - real_n_samples // 2) / REAL_SAMPLE_RATE
-real_time_window = np.abs(real_time_offsets) <= 0.060
-event_time_in_segment = GW150914_GPS - real_ifos[0].strain_data.start_time
-
-
-def real_template(chirp_mass_detector, mass_ratio, aligned_spin=0.0):
-    """Aligned-spin IMRPhenomD plus polarisation on the real-data grid.
-
-    Setting chi1 = chi2 = aligned_spin makes this grid axis exactly chi_eff.
-    """
-    symmetric_mass_ratio = mass_ratio / (1 + mass_ratio) ** 2
-    parameters = jnp.array(
-        [
-            chirp_mass_detector,
-            symmetric_mass_ratio,
-            aligned_spin,
-            aligned_spin,
-            1.0,
-            event_time_in_segment,
-            0.0,
-            0.0,
-        ]
-    )
-    plus, _ = jitted_waveform(
-        jnp.asarray(real_frequency[real_band]),
-        parameters,
-        jnp.asarray(REAL_F_MIN),
-    )
-    template = np.zeros(real_frequency.size, dtype=complex)
-    template[real_band] = np.asarray(plus)
-    return template
-
-
-def profile_detector(ifo, template, return_model=False):
-    """Profile one detector over a complex amplitude and a narrow time shift."""
-    psd = ifo.power_spectral_density_array
-    usable = real_band & np.isfinite(psd) & (psd > 0)
-    integrand = np.zeros(real_frequency.size, dtype=complex)
-    integrand[usable] = (
-        ifo.frequency_domain_strain[usable] * np.conj(template[usable]) / psd[usable]
-    )
-    padded = np.zeros(real_n_samples, dtype=complex)
-    padded[: integrand.size] = integrand
-    complex_overlap = np.fft.fftshift(
-        4 * real_df * real_n_samples * np.fft.ifft(padded)
-    )
-    template_norm = 4 * real_df * np.sum(np.abs(template[usable]) ** 2 / psd[usable])
-    allowed_indices = np.flatnonzero(real_time_window)
-    peak_index = allowed_indices[np.argmax(np.abs(complex_overlap[real_time_window]))]
-    peak_snr = np.abs(complex_overlap[peak_index]) / np.sqrt(template_norm)
-    peak_time = real_time_offsets[peak_index]
-    if not return_model:
-        return float(peak_snr), float(peak_time)
-    complex_scale = complex_overlap[peak_index] / template_norm
-    shifted_template = template * np.exp(-2j * np.pi * real_frequency * peak_time)
-    return float(peak_snr), float(peak_time), complex_scale * shifted_template
-
-
-# Spin is not optional here. Chirp mass and chi_eff are strongly degenerate, so
-# a chi = 0 template slices that ridge at right angles and manufactures a sharp
-# fake peak plus a spurious second mode. Grid the spin instead, and marginalise.
-# Resolution matters too: too few q/chi points and the narrow ridge aliases into
-# lumps. 91 x 41 x 51 is converged (matches a 145 x 61 x 81 grid to 0.003 in
-# density); drop to 41 x 21 x 25 for a faster, visibly lumpier live run.
-real_mc_grid = np.linspace(29.0, 33.5, 91)
-real_q_grid = np.linspace(0.4, 1.0, 41)
-real_chi_grid = np.linspace(-0.6, 0.6, 51)
-real_log_profile = np.empty(
-    (real_mc_grid.size, real_q_grid.size, real_chi_grid.size)
-)
-for i, chirp_mass_detector in enumerate(real_mc_grid):
-    for j, mass_ratio in enumerate(real_q_grid):
-        for k, aligned_spin in enumerate(real_chi_grid):
-            template = real_template(chirp_mass_detector, mass_ratio, aligned_spin)
-            squared_network_snr = sum(
-                profile_detector(ifo, template)[0] ** 2 for ifo in real_ifos
-            )
-            real_log_profile[i, j, k] = 0.5 * squared_network_snr
-
-# A flat chi prior is not what LVK used, and the difference matters on a ridge.
-# Build their prior -- spin magnitudes U(0, 1), isotropic tilts -- by sampling
-# the induced chi_eff distribution onto our grid.
-def lvk_chi_eff_log_prior(chi_grid, q_low, q_high, n_draws=2_000_000, seed=1):
-    rng = np.random.default_rng(seed)
-    a1, a2 = rng.uniform(0, 1, n_draws), rng.uniform(0, 1, n_draws)
-    cos1, cos2 = rng.uniform(-1, 1, n_draws), rng.uniform(-1, 1, n_draws)
-    q = rng.uniform(q_low, q_high, n_draws)
-    chi_eff = (a1 * cos1 + q * a2 * cos2) / (1 + q)
-    half = (chi_grid[1] - chi_grid[0]) / 2
-    edges = np.concatenate(
-        [[chi_grid[0] - half], (chi_grid[:-1] + chi_grid[1:]) / 2, [chi_grid[-1] + half]]
-    )
-    weights, _ = np.histogram(chi_eff, bins=edges, density=True)
-    return np.log(np.maximum(weights, 1e-12))
-
-
-real_log_chi_prior = lvk_chi_eff_log_prior(
-    real_chi_grid, real_q_grid[0], real_q_grid[-1]
-)
-
-# Flat in q, LVK-like in chi_eff; marginalise over both nuisance axes.
-real_log_posterior = real_log_profile + real_log_chi_prior[None, None, :]
-real_log_mc_density = logsumexp(real_log_posterior, axis=(1, 2))
-real_mc_density = np.exp(real_log_mc_density - real_log_mc_density.max())
-real_mc_density /= np.trapezoid(real_mc_density, real_mc_grid)
-real_low, real_median, real_high = credible_interval(real_mc_grid, real_mc_density)
-
-real_log_chi_density = logsumexp(real_log_posterior, axis=(0, 1))
-real_chi_density = np.exp(real_log_chi_density - real_log_chi_density.max())
-real_chi_density /= np.trapezoid(real_chi_density, real_chi_grid)
-real_chi_low, real_chi_median, real_chi_high = credible_interval(
-    real_chi_grid, real_chi_density
-)
-
-# Marginalised (Mc, chi_eff) surface: this is the plane the degeneracy lives in.
-real_log_mc_chi = logsumexp(real_log_posterior, axis=1)
-
-best_i, best_j, best_k = np.unravel_index(
-    np.argmax(real_log_profile), real_log_profile.shape
-)
-real_best_mc = real_mc_grid[best_i]
-real_best_q = real_q_grid[best_j]
-real_best_chi = real_chi_grid[best_k]
-real_best_template = real_template(real_best_mc, real_best_q, real_best_chi)
-real_best_snr = np.sqrt(2 * real_log_profile[best_i, best_j, best_k])
-
-print(
-    f"profile maximum: Mc_det={real_best_mc:.2f} Msun, "
-    f"q={real_best_q:.2f}, chi_eff={real_best_chi:+.2f}"
-)
-print(
-    f"restricted Mc_det density: {real_median:.2f} "
-    f"[{real_low:.2f}, {real_high:.2f}] Msun"
-)
-print(
-    f"restricted chi_eff:        {real_chi_median:+.3f} "
-    f"[{real_chi_low:+.3f}, {real_chi_high:+.3f}]"
-)
-print(f"profiled H1+L1 network SNR: {real_best_snr:.1f}")'''
-        ),
-        md(
-            r"""### Compare like with like
-
-The release contains several posterior datasets. Select `Overall_posterior`
-explicitly and use its `m1_detector_frame_Msun` and
-`m2_detector_frame_Msun` fields. We therefore compare detector-frame chirp
-mass with detector-frame chirp mass; no accidental source/detector-frame mixing
-is allowed."""
-        ),
-        code(
-            r'''posterior_path = cache / "GW150914_GWTC-1.hdf5"
-if not posterior_path.exists():
-    urlretrieve(GWTC1_POSTERIOR_URL, posterior_path)
-
-with h5py.File(posterior_path, "r") as h5:
-    if "Overall_posterior" not in h5:
-        raise KeyError("GWTC-1 file does not contain Overall_posterior")
-    lvk = h5["Overall_posterior"][...]
-
-required_mass_fields = {"m1_detector_frame_Msun", "m2_detector_frame_Msun"}
-if not required_mass_fields <= set(lvk.dtype.names or ()):
-    raise KeyError(f"Missing detector-frame mass fields: {required_mass_fields}")
-
-lvk_m1_detector = lvk["m1_detector_frame_Msun"]
-lvk_m2_detector = lvk["m2_detector_frame_Msun"]
-lvk_chirp_mass_detector = (lvk_m1_detector * lvk_m2_detector) ** (3 / 5) / (
-    lvk_m1_detector + lvk_m2_detector
-) ** (1 / 5)
-lvk_low, lvk_median, lvk_high = np.percentile(lvk_chirp_mass_detector, [5, 50, 95])
-
-# chi_eff for the like-for-like spin comparison.
-lvk_chi_eff = (
-    lvk_m1_detector * lvk["spin1"] * lvk["costilt1"]
-    + lvk_m2_detector * lvk["spin2"] * lvk["costilt2"]
-) / (lvk_m1_detector + lvk_m2_detector)
-lvk_chi_low, lvk_chi_median, lvk_chi_high = np.percentile(lvk_chi_eff, [5, 50, 95])
-
-fig, axes = plt.subplots(1, 3, figsize=(16, 4))
-
-# The degeneracy plane. LVK's answer should land on our ridge, not beside it.
-image = axes[0].pcolormesh(
-    real_mc_grid,
-    real_chi_grid,
-    (real_log_mc_chi - real_log_mc_chi.max()).T,
-    vmin=-12,
-    vmax=0,
-    cmap="magma",
-    shading="gouraud",
-    rasterized=True,
-)
-axes[0].plot(lvk_median, lvk_chi_median, "*", color="cyan", ms=16, mec="k", mew=0.6)
-axes[0].annotate(
-    "LVK median",
-    (lvk_median, lvk_chi_median),
-    xytext=(14, -20),
-    textcoords="offset points",
-    color="cyan",
-    fontsize=9,
-    arrowprops=dict(arrowstyle="-", color="cyan", lw=0.8),
-)
-axes[0].set(
-    xlabel=r"detector-frame chirp mass $\mathcal{M}^{\rm det}$ [$M_\odot$]",
-    ylabel=r"$\chi_{\rm eff}$",
-    title=r"The $\mathcal{M}$--$\chi_{\rm eff}$ degeneracy",
-)
-axes[0].grid(False)
-fig.colorbar(image, ax=axes[0], label="log posterior rel. max")
-
-lvk_bins = np.linspace(28.5, 34.0, 70)
-axes[1].hist(
-    lvk_chirp_mass_detector,
-    bins=lvk_bins,
-    density=True,
-    histtype="step",
-    lw=2,
-    color="C0",
-    label="LVK GWTC-1",
-)
-axes[1].plot(
-    real_mc_grid, real_mc_density, lw=2.5, color="C3", label="this notebook"
-)
-axes[1].set(
-    xlabel=r"detector-frame chirp mass $\mathcal{M}^{\rm det}$ [$M_\odot$]",
-    ylabel="density",
-    title="Chirp mass",
-)
-axes[1].legend(fontsize=8)
-
-axes[2].hist(
-    lvk_chi_eff,
-    bins=np.linspace(-0.5, 0.5, 60),
-    density=True,
-    histtype="step",
-    lw=2,
-    color="C0",
-    label="LVK GWTC-1",
-)
-axes[2].plot(
-    real_chi_grid, real_chi_density, lw=2.5, color="C3", label="this notebook"
-)
-axes[2].set(xlabel=r"$\chi_{\rm eff}$", title="Effective spin", xlim=(-0.5, 0.5))
-axes[2].legend(fontsize=8)
-plt.tight_layout()
-plt.show()
-
-print(f"LVK  Mc_det  : {lvk_median:.2f} [{lvk_low:.2f}, {lvk_high:.2f}] Msun")
-print(f"ours Mc_det  : {real_median:.2f} [{real_low:.2f}, {real_high:.2f}] Msun")
-print(
-    f"LVK  chi_eff : {lvk_chi_median:+.3f} "
-    f"[{lvk_chi_low:+.3f}, {lvk_chi_high:+.3f}]"
-)
-print(
-    f"ours chi_eff : {real_chi_median:+.3f} "
-    f"[{real_chi_low:+.3f}, {real_chi_high:+.3f}]"
-)
-offset = abs(real_median - lvk_median) / ((lvk_high - lvk_low) / 3.29)
-print(f"\nchirp-mass offset: {offset:.2f} sigma of the LVK posterior")
-# Each median must sit inside the other's 90% interval.
-assert lvk_low <= real_median <= lvk_high
-assert real_low <= lvk_median <= real_high
-assert offset < 1.0
-print("like-for-like check passed")''', figure="lvk-gw150914"
-        ),
-        md(
-            r"""### Frequency-domain model check
-
-At the profile maximum, reconstruct each detector's independently profiled
-waveform. Data, noise ASD, and model are plotted in the same
-strain-per-square-root-Hz convention. This checks where the fitted waveform
-draws its support; it is not a posterior-predictive distribution."""
-        ),
-        code(
-            r'''fig, axes = plt.subplots(1, 2, figsize=(12, 3.5), sharey=True)
-for ax, ifo in zip(axes, real_ifos):
-    peak_snr, peak_time, best_model = profile_detector(
-        ifo, real_best_template, return_model=True
-    )
-    amplitude_factor = np.sqrt(2 / REAL_DURATION)
-    ax.loglog(
-        real_frequency[real_band],
-        amplitude_factor * np.abs(ifo.frequency_domain_strain[real_band]),
-        color="0.65",
-        lw=0.7,
-        label="four-second data amplitude",
-    )
-    ax.loglog(
-        real_frequency[real_band],
-        np.sqrt(ifo.power_spectral_density_array[real_band]),
-        color="k",
-        lw=1.3,
-        label="off-source ASD",
-    )
-    ax.loglog(
-        real_frequency[real_band],
-        amplitude_factor * np.abs(best_model[real_band]),
-        color="C3",
-        lw=1.5,
-        label="profiled best-fit model",
-    )
-    ax.set(
-        xlim=(30, 350),
-        ylim=(2e-24, 3e-21),
-        xlabel="frequency [Hz]",
-        title=f"{ifo.name}: SNR {peak_snr:.1f}, time shift {1e3*peak_time:+.1f} ms",
-    )
-    tidy_log_frequency(ax, ticks=(30, 50, 100, 200, 350))
-axes[0].set_ylabel(r"amplitude equivalent [strain/$\sqrt{\rm Hz}$]")
-axes[0].legend(fontsize=8)
-plt.show()'''
-        ),
-        md(
-            """## Boundary and extensions
-
-- Section 7 frees four parameters; production BBH analyses free about fifteen, plus nuisance and systematic choices.
-- Section 8 uses real strain but profiles detector amplitudes, phases and times independently. It is intentionally less complete than coherent Bayesian PE.
-- Real data contain PSD uncertainty, lines, glitches, non-stationarity, and calibration uncertainty; none is marginalised here.
-- Replace the profile grid with a coherent Bilby likelihood to turn this into a full real-data follow-up.
-- Extend the mock catalogue by giving each event a mass posterior instead of an exact mass.
-
-Adapted substantially from `nz_bilby_cbc_workshop_2024`, with its injection → PSD → prior → likelihood → result structure."""
-        ),
-        md(
-            """## Question bank and answer key
-
-1. Does adding a detector make every sky direction equally loud, and what does a
-   response map omit about localisation?
-2. Why can matched filtering recover an otherwise invisible signal, and why does
-   waveform mismatch reduce its SNR?
-3. Why do distance and inclination form an extended posterior degeneracy?
-4. Why does one inter-detector time difference produce a ring instead of a
-   unique sky position?
-
-<details>
-<summary>Show the answer key</summary>
-
-1. A new detector fills some blind spots and improves the network unevenly. A
-   sensitivity map omits the phase and arrival-time information that is crucial
-   for localisation.
-2. The correct template adds hundreds of signal cycles coherently while noise
-   adds incoherently. Mismatch lets the template phase drift, so that coherent
-   sum is lost.
-3. Both parameters predominantly rescale the two polarisations. A more distant,
-   more face-on source can resemble a nearer, more inclined source.
-4. A fixed path-length difference defines a locus on the celestial sphere. A
-   third timing constraint reduces that locus, but timing alone still leaves
-   mirror/extended degeneracies that coherent amplitudes and phases help break.
-</details>"""
-        ),
     ],
 )
 
@@ -4453,7 +3744,7 @@ from earlier notebooks:
 - **MBHB.** Maximise the overlap over $(\mathcal M,t_c)$. Amplitude and phase
   come out analytically, and $t_c$ enters only as $e^{2\pi i f t_c}$, so **one
   inverse FFT scans every arrival time at once**. This is exactly the
-  matched-filter trick from notebook 01, Section 3.
+  matched-filter trick from notebook 02, Section 3.
 - **Galactic binaries.** After removing the MBHB estimate, a monochromatic
   source sitting exactly on a Fourier bin has all its power in that bin, so the
   search statistic is just the **whitened periodogram**. Peaks above 7 are kept.
@@ -4529,7 +3820,8 @@ all of them; each sees only its own conditional residual.
 well constrained: $t_c$ is measured to a second out of a 90-day window. An
 isotropic proposal is rejected essentially always. So we build the **Fisher
 matrix at the seed and propose along its eigen-directions** — the payoff for
-the Fisher extension in Section 4, and what production samplers actually do.
+the Fisher extension in notebook 05, Section 3, and what production
+samplers actually do.
 
 The Fisher matrix here is numerically brutal: $\sigma(f_0)\sim10^{-9}$ while
 $\sigma(\rho)\sim1$, a condition number near $10^{18}$. We rescale to unit
@@ -4703,7 +3995,7 @@ block has to find its way back.
   reversible-jump moves that delete and re-add sources deliberately, rather
   than waiting for a fixed-dimension chain to wander back.
 - It is also the honest form of the question "is this source really there?",
-  which Section 7 takes up.
+  which Section 3 takes up.
 
 What this miniature keeps from a real global fit:
 
@@ -4717,13 +4009,13 @@ What this miniature keeps from a real global fit:
 What it still leaves out:
 
 - Constellation response and TDI: these are plain frequency-domain templates,
-  whereas Section 4 used the real moving JaxGB response.
+  whereas notebook 05, Section 3 used the real moving JaxGB response.
 - Sky position, inclination, polarisation, and frequency drift $\dot f_0$.
 - A **fixed** source count. Real analyses add and delete sources with
   reversible-jump moves inside the Galactic-binary block.
 - Tens of thousands of overlapping sources rather than three, with a confusion
   foreground that is itself part of the noise model.
-- Data gaps and non-stationarity, from Section 3."""),
+- Data gaps and non-stationarity, from notebook 08, Section 1."""),
         md(
             """## 7. A miniature unknown-source-count challenge
 
@@ -4840,6 +4132,26 @@ def _between(cells, start_heading, end_heading=None):
     start = _find_heading(cells, start_heading)
     end = len(cells) if end_heading is None else _find_heading(cells, end_heading)
     return [deepcopy(cell) for cell in cells[start:end]]
+
+
+def _renumber(cells, mapping):
+    """Restart a sliced module's section numbers at 1.
+
+    The transitional monoliths number their sections globally, so a slice taken
+    out of the middle would otherwise open at "## 6." on the website.  Rewriting
+    after the slice keeps the _between() headings usable as markers.  Lettered
+    subsections ("### 1a.") are left alone: they hang off a major number that
+    the mapping either keeps or renames consistently.
+    """
+    pattern = re.compile(r"^## (\d+)([a-z]?)\.", re.MULTILINE)
+    for cell in cells:
+        if cell.cell_type == "markdown":
+            cell.source = pattern.sub(
+                lambda match: f"## {mapping.get(match.group(1), match.group(1))}"
+                f"{match.group(2)}.",
+                cell.source,
+            )
+    return cells
 
 
 def _exercise(question, starter, hint, solution):
@@ -5499,32 +4811,7 @@ lvk_c_cells = [
         "selection with injection campaigns.",
     ),
     population_setup,
-    *_between(lvk_source, "## 6. From events to a population", "## 7. The full Bilby analysis"),
-    *_exercise(
-        "Move the detection turn-on from 22 to 28 mass units and recompute both "
-        "population posteriors. Which estimate moves more, and why?",
-        """# Your code here
-def harder_detection_probability(mass):
-    return 1 / (1 + np.exp(-(mass - 28) / 3.5))
-
-raise NotImplementedError("redraw the detected catalogue and selection correction")""",
-        "Use the same underlying `all_masses`. The hyperlikelihood correction "
-        "must use the same selection function that generated the detected sample.",
-        """hard_detected = all_masses[
-    rng.random(all_masses.size) < harder_detection_probability(all_masses)
-][:40]
-hard_naive, hard_corrected = [], []
-for mean in mean_grid:
-    event_term = norm.logpdf(hard_detected, mean, population_width).sum()
-    alpha = np.trapezoid(
-        norm.pdf(integration_grid, mean, population_width)
-        * harder_detection_probability(integration_grid), integration_grid
-    )
-    hard_naive.append(event_term)
-    hard_corrected.append(event_term - len(hard_detected) * np.log(alpha))
-print("naive MAP:", mean_grid[np.argmax(hard_naive)])
-print("selection-aware MAP:", mean_grid[np.argmax(hard_corrected)])""",
-    ),
+    *_renumber(_between(lvk_source, "## 6. From events to a population"), {"6": "1"}),
     md("""## PE checks before population claims
 
 - Inspect sampler convergence and effective sample size at event level.
@@ -5553,7 +4840,7 @@ lisa_a_cells = [
     ),
     *lisa_setup,
     *_between(lisa_source, "## 1. LISA's band and source zoo", "## 3. Real LISA data will be more complicated"),
-    *_between(lisa_source, "## 4. Inner product, SNR, and likelihood", "## 5. The global fit: a wheel of conditional analyses"),
+    *_renumber(_between(lisa_source, "## 4. Inner product, SNR, and likelihood", "## 5. The global fit: a wheel of conditional analyses"), {"4": "3"}),
     md("""## Analysis-code map
 
 | Tool family | Typical role in a LISA analysis |
@@ -5604,7 +4891,7 @@ lisa_b_cells = [
     ),
     *lisa_setup,
     global_lisa_state,
-    *_between(lisa_source, "## 5. The global fit: a wheel of conditional analyses", "## Optional LISA Data Challenge input and boundary"),
+    *_renumber(_between(lisa_source, "## 5. The global fit: a wheel of conditional analyses", "## Optional LISA Data Challenge input and boundary"), {"5": "1", "6": "2", "7": "3"}),
     *_exercise(
         "Reverse the order of the one-pass source subtraction. Compare the final "
         "residual norm with the blocked chain. Why can one-pass subtraction "
@@ -5781,7 +5068,7 @@ write(
 # Part 3D: repeat the global-fit wheel in WDM coefficients, now with a gap.
 wdm_global_fit_cells = [
     md(
-        r"""## 4. The same global fit, now in the WDM domain
+        r"""## 2. The same global fit, now in the WDM domain
 
 Nothing about blocked Gibbs sampling belongs specifically to a Fourier basis.
 Module 06 used frequency-domain residuals. Here the data model is unchanged,
@@ -6245,7 +5532,7 @@ lisa_d_cells = [
         "assumptions. Gaps and non-stationarity can correlate pixels.",
     ),
     *lisa_setup,
-    *_between(lisa_source, "## 3. Real LISA data will be more complicated", "## 4. Inner product, SNR, and likelihood"),
+    *_renumber(_between(lisa_source, "## 3. Real LISA data will be more complicated", "## 4. Inner product, SNR, and likelihood"), {"3": "1", "4": "2"}),
     *wdm_global_fit_cells,
     *_exercise(
         "Reverse the one-pass source order and compare its masked residual norm "
