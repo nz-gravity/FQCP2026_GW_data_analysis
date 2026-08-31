@@ -105,7 +105,19 @@ several minutes.
 
 ## Website deployment
 
-`.github/workflows/pages.yml` validates notebooks, builds `_build/html` with JupyterBook, and deploys it with the official GitHub Pages actions on pushes to `main`. In repository settings, select **GitHub Actions** as the Pages source.
+`.github/workflows/pages.yml` validates notebooks on every push and pull
+request: it checks that they are valid, carry no saved outputs, use `$$` math
+delimiters, and still match `build_course.py`. It does not execute or deploy
+them.
+
+The site itself is built and force-pushed to the `gh-pages` branch by
+`bash scripts/prepush_course.sh --publish`, which also publishes the reference
+figures to the `assets` branch. In repository settings, select **Deploy from a
+branch** and point Pages at `gh-pages`.
+
+Publishing runs locally because executing the course takes roughly twenty
+minutes and Part 2B downloads public GW150914 strain — not because of any
+platform restriction. Every dependency installs on Linux.
 
 - Repository: `https://github.com/nz-gravity/FQCP2026_GW_data_analysis`
 - Intended site: `https://nz-gravity.github.io/FQCP2026_GW_data_analysis/`

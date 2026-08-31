@@ -17,10 +17,10 @@ dependencies = [
   "jupyter-book>=1.0,<2.0",
   "jupyterlab>=4.0",
   "lalsuite==7.26.15",
-  # The published 1.2.5 wheels are macOS-only, so this notebook can only be
-  # executed on a Mac.  That is why the course is built and published locally by
-  # scripts/prepush_course.sh --publish rather than in CI.
-  "lisaanalysistools==1.2.5 ; sys_platform == 'darwin'",
+  # 1.2.5 was the one release in the 1.2.x line published without Linux wheels.
+  # 1.2.8 ships cp312 manylinux_2_28 x86_64, which Colab can install, so the
+  # LISA notebooks run there and CI can build the site again.
+  "lisaanalysistools==1.2.8",
   "matplotlib>=3.8",
   "nbclient>=0.10",
   "numpy>=2.0,<2.4",
