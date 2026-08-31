@@ -1,7 +1,21 @@
 format: jb-book
 root: index
-chapters:
-  - file: notebooks/00_basics_parameter_estimation
-  - file: notebooks/01_lvk_compact_binary_parameter_estimation
-  - file: notebooks/02_lisa_parameter_estimation_and_global_fit
-  - file: notebooks/03_literature
+parts:
+  - caption: Part 1 — Bayesian inference
+    chapters:
+      - file: notebooks/01_bayesian_inference
+  - caption: Part 2 — LVK
+    chapters:
+      - file: notebooks/02_lvk_signals_injections
+      - file: notebooks/03_lvk_gw150914_bilby
+      - file: notebooks/04_lvk_population_and_checks
+      - file: notebooks/09_lvk_blind_data_challenge
+  - caption: Part 3 — LISA
+    chapters:
+      - file: notebooks/05_lisa_signals_response_codes
+      - file: notebooks/06_lisa_global_fit_gibbs
+      - file: notebooks/07_lisa_pspline_psd
+      - file: notebooks/08_lisa_wdm_time_frequency
+  - caption: Further study
+    chapters:
+      - file: notebooks/03_literature

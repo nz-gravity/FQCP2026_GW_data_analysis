@@ -11,7 +11,7 @@ permissions:
 
 # The site and the reference figures are built and published from a Mac by
 # scripts/prepush_course.sh --publish.  lisaanalysistools ships macOS-only
-# wheels, so notebook 02 cannot even be installed on a Linux runner, and
+# wheels, so the LISA runtime modules cannot be installed on a Linux runner, and
 # executing the course here would cost ~20 minutes a push to reproduce work
 # that already happened locally.  CI only checks what is cheap to check.
 jobs:

@@ -1,8 +1,9 @@
-"""Build the three Colab-first FQCP 2026 gravitational-wave PE notebooks."""
+"""Build the eight Colab-first FQCP 2026 gravitational-wave PE notebooks."""
 
 import base64
 import mimetypes
 import re
+from copy import deepcopy
 from pathlib import Path
 from textwrap import dedent
 
@@ -76,7 +77,7 @@ def reference_block(slug):
     )
 
 
-def write(name, title, cells):
+def write(name, title, cells, *, orphan=False):
     header = md(f"""# {title}
 
 **FQCP 2026 · Bayesian parameter estimation for gravitational-wave sources**
@@ -105,6 +106,9 @@ def write(name, title, cells):
         "language_info": {"name": "python", "version": "3"},
         "colab": {"name": name, "provenance": []},
     }
+    if orphan:
+        # Build a directly addressable page without adding it to site navigation.
+        notebook.metadata["orphan"] = True
     OUT.mkdir(parents=True, exist_ok=True)
     nbf.write(notebook, OUT / name)
     print("Wrote", OUT / name)
@@ -3133,9 +3137,16 @@ for i,label in enumerate(["spacecraft 1","spacecraft 2","spacecraft 3"]): ax.plo
 ax.plot(0,0,"o",color="gold",mec="k",label="Sun"); ax.set(xlabel="heliocentric x [AU]",ylabel="heliocentric y [AU]",title="An explicit LISA orbit model",aspect="equal"); ax.legend(); plt.show()"""
         ),
         md(
-            """### Fast animation: the moving constellation
+            """### Animation: orbital motion becomes response modulation
 
-The orbital motion is not decorative: it amplitude-, phase-, and frequency-modulates long-lived signals and encodes sky position. This animation uses precomputed orbit coordinates, so it remains fast in Colab."""
+The binary in this animation is fixed on the sky. LISA's changing orientation
+changes the antenna projection, while its motion around the Sun changes the
+arrival-time phase. Those two measured modulations—not the orbit picture by
+itself—are what help encode sky position.
+
+The right-hand curves use a **low-frequency Michelson response proxy** to make
+the causal link visible. The exact delayed-link and TDI responses are built in
+the cells immediately below."""
         ),
         md(
             """**Predict before running:** Hold a binary fixed on the sky. Which observed
@@ -3143,15 +3154,81 @@ features can change during a year even if the binary itself is nearly
 monochromatic, and why can those changes help localisation?"""
         ),
         code(
-            """orbit_frames=np.arange(0,len(times),10); fig,ax=plt.subplots(figsize=(5.2,5.2)); triangle,=ax.plot([],[],"o-",lw=1.5); trail_lines=[ax.plot([],[],alpha=.35)[0] for _ in range(3)]
-ax.plot(0,0,"o",color="gold",mec="k"); ax.set(xlim=(-1.12,1.12),ylim=(-1.12,1.12),aspect="equal",xlabel="x [AU]",ylabel="y [AU]")
-def animate_constellation(frame):
-    i=orbit_frames[frame]; current=positions[i,:,:2]/AU; closed=np.vstack([current,current[0]])
-    triangle.set_data(closed[:,0],closed[:,1])
-    for spacecraft,line in enumerate(trail_lines): line.set_data(positions[:i+1,spacecraft,0]/AU,positions[:i+1,spacecraft,1]/AU)
-    ax.set_title(f"LISA constellation: day {times[i]/86400:.0f}"); return (triangle,*trail_lines)
-orbit_animation=FuncAnimation(fig,animate_constellation,frames=len(orbit_frames),interval=90)
-plt.close(fig); show_animation(orbit_animation)"""
+            """# Fixed source and polarisation tensors used only for this response-intuition
+# panel. The full finite-arm, delayed-link calculation follows below.
+animation_ra,animation_dec=1.0,.4
+animation_source=np.array([np.cos(animation_dec)*np.cos(animation_ra),
+                           np.cos(animation_dec)*np.sin(animation_ra),
+                           np.sin(animation_dec)])
+animation_k=-animation_source
+animation_p=np.cross(animation_k,np.array([0.,0.,1.])); animation_p/=np.linalg.norm(animation_p)
+animation_q=np.cross(animation_k,animation_p)
+animation_plus=np.outer(animation_p,animation_p)-np.outer(animation_q,animation_q)
+animation_cross=np.outer(animation_p,animation_q)+np.outer(animation_q,animation_p)
+
+def unit_rows(values): return values/np.linalg.norm(values,axis=1)[:,None]
+animation_arms=[unit_rows(positions[:,j]-positions[:,i]) for i,j in [(0,1),(1,2),(2,0)]]
+n12,n23,n31=animation_arms
+n13=-n31
+michelson_tensor=.5*(np.einsum("ni,nj->nij",n12,n12)-np.einsum("ni,nj->nij",n13,n13))
+f_plus=np.einsum("nij,ij->n",michelson_tensor,animation_plus)
+f_cross=np.einsum("nij,ij->n",michelson_tensor,animation_cross)
+response_envelope=np.hypot(f_plus,f_cross)
+animation_barycentre=positions.mean(axis=1)
+animation_frequency=3e-3
+doppler_phase_cycles=animation_frequency*(animation_barycentre@animation_source)/C_SI
+arm_projections=np.asarray([
+    np.abs(np.einsum("ni,ij,nj->n",arm,animation_plus,arm))
+    for arm in animation_arms
+])
+
+# The real triangle is tiny on an AU-scale plot. Enlarge it around its true
+# barycentre so the cartwheel can be seen, and label that display choice.
+DISPLAY_TRIANGLE_SCALE=8
+display_positions=(animation_barycentre[:,None,:]
+                   +DISPLAY_TRIANGLE_SCALE*(positions-animation_barycentre[:,None,:]))
+orbit_frames=np.arange(0,len(times),5)
+fig=plt.figure(figsize=(11,5.2))
+grid=fig.add_gridspec(2,2,width_ratios=(1.05,1),hspace=.38)
+orbit_ax=fig.add_subplot(grid[:,0]); response_ax=fig.add_subplot(grid[0,1]); phase_ax=fig.add_subplot(grid[1,1])
+orbit_ax.plot(animation_barycentre[:,0]/AU,animation_barycentre[:,1]/AU,color=".75",lw=1)
+orbit_ax.plot(0,0,"o",color="gold",mec="k",ms=9)
+source_arrow=animation_source[:2]/np.linalg.norm(animation_source[:2])
+orbit_ax.arrow(0,0,.43*source_arrow[0],.43*source_arrow[1],width=.008,
+               color="C3",length_includes_head=True)
+orbit_ax.text(.47*source_arrow[0],.47*source_arrow[1],"fixed source",color="C3",ha="center")
+spacecraft_points,=orbit_ax.plot([],[],"o",color="k",ms=4)
+arm_lines=[orbit_ax.plot([],[],lw=3)[0] for _ in range(3)]
+orbit_ax.text(.03,.03,f"triangle size x{DISPLAY_TRIANGLE_SCALE} for display",
+              transform=orbit_ax.transAxes,fontsize=8,color=".35")
+orbit_ax.set(xlim=(-1.2,1.2),ylim=(-1.2,1.2),aspect="equal",xlabel="x [AU]",ylabel="y [AU]")
+
+mission_days=times/86400
+response_ax.plot(mission_days,response_envelope,color="C0")
+response_marker,=response_ax.plot([],[],"o",color="C0",ms=7)
+response_ax.set(xlim=(0,mission_days[-1]),ylim=(0,1.08*response_envelope.max()),
+                ylabel="antenna amplitude",title="same binary, changing projection")
+phase_ax.plot(mission_days,doppler_phase_cycles,color="C3")
+phase_marker,=phase_ax.plot([],[],"o",color="C3",ms=7)
+phase_ax.axhline(0,color=".8",lw=.8)
+phase_ax.set(xlim=(0,mission_days[-1]),
+             ylim=(1.08*doppler_phase_cycles.min(),1.08*doppler_phase_cycles.max()),
+             xlabel="mission time [days]",ylabel="Doppler phase [cycles]")
+
+def animate_response(frame):
+    i=orbit_frames[frame]
+    current=display_positions[i,:,:2]/AU
+    spacecraft_points.set_data(current[:,0],current[:,1])
+    for arm_index,(first,second) in enumerate([(0,1),(1,2),(2,0)]):
+        arm_lines[arm_index].set_data(current[[first,second],0],current[[first,second],1])
+        arm_lines[arm_index].set_color(plt.cm.viridis(arm_projections[arm_index,i]))
+    response_marker.set_data([mission_days[i]],[response_envelope[i]])
+    phase_marker.set_data([mission_days[i]],[doppler_phase_cycles[i]])
+    orbit_ax.set_title(f"LISA at day {mission_days[i]:.0f}; arm colour = GW projection")
+    return (*arm_lines,spacecraft_points,response_marker,phase_marker)
+
+orbit_response_animation=FuncAnimation(fig,animate_response,frames=len(orbit_frames),interval=110)
+plt.close(fig); show_animation(orbit_response_animation)"""
         ),
         md(
             r"""### 1b. Orbits become six directed delays
@@ -3454,7 +3531,10 @@ ax.set(xlabel="frequency [Hz]",ylabel=r"TDI A ASD [1/$\\sqrt{\\mathrm{Hz}}$]",ti
 | overlapping source classes | what belongs to the residual? | global rather than source-by-source inference |
 | unknown catalogue size | how many binaries are present? | trans-dimensional/RJ methods and label-switching care |
 
-The following lightweight laboratory is intentionally editable. Change the gap, drift, and noise-growth parameters and rerun it."""
+The following lightweight laboratory is intentionally editable. Change the
+gap, drift, and noise-growth parameters and rerun it. Throughout this notebook,
+a grey hatched span means **time that is unavailable to the analysis**; it is a
+plot annotation, not a measured value."""
         ),
         code("""from scipy.signal import welch,spectrogram
 # Student playground: all three controls are deliberately visible.
@@ -3466,6 +3546,19 @@ continuous_data=noise_scale*rng.normal(size=toy_time.size)+1.5*np.sin(phase)
 available=~((toy_time>=GAP_DAYS[0]*86400)&(toy_time<GAP_DAYS[1]*86400))
 gapped_data=continuous_data.copy(); gapped_data[~available]=0  # zero fill only to expose leakage below
 
+# One visual language for missing time everywhere in this notebook. Keep the
+# plotted values masked/zero-filled as required by the demonstration, then draw
+# an opaque hatched overlay so blank pixels can never be mistaken for zero
+# power, clipping, or a rendering failure.
+GAP_HATCH_STYLE = dict(
+    facecolor="0.92", edgecolor="0.45", hatch="////", linewidth=0.0,
+    alpha=1.0, zorder=20,
+)
+
+
+def mark_gap(axis, start=GAP_DAYS[0], end=GAP_DAYS[1], label="data gap"):
+    return axis.axvspan(start, end, label=label, **GAP_HATCH_STYLE)
+
 early=continuous_data[toy_time<7*86400]; late=continuous_data[toy_time>21*86400]
 f_early,p_early=welch(early,fs=sample_rate_toy,nperseg=4096)
 f_late,p_late=welch(late,fs=sample_rate_toy,nperseg=4096)
@@ -3475,13 +3568,15 @@ f_spec,t_spec,p_spec=spectrogram(gapped_data,fs=sample_rate_toy,nperseg=2048,nov
 
 fig,axes=plt.subplots(2,2,figsize=(12,7))
 axes[0,0].plot(toy_time[::80]/86400,available[::80].astype(int)); axes[0,0].set(xlabel="mission time [days]",ylabel="available?",title="A three-day gap")
+mark_gap(axes[0,0]); axes[0,0].legend(fontsize=8,loc="lower right")
 axes[0,1].loglog(f_early[1:],np.sqrt(p_early[1:]),label="week 1"); axes[0,1].loglog(f_late[1:],np.sqrt(p_late[1:]),label="week 4")
 axes[0,1].set(xlabel="frequency [Hz]",ylabel="ASD [toy]",title="Noise level changes with time"); axes[0,1].legend()
 near=(fft_frequency>2.7e-3)&(fft_frequency<3.4e-3); axes[1,0].semilogy(1e3*fft_frequency[near],fft_full[near],label="continuous")
 axes[1,0].semilogy(1e3*fft_frequency[near],fft_gap[near],label="gap zero-filled",alpha=.8); axes[1,0].set(xlabel="frequency [mHz]",ylabel="FFT magnitude",title="A gap spreads power across bins"); axes[1,0].legend()
 band=(f_spec>2.7e-3)&(f_spec<3.4e-3); image=axes[1,1].pcolormesh(t_spec/86400,1e3*f_spec[band],np.log10(p_spec[band]+1e-30),shading="auto")
+mark_gap(axes[1,1]); axes[1,1].legend(fontsize=8,loc="upper right")
 axes[1,1].set(xlabel="mission time [days]",ylabel="frequency [mHz]",title="Drifting line + gap in time–frequency"); fig.colorbar(image,ax=axes[1,1],label="log power")
-fig.tight_layout(); plt.show()"""),
+fig.tight_layout(); plt.show()""", figure="lisa-gap-laboratory"),
         md(
             r"""### WDM time--frequency map and likelihood
 
@@ -3535,6 +3630,7 @@ for ax, coeffs, title in zip(
     )
     ax.set(xlabel="mission time [days]", ylabel="frequency [mHz]",
            title=f"WDM coefficients: {title}")
+mark_gap(axes[1]); axes[1].legend(fontsize=8,loc="upper right")
 fig.colorbar(image, ax=axes, label=r"$|w_{nm}|$", pad=0.02)
 plt.show()
 
@@ -4057,6 +4153,10 @@ for i, h in enumerate(templates):
 n_sweeps = 2000
 gibbs_state = np.zeros(3)
 gibbs_history = [gibbs_state.copy()]
+gibbs_substates = []
+gibbs_active_blocks = []
+gibbs_conditional_means = []
+gibbs_conditional_sds = []
 for sweep in range(n_sweeps):
     for i, h in enumerate(templates):
         conditional_residual = (
@@ -4068,8 +4168,16 @@ for sweep in range(n_sweeps):
         conditional_mean = global_inner(h, conditional_residual) / precision
         conditional_sd = 1 / np.sqrt(precision)
         gibbs_state[i] = rng.normal(conditional_mean, conditional_sd)
+        gibbs_substates.append(gibbs_state.copy())
+        gibbs_active_blocks.append(i)
+        gibbs_conditional_means.append(conditional_mean)
+        gibbs_conditional_sds.append(conditional_sd)
     gibbs_history.append(gibbs_state.copy())
 gibbs_history = np.asarray(gibbs_history)
+gibbs_substates = np.asarray(gibbs_substates)
+gibbs_active_blocks = np.asarray(gibbs_active_blocks)
+gibbs_conditional_means = np.asarray(gibbs_conditional_means)
+gibbs_conditional_sds = np.asarray(gibbs_conditional_sds)
 gibbs_samples = gibbs_history[400:]
 
 # The simultaneous weighted least-squares solution is the Gaussian posterior
@@ -4096,7 +4204,103 @@ axes[1].set(xlabel="amplitude multiplier",ylabel="posterior density",title="Gibb
 for ax in axes: ax.legend(fontsize=8)
 plt.show()"""
         ),
-        md(r"""## 6. A realistic miniature global fit
+        md(
+            r"""### Animation: one conditional block at a time
+
+Every frame below is **one block update**, not one completed sweep. The left
+panel shows the first two amplitude coordinates of the joint posterior; a
+source-1 draw moves horizontally and a source-2 draw vertically. Source 3 is
+not one of those axes, so its update leaves the dot fixed while still changing
+the shared residual on the right.
+
+The right panel shows what is handed to the next block. The highlighted source
+is updated conditional on the current estimates of all the others, then its new
+waveform is subtracted from the shared data."""
+        ),
+        md(
+            """**Watch for:** Why can the conditional draw for one source move when
+another source was updated in the preceding frame, even though the data never
+changed?"""
+        ),
+        code(
+            """# Start after a few sweeps so the narrow posterior contours remain visible.
+animation_start=15
+animation_stop=animation_start+36
+animation_states=gibbs_substates[animation_start:animation_stop]
+animation_blocks=gibbs_active_blocks[animation_start:animation_stop]
+animation_means=gibbs_conditional_means[animation_start:animation_stop]
+animation_sds=gibbs_conditional_sds[animation_start:animation_stop]
+animation_initial=gibbs_substates[animation_start-1]
+animation_path=np.vstack([animation_initial,animation_states])
+
+amplitude_precision=np.array([
+    [global_inner(first,second) for second in templates]
+    for first in templates
+])
+amplitude_covariance=np.linalg.inv(amplitude_precision)
+covariance_12=amplitude_covariance[:2,:2]
+sigma_12=np.sqrt(np.diag(covariance_12))
+a1_grid=np.linspace(joint[0]-4*sigma_12[0],joint[0]+4*sigma_12[0],120)
+a2_grid=np.linspace(joint[1]-4*sigma_12[1],joint[1]+4*sigma_12[1],120)
+A1_GRID,A2_GRID=np.meshgrid(a1_grid,a2_grid)
+offsets_12=np.stack([A1_GRID-joint[0],A2_GRID-joint[1]],axis=-1)
+mahalanobis_12=np.einsum("...i,ij,...j->...",offsets_12,np.linalg.inv(covariance_12),offsets_12)
+posterior_12=np.exp(-.5*mahalanobis_12)
+
+fig,(posterior_ax,residual_ax)=plt.subplots(1,2,figsize=(12,4.5))
+posterior_ax.contour(A1_GRID,A2_GRID,posterior_12,
+                     levels=np.exp(-.5*np.array([9.,4.,1.])),colors=".65")
+posterior_ax.plot(true_scales[0],true_scales[1],"*",color="k",ms=10,label="injected")
+posterior_ax.plot(joint[0],joint[1],"+",color="C3",ms=10,mew=2,label="joint mean")
+gibbs_path_line,=posterior_ax.plot([],[],color=".7",lw=1)
+gibbs_step_line,=posterior_ax.plot([],[],lw=3)
+gibbs_point,=posterior_ax.plot([],[],"o",color="k",ms=5)
+posterior_ax.set(xlabel="source 1 amplitude",ylabel="source 2 amplitude",
+                 title="conditional moves through the joint posterior")
+posterior_ax.legend(fontsize=8)
+
+animation_whitening=np.sqrt(4*df/common_psd[0])
+animation_data_A=np.abs(data[0])*animation_whitening
+residual_ax.plot(1e3*common_frequency,animation_data_A,color=".82",lw=.8,label="shared data")
+residual_line,=residual_ax.plot([],[],color="k",lw=1,label="residual after update")
+active_model_line,=residual_ax.plot([],[],color=".5",lw=2,
+                                    label="active source (block colour)")
+conditional_text=residual_ax.text(.02,.95,"",transform=residual_ax.transAxes,va="top",
+                                  bbox=dict(facecolor="white",alpha=.85,edgecolor="none"))
+residual_ax.set(xlim=(1e3*common_frequency.min(),1e3*common_frequency.max()),
+                ylim=(0,1.08*animation_data_A.max()),xlabel="frequency [mHz]",
+                ylabel="whitened A magnitude")
+residual_ax.legend(fontsize=8,loc="upper right")
+
+def animate_gibbs_block(frame):
+    state=animation_states[frame]
+    previous=animation_path[frame]
+    active=int(animation_blocks[frame])
+    colour=f"C{active}"
+    gibbs_path_line.set_data(animation_path[:frame+2,0],animation_path[:frame+2,1])
+    gibbs_step_line.set_data([previous[0],state[0]],[previous[1],state[1]])
+    gibbs_step_line.set_color(colour)
+    gibbs_point.set_data([state[0]],[state[1]])
+    residual_after=data-np.sum(state[:,None,None]*templates,axis=0)
+    residual_line.set_data(1e3*common_frequency,np.abs(residual_after[0])*animation_whitening)
+    active_model_line.set_data(1e3*common_frequency,
+                               np.abs(state[active]*templates[active,0])*animation_whitening)
+    active_model_line.set_color(colour)
+    conditional_text.set_text(
+        f"draw a{active+1} from its conditional\\n"
+        f"mean {animation_means[frame]:.3f}, sd {animation_sds[frame]:.3f}\\n"
+        f"new value {state[active]:.3f}"
+    )
+    posterior_ax.set_title(f"block {active+1}: condition on the other sources")
+    residual_ax.set_title(f"pass this residual to block {(active+1)%3+1}")
+    return (gibbs_path_line,gibbs_step_line,gibbs_point,residual_line,
+            active_model_line,conditional_text)
+
+gibbs_block_animation=FuncAnimation(fig,animate_gibbs_block,
+                                    frames=len(animation_states),interval=320)
+plt.close(fig); show_animation(gibbs_block_animation)"""
+        ),
+        md(r"""## 6. A miniature teaching-toy global fit
 
 The three-amplitude demo above kept the source *shapes* fixed so every
 conditional was exactly Gaussian. Now we drop that: two source classes with
@@ -4133,7 +4337,12 @@ The pipeline is the real one, in miniature:
 
 1. **Search.** Find the sources. Nothing is known a priori.
 2. **Seed.** Use the search estimates as the starting point.
-3. **Gibbs.** Cycle blocks, each conditional on the current residual."""),
+3. **Gibbs.** Cycle blocks, each conditional on the current residual.
+
+This is still an inspiral-only classroom model: it omits merger and ringdown,
+the moving LISA response, gaps, and non-stationary noise. Its purpose is to
+make the search--seed--cycle logic visible, not to claim a production global
+fit."""),
         code(r'''from scipy.stats import gamma as gamma_dist
 
 T_OBS_GF = 90 * 86400.0
@@ -4205,15 +4414,36 @@ print(f"noise check (n|n)/N_bins = {gf_inner(gf_noise, gf_noise)/N_BINS:.3f} (ex
         code(r'''whitened_data = np.abs(gf_data) * np.sqrt(4 * DF_GF / BASE_PSD)
 whitened_mbhb = np.abs(mbhb_template(TRUE_MBHB)) * np.sqrt(4 * DF_GF / BASE_PSD)
 
-fig, ax = plt.subplots(figsize=(11, 3.6))
-ax.plot(gf_frequency * 1e3, whitened_data, lw=0.5, color="0.6", label="data")
-ax.plot(gf_frequency * 1e3, whitened_mbhb, lw=1.4, color="C3", label="MBHB (truth)")
+# The magnitude panel is the object searched below, but magnitude alone throws
+# away the phase evolution that makes an inspiral recognisable as a chirp.
+fig, axes = plt.subplots(1, 2, figsize=(12, 4.0))
+axes[0].plot(gf_frequency * 1e3, whitened_data, lw=0.5, color="0.6", label="data")
+axes[0].plot(gf_frequency * 1e3, whitened_mbhb, lw=1.4, color="C3", label="MBHB (truth)")
 for i, g in enumerate(TRUE_GB):
-    ax.axvline(g[0] * 1e3, color="C0", ls="--", lw=1,
-               label="Galactic binaries (truth)" if i == 0 else None)
-ax.set(xlabel="frequency [mHz]", ylabel="whitened amplitude",
-       title="Everything at once: one chirp, three lines, one noise level")
-ax.legend()
+    axes[0].axvline(g[0] * 1e3, color="C0", ls="--", lw=1,
+                    label="Galactic binaries (truth)" if i == 0 else None)
+axes[0].set(xlabel="frequency [mHz]", ylabel="whitened amplitude",
+            title="Search-domain data")
+axes[0].legend(fontsize=8)
+
+# The derivative of the stationary-phase Fourier phase gives the time at which
+# each frequency is emitted. This is the same injected template, not a second
+# waveform model or a simulated merger/ringdown.
+mass_seconds = TRUE_MBHB[0] * MSUN_SECONDS
+track_time = TRUE_MBHB[1] - (5 / 256) * mass_seconds * (
+    np.pi * mass_seconds * gf_frequency
+) ** (-8 / 3)
+hours_from_tc = (track_time - TRUE_MBHB[1]) / 3600
+axes[1].plot(hours_from_tc, gf_frequency * 1e3, color="C3", lw=3,
+             label="MBHB inspiral (truth)")
+for i, g in enumerate(TRUE_GB):
+    axes[1].axhline(g[0] * 1e3, color="C0", ls="--", lw=1,
+                    label="stationary GBs (truth)" if i == 0 else None)
+axes[1].set(xlabel=r"time relative to $t_c$ [hours]", ylabel="frequency [mHz]",
+            title="Phase reveals the rising chirp")
+axes[1].legend(fontsize=8)
+fig.suptitle("One inspiral chirp, three lines, and one noise level")
+fig.tight_layout()
 plt.show()''', figure="lisa-global-fit"),
         md(r"""### Stage 1: search
 
@@ -4513,19 +4743,6 @@ labels=["".join(map(str,bits)) for bits,_ in model_scores]; delta=[score-best fo
 fig,ax=plt.subplots(figsize=(8,3.3)); ax.bar(labels,delta); ax.set(xlabel="included sources (1=yes)",ylabel=r"$\\Delta$BIC",title="Toy catalogue-size comparison"); plt.show()
 print("Preferred subset:",labels[int(np.argmin(delta))],"(the injected subset is 111)")"""
         ),
-        md("""## Extension: animate the global residual"""),
-        code(
-            """animation_sweeps=np.arange(0,40,2)
-fig,ax=plt.subplots(figsize=(9,3.3)); line,=ax.plot([],[],lw=.8)
-ax.set(xlim=(1e3*common_frequency.min(),1e3*common_frequency.max()),ylim=(0,1.1*np.max(np.abs(data[0]))),xlabel="frequency [mHz]",ylabel="A residual magnitude")
-def animate_residual(i):
-    sweep=animation_sweeps[i]
-    residual=data-np.sum(gibbs_history[sweep,:,None,None]*templates,axis=0)
-    line.set_data(1e3*common_frequency,np.abs(residual[0]))
-    ax.set_title(f"shared residual after Gibbs sweep {sweep}")
-    return (line,)
-animation=FuncAnimation(fig,animate_residual,frames=len(animation_sweeps),interval=220); plt.close(fig); show_animation(animation)"""
-        ),
         md("""## Optional LISA Data Challenge input and boundary
 
 The LDC portal requires authentication, so the live notebook uses deterministic synthetic data. An authenticated student can later upload a selected file in Colab.
@@ -4535,7 +4752,14 @@ from google.colab import files
 uploaded = files.upload()
 ```
 
-This notebook uses a real sensitivity model, orbit, and TDI response, but the global exercise fits three amplitude coefficients from a fixed candidate catalogue. A research global fit must infer nonlinear parameters, source count, multiple source classes and TDI channels, instrument/foreground noise, and demonstrate convergence and coverage.
+This notebook uses a real sensitivity model, orbit, and TDI response. Its first
+global exercise fits three amplitude coefficients from a fixed catalogue; the
+second searches and samples a restricted inspiral plus three idealised Galactic
+binaries with a fixed source count. Neither is a production global fit. A
+research analysis must infer richer nonlinear source parameters and source
+count across multiple source classes and TDI channels, jointly model the
+instrument and foreground noise, include gaps and non-stationarity, and
+demonstrate convergence and coverage.
 
 Continue with:
 
@@ -4582,3 +4806,2880 @@ Continue with:
 </details>"""),
     ],
 )
+
+
+# The material above is deliberately kept in three large, reviewable source
+# blocks while the course is migrated.  The public book is assembled below as
+# eight independently runnable modules.  This preserves the validated teaching
+# calculations while giving each topic enough room to breathe.
+
+
+def _source(cell):
+    return cell.get("source", "")
+
+
+def _is_reference_block(cell):
+    return cell.cell_type == "markdown" and _source(cell).startswith(
+        "<details>\n<summary><i>Expected output"
+    )
+
+
+def _read_source_notebook(name):
+    notebook = nbf.read(OUT / name, as_version=4)
+    return [deepcopy(cell) for cell in notebook.cells if not _is_reference_block(cell)]
+
+
+def _find_heading(cells, heading):
+    for index, cell in enumerate(cells):
+        if _source(cell).startswith(heading):
+            return index
+    raise ValueError(f"Could not find heading {heading!r}")
+
+
+def _between(cells, start_heading, end_heading=None):
+    start = _find_heading(cells, start_heading)
+    end = len(cells) if end_heading is None else _find_heading(cells, end_heading)
+    return [deepcopy(cell) for cell in cells[start:end]]
+
+
+def _exercise(question, starter, hint, solution):
+    """GWOSC-style question followed immediately by work and a hidden answer."""
+    starter = re.sub(
+        r"raise NotImplementedError\((.+)\)",
+        r'print("Exercise ready:", \1)',
+        starter,
+    )
+    return [
+        md(f"""### Question
+
+{question}
+
+Write your answer in the cell immediately below. The starter runs safely before
+you edit it, so the complete notebook remains reproducible."""),
+        code(starter),
+        md(f"""<details>
+<summary>Hint</summary>
+
+{hint}
+</details>
+
+<details>
+<summary>Solution and check</summary>
+
+```python
+{solution}
+```
+</details>"""),
+    ]
+
+
+def _module_intro(goal, live_route, boundary=None):
+    boundary_text = "" if boundary is None else f"\n\n**Boundary:** {boundary}"
+    return md(f"""## Goal and route
+
+{goal}
+
+:::{'{'}admonition{'}'} Live route
+:class: tip
+
+{live_route}
+:::
+{boundary_text}
+""")
+
+
+basics_source = _read_source_notebook("00_basics_parameter_estimation.ipynb")
+lvk_source = _read_source_notebook("01_lvk_compact_binary_parameter_estimation.ipynb")
+lisa_source = _read_source_notebook("02_lisa_parameter_estimation_and_global_fit.ipynb")
+
+
+# Part 1: keep the validated manual calculation, but replace the detached final
+# question bank with questions that put a code cell directly under the task.
+basics_cells = [
+    _module_intro(
+        "Build Bayesian parameter estimation from a signal and noise model, "
+        "without hiding any step behind Bilby.",
+        "Use Sections 1--4 and the PSD/Whittle bridge. Sampling algorithms and "
+        "calibration are reference material.",
+    ),
+    *_between(basics_source, "import os", "## Question bank and answer key"),
+    *_exercise(
+        "Change the assumed noise standard deviation from `sigma` to "
+        "`sigma / 2`. Recompute a normalized slope posterior and report how its "
+        "90% interval changes. Why is a narrower posterior not automatically a "
+        "better result?",
+        """# Your code here
+assumed_sigma = sigma / 2
+raise NotImplementedError("recompute the posterior with assumed_sigma")""",
+        "Reuse the `M`, `C`, `data`, and `time` arrays from the grid calculation. "
+        "Only the likelihood width changes.",
+        """residual = data[None, None, :] - (M[:, :, None] * time + C[:, :, None])
+log_like = -0.5 * np.sum((residual / assumed_sigma) ** 2, axis=-1)
+p = np.exp(log_like - np.max(log_like))
+p /= np.trapezoid(np.trapezoid(p, c_grid, axis=1), m_grid)
+p_m_test = np.trapezoid(p, c_grid, axis=1)
+print(interval(m_grid, p_m_test))
+# The interval contracts because the likelihood was made overconfident, not
+# because the data became more informative.""",
+    ),
+]
+write(
+    "01_bayesian_inference.ipynb",
+    "Part 1: Bayesian inference from first principles",
+    basics_cells,
+)
+
+
+# Part 2A: signals, detector response, injection, matched filtering, and the
+# manual likelihood.  Population and full sampler material move elsewhere.
+lvk_setup = _between(lvk_source, "import os", "## 1. CBC parameters")
+lvk_a_cells = [
+    _module_intro(
+        "Follow a compact-binary signal from source parameters through a detector "
+        "network, injection, matched filtering, and a manual likelihood.",
+        "Sections 1--4 are the core route; localisation is the extension.",
+    ),
+    *lvk_setup,
+    *_between(lvk_source, "## 1. CBC parameters", "## 6. From events to a population"),
+    *_exercise(
+        "Make the template-bank offsets coarser and rerun the scan. What is the "
+        "largest spacing that still places a template close to the recovered "
+        "peak?",
+        """# Your code here
+coarse_offsets = np.linspace(-4, 4, 9)
+raise NotImplementedError("call student_template_bank_scan and inspect the peak")""",
+        "The relevant comparison is the grid spacing against the width of the "
+        "matched-filter peak, not simply the number of templates.",
+        """coarse_snr = student_template_bank_scan(coarse_offsets)
+best_offset = coarse_offsets[np.argmax(coarse_snr)]
+print("best coarse-grid offset:", best_offset)""",
+    ),
+]
+write(
+    "02_lvk_signals_injections.ipynb",
+    "Part 2A: LVK signals, injections, and matched filtering",
+    lvk_a_cells,
+)
+
+
+# Part 2B: a direct adaptation of GWOSC Tutorial 5.2.  The teaching path and
+# numerical choices are attributed explicitly; prose and checks are adapted to
+# the FQCP book and current package versions.
+gwosc_bilby_cells = [
+    _module_intro(
+        "Analyse public H1/L1 data around GW150914 with Bilby's standard "
+        "compact-binary likelihood.",
+        "Build the data and PSD, inspect the priors and likelihood, then launch "
+        "the sampler. The Dynesty cell can take 10--30 minutes in Colab.",
+        "This is a restricted non-spinning analysis with several extrinsic "
+        "parameters fixed and fast workshop sampler settings. It is not the "
+        "published LVK production analysis.",
+    ),
+    md(r"""## Source and attribution
+
+This notebook directly adapts **GWOSC Open Data Workshop Tutorial 5.2,
+“Parameter estimation for compact object mergers.”** It preserves the
+recognisable GWOSC sequence:
+
+$$
+\text{open strain}\rightarrow\text{off-source PSD}\rightarrow
+\text{Bilby interferometers}\rightarrow\text{prior + likelihood}\rightarrow
+\text{Dynesty}\rightarrow\text{posterior checks}.
+$$
+
+The package versions, explanations, exercises, and reproducibility checks are
+adapted for this course."""),
+    code("""import os, sys, subprocess, importlib.util
+
+IN_COLAB = "COLAB_RELEASE_TAG" in os.environ
+needed = ("bilby", "gwpy", "lal", "lalsimulation")
+if any(importlib.util.find_spec(package) is None for package in needed):
+    if IN_COLAB:
+        subprocess.check_call([
+            sys.executable, "-m", "pip", "install", "-q",
+            "bilby==2.8.0", "gwpy>=3.0,<4", "lalsuite==7.26.15",
+        ])
+    else:
+        raise ImportError("Install bilby, gwpy, and lalsuite, or run in Colab.")
+
+import numpy as np
+import matplotlib.pyplot as plt
+import bilby
+from gwpy.timeseries import TimeSeries
+from bilby.core.prior import PowerLaw, Uniform
+from bilby.gw.conversion import (
+    convert_to_lal_binary_black_hole_parameters,
+    generate_all_bbh_parameters,
+)
+
+bilby.core.utils.log.setup_logger(log_level="WARNING")
+plt.style.use("seaborn-v0_8-whitegrid")
+print("Bilby version:", bilby.__version__)"""),
+    md(r"""## 1. Get the GW150914 analysis data
+
+GW150914 occurred at GPS time $1126259462.4$. Following GWOSC, use a four-second
+analysis segment with two seconds after the trigger. The 4096-Hz public product
+is used explicitly."""),
+    code("""time_of_event = 1126259462.4
+post_trigger_duration = 2
+duration = 4
+sampling_frequency = 4096
+analysis_start = time_of_event + post_trigger_duration - duration
+
+analysis_data = {
+    detector: TimeSeries.fetch_open_data(
+        detector,
+        analysis_start,
+        analysis_start + duration,
+        sample_rate=sampling_frequency,
+        cache=True,
+        timeout=120,
+    )
+    for detector in ("H1", "L1")
+}
+
+interferometers = bilby.gw.detector.InterferometerList(["H1", "L1"])
+for interferometer in interferometers:
+    interferometer.minimum_frequency = 20
+    interferometer.maximum_frequency = 1024
+    interferometer.set_strain_data_from_gwpy_timeseries(
+        analysis_data[interferometer.name]
+    )
+
+fig, axes = plt.subplots(2, 1, figsize=(10, 5), sharex=True)
+for axis, detector in zip(axes, ("H1", "L1")):
+    series = analysis_data[detector]
+    axis.plot(series.times.value - time_of_event, series.value, lw=0.5)
+    axis.set(ylabel=f"{detector} strain", title=f"{detector}: public 4096-Hz data")
+axes[-1].set_xlabel("time from GW150914 [s]")
+plt.show()""", figure="lvk-gwosc-strain"),
+    md(r"""### Why does GW150914 need only four seconds?
+
+At leading post-Newtonian order, the time remaining from a low frequency
+$f_{\rm low}$ scales as
+
+$$
+t_{\rm insp}(f_{\rm low}) = \frac{5}{256}
+\left(\frac{G\mathcal M}{c^3}\right)^{-5/3}
+(\pi f_{\rm low})^{-8/3}.
+$$
+
+A lower-chirp-mass binary spends much longer chirping through the detector
+band. CBC analyses therefore use longer data segments for lower masses and
+short power-of-two segments for high-mass systems. The curve below turns the
+leading-order time from 20 Hz, plus a 2.1-second post-trigger margin, into the
+smallest power-of-two segment from 4 to 64 seconds.
+
+This is an **LVK/Bilby-style teaching rule**, not a universal catalogue lookup:
+production choices also depend on the low-frequency cutoff, waveform modes,
+priors, and pipeline. The 4, 8, 16, 32, and 64-second analysis families are
+documented for the GWTC-1 Bilby analyses in
+[Romero-Shaw et al. (2020)](https://arxiv.org/abs/2006.00714)."""),
+    code(r'''from scipy.constants import G, c
+
+solar_mass_kg = 1.988409870698051e30
+chirp_mass_grid = np.geomspace(2.2, 50, 500)
+chirp_mass_seconds = G * chirp_mass_grid * solar_mass_kg / c**3
+inspiral_time_20hz = (
+    5 / 256 * chirp_mass_seconds ** (-5 / 3) * (np.pi * 20) ** (-8 / 3)
+)
+required_time = inspiral_time_20hz + 2.1
+analysis_duration = np.clip(
+    2 ** np.ceil(np.log2(required_time)), 4, 64
+)
+
+fig, ax = plt.subplots(figsize=(9, 4.2))
+ax.plot(
+    chirp_mass_grid,
+    required_time,
+    color="0.35",
+    lw=2,
+    label=r"leading-order time from 20 Hz + 2.1 s",
+)
+ax.step(
+    chirp_mass_grid,
+    analysis_duration,
+    where="post",
+    color="C0",
+    lw=3,
+    label="smallest power-of-two analysis segment",
+)
+ax.scatter([31.2], [4], marker="*", s=180, color="C3", zorder=4)
+ax.annotate(
+    "GW150914",
+    (31.2, 4),
+    xytext=(-12, 20),
+    textcoords="offset points",
+    ha="right",
+    arrowprops={"arrowstyle": "->", "color": "0.25"},
+)
+ax.set(
+    xlabel=r"detector-frame chirp mass $\mathcal{M}^{\rm det}$ [$M_\odot$]",
+    ylabel="duration [s]",
+    title="Analysis duration follows the in-band chirp time",
+    xlim=(2.2, 50),
+    ylim=(0, 70),
+    yticks=[4, 8, 16, 32, 64],
+)
+ax.set_xscale("log")
+ax.set_xticks([2, 3, 5, 10, 20, 30, 50])
+ax.set_xticklabels(["2", "3", "5", "10", "20", "30", "50"])
+from matplotlib.ticker import NullLocator
+ax.xaxis.set_minor_locator(NullLocator())
+ax.set_yticklabels(["4", "8", "16", "32", "64"])
+ax.legend(frameon=False)
+plt.show()''', figure="lvk-analysis-duration"),
+    md(r"""### What those analysis windows contain in the time domain
+
+The duration choice is not a statement that every second contains signal. The
+examples below show three **equal-mass** binaries in their selected records,
+recentered on merger for display as in the NZ workshop (only the first 0.35 s
+after merger is shown). The 60-$M_\odot$ system enters at 20 Hz only near the
+end of its four-second record; the 6-$M_\odot$ system has a long, slow inspiral,
+so it needs a much longer record.
+
+These use the same **IMRPhenomPv2** inspiral--merger--ringdown model as the
+NZ workshop, rendered through Bilby/LAL. Each panel has its own amplitude scale
+and uses equal masses solely to make the duration comparison transparent; it is
+not an event reconstruction."""),
+    code(r'''# Equal-mass IMRPhenomPv2 signals in their selected analysis windows.
+# The physical waveform removes the artificial ISCO cut in a Newtonian cartoon.
+def normalized_imr_signal(total_mass, window_duration, sample_rate=2048):
+    chirp_mass = total_mass * 0.25 ** (3 / 5)
+    generator = bilby.gw.WaveformGenerator(
+        duration=window_duration,
+        sampling_frequency=sample_rate,
+        frequency_domain_source_model=bilby.gw.source.lal_binary_black_hole,
+        waveform_arguments={
+            "waveform_approximant": "IMRPhenomPv2",
+            "reference_frequency": 20.0,
+            "minimum_frequency": 20.0,
+        },
+    )
+    parameters = dict(
+        mass_1=total_mass / 2,
+        mass_2=total_mass / 2,
+        a_1=0.0,
+        a_2=0.0,
+        tilt_1=0.0,
+        tilt_2=0.0,
+        phi_jl=0.0,
+        phi_12=0.0,
+        lambda_1=0.0,
+        lambda_2=0.0,
+        luminosity_distance=1000.0,
+        theta_jn=0.0,
+        ra=0.0,
+        dec=0.0,
+        psi=0.0,
+        phase=0.0,
+        geocent_time=0.0,
+    )
+    strain = generator.time_domain_strain(parameters)["plus"]
+    # The frequency-domain model is represented on a periodic FFT grid.  Roll
+    # the peak into the interior, as in the NZ workshop, before plotting it.
+    strain = np.roll(strain, -len(strain) // 3)
+    strain /= np.max(np.abs(strain))
+    peak = np.argmax(np.abs(strain))
+    time_from_merger = generator.time_array - generator.time_array[peak]
+    return time_from_merger, strain, chirp_mass
+
+examples = [(6, 64), (20, 8), (60, 4)]
+fig, axes = plt.subplots(1, 3, figsize=(13, 3.3))
+for ax, (total_mass, window_duration) in zip(axes, examples):
+    time, strain, chirp_mass = normalized_imr_signal(
+        total_mass, window_duration
+    )
+    ax.plot(time, strain, color="C0", lw=0.8)
+    ax.axvline(0, color="0.25", lw=0.8)
+    ax.set(
+        xlim=(-2 * window_duration / 3, min(window_duration / 3, 0.35)),
+        ylim=(-1.12, 1.12),
+        xlabel="time from merger [s]",
+        title=(
+            rf"$M_{{\rm tot}}={total_mass}\,M_\odot$; "
+            rf"$\mathcal{{M}}={chirp_mass:.1f}\,M_\odot$; "
+            rf"{window_duration}-s record"
+        ),
+    )
+    ax.set_yticks([])
+axes[0].set_ylabel("normalised strain\n(arbitrary amplitude per panel)")
+fig.suptitle("IMRPhenomPv2 signal within the selected analysis window", y=1.03)
+plt.tight_layout()
+plt.show()''', figure="lvk-analysis-time-domain"),
+    md(r"""## 2. Estimate the PSD from off-source data
+
+The likelihood weights residuals by a noise PSD. Following the GWOSC tutorial,
+estimate it from the 128 seconds immediately before the analysis segment using
+four-second Tukey-windowed periodograms, 50% overlap, and a median average. This
+is deliberately off source: the event should not define its own noise weighting.
+
+This common off-source construction is usually called a **median-Welch PSD**:
+
+1. **Why Welch?** A single periodogram is an extremely noisy estimate: at each
+   frequency its scatter is comparable to its mean. Split a long record into
+   short, windowed stretches; Fourier transform each; then combine their
+   periodograms. We trade frequency resolution for much lower estimator
+   variance.
+2. **Why a median rather than an arithmetic mean?** For perfectly stationary
+   Gaussian noise the mean is efficient. Real interferometer data contain
+   short glitches, and one loud stretch can pull a mean far upward. The median
+   is robust to a minority of contaminated stretches. The implementation
+   applies the appropriate median-bias correction; the median is not taken as
+   an already unbiased PSD by itself.
+3. **Why overlap?** A Tukey or Hann window downweights samples near each
+   stretch's edges. Sliding the next stretch by half a window reuses those
+   samples near another window's centre and supplies more periodograms from a
+   fixed off-source record. Adjacent estimates are correlated, so 50% overlap
+   improves stability but does **not** double the independent information.
+
+Keep the four timescales distinct:
+
+| quantity | value here | role |
+|---|---:|---|
+| event-analysis duration | 4 s | data entering the likelihood |
+| Welch FFT length | 4 s | one periodogram; gives 0.25-Hz bins |
+| overlap / stride | 2 s / 2 s | 50% overlap between periodograms |
+| off-source PSD record | 128 s | reservoir supplying 63 stretches |
+
+Median-Welch is common, not the only defensible LVK noise model. BayesLine-like
+on-source fits and pipeline-specific PSD estimators answer related but different
+questions; see [Chatziioannou et al. (2019)](https://arxiv.org/abs/1907.06540)."""),
+    code("""# A visual Welch construction: one transient contaminates a few windows,
+# while the median remains representative of the many quiet windows.
+from scipy.signal import get_window, periodogram, welch
+
+welch_rng = np.random.default_rng(2026)
+toy_rate = 256
+toy_duration = 128
+fft_length = 4
+nperseg = toy_rate * fft_length
+noverlap = nperseg // 2
+toy_time = np.arange(toy_rate * toy_duration) / toy_rate
+
+# Smooth coloured noise plus one deliberately obvious broadband transient.
+toy_frequency = np.fft.rfftfreq(toy_time.size, 1 / toy_rate)
+toy_shape = 1 + (18 / np.maximum(toy_frequency, 1)) ** 4
+quiet_noise = np.fft.irfft(
+    np.fft.rfft(welch_rng.normal(size=toy_time.size)) * np.sqrt(toy_shape),
+    n=toy_time.size,
+)
+glitch = (
+    100
+    * np.exp(-0.5 * ((toy_time - 11.2) / 0.08) ** 2)
+    * np.sin(2 * np.pi * 70 * (toy_time - 11.2))
+)
+contaminated_noise = quiet_noise + glitch
+
+starts = np.arange(0, toy_time.size - nperseg + 1, nperseg - noverlap)
+window = get_window(("tukey", 0.2), nperseg)
+segment_psds = []
+touches_glitch = []
+for start in starts:
+    frequency, one_psd = periodogram(
+        contaminated_noise[start : start + nperseg],
+        fs=toy_rate,
+        window=window,
+        scaling="density",
+    )
+    segment_psds.append(one_psd)
+    touches_glitch.append(start / toy_rate <= 11.2 < (start + nperseg) / toy_rate)
+segment_psds = np.asarray(segment_psds)
+
+_, clean_reference = welch(
+    quiet_noise, fs=toy_rate, window=("tukey", 0.2),
+    nperseg=nperseg, noverlap=noverlap, average="median",
+)
+_, contaminated_mean = welch(
+    contaminated_noise, fs=toy_rate, window=("tukey", 0.2),
+    nperseg=nperseg, noverlap=noverlap, average="mean",
+)
+_, contaminated_median = welch(
+    contaminated_noise, fs=toy_rate, window=("tukey", 0.2),
+    nperseg=nperseg, noverlap=noverlap, average="median",
+)
+
+fig, axes = plt.subplots(1, 3, figsize=(13, 3.7))
+shown = toy_time < 16
+axes[0].plot(toy_time[shown], contaminated_noise[shown], color="0.25", lw=0.7)
+for index, start in enumerate(starts[:7]):
+    left = start / toy_rate
+    axes[0].axvspan(left, left + fft_length, color=f"C{index % 2}", alpha=0.10)
+axes[0].axvline(11.2, color="C3", ls="--", label="transient")
+axes[0].set(xlabel="off-source time [s]", ylabel="toy strain",
+            title="4-s windows, shifted by 2 s")
+axes[0].legend(frameon=False)
+
+band = (frequency >= 15) & (frequency <= 120)
+for one_psd, bad in zip(segment_psds, touches_glitch):
+    axes[1].loglog(
+        frequency[band], np.sqrt(one_psd[band]),
+        color="C3" if bad else "0.7", alpha=0.85 if bad else 0.16,
+        lw=1.1 if bad else 0.7,
+    )
+axes[1].set(xlabel="frequency [Hz]", ylabel="ASD [toy units]",
+            title="Each window gives a noisy periodogram")
+
+axes[2].loglog(frequency[band], np.sqrt(clean_reference[band]),
+               color="0.2", ls="--", lw=2, label="quiet reference")
+axes[2].loglog(frequency[band], np.sqrt(contaminated_mean[band]),
+               color="C3", alpha=0.85, label="mean with transient")
+axes[2].loglog(frequency[band], np.sqrt(contaminated_median[band]),
+               color="C0", lw=2, label="median with transient")
+axes[2].set(xlabel="frequency [Hz]", ylabel="ASD [toy units]",
+            title=f"Combine {len(starts)} overlapping estimates")
+axes[2].legend(frameon=False, fontsize=8)
+plt.tight_layout()
+plt.show()""", figure="lvk-welch-explainer"),
+    code("""psd_duration = 32 * duration
+psd_start = analysis_start - psd_duration
+
+psd_data = {
+    detector: TimeSeries.fetch_open_data(
+        detector,
+        psd_start,
+        psd_start + psd_duration,
+        sample_rate=sampling_frequency,
+        cache=True,
+        timeout=120,
+    )
+    for detector in ("H1", "L1")
+}
+
+for interferometer in interferometers:
+    alpha = 2 * interferometer.strain_data.roll_off / duration
+    estimate = psd_data[interferometer.name].psd(
+        fftlength=duration,
+        overlap=duration / 2,
+        window=("tukey", alpha),
+        method="median",
+    )
+    interferometer.power_spectral_density = bilby.gw.detector.PowerSpectralDensity(
+        frequency_array=estimate.frequencies.value,
+        psd_array=estimate.value,
+    )
+
+fig, ax = plt.subplots(figsize=(9, 4))
+for interferometer in interferometers:
+    mask = interferometer.strain_data.frequency_mask
+    frequency = interferometer.frequency_array[mask]
+    asd = interferometer.amplitude_spectral_density_array[mask]
+    ax.loglog(frequency, asd, label=interferometer.name)
+ax.set(xlabel="frequency [Hz]", ylabel=r"ASD [1/$\\sqrt{\\mathrm{Hz}}$]",
+       title="Off-source noise model used by the likelihood")
+ax.legend()
+plt.show()""", figure="lvk-gwosc-psd"),
+    *_exercise(
+        "Why should the PSD normally be estimated away from the signal? Compute "
+        "the ratio of the H1 ASD near 100 Hz to its median between 80 and 120 Hz "
+        "as a quick local sanity check.",
+        """# Your code here
+h1 = interferometers[0]
+raise NotImplementedError("select the 80--120 Hz bins and compare ASD values")""",
+        "Use `h1.frequency_array` and `h1.amplitude_spectral_density_array`; "
+        "apply the interferometer's frequency mask as well.",
+        """mask = h1.strain_data.frequency_mask & (h1.frequency_array >= 80) & (h1.frequency_array <= 120)
+band_frequency = h1.frequency_array[mask]
+band_asd = h1.amplitude_spectral_density_array[mask]
+near_100 = np.argmin(np.abs(band_frequency - 100))
+print(band_asd[near_100] / np.median(band_asd))""",
+    ),
+    md(r"""## 3. Define the restricted prior
+
+Sample detector-frame chirp mass, mass ratio, phase, coalescence time, and
+luminosity distance. Fix spins, sky position, orientation, and polarisation to
+keep the workshop runtime manageable. The prior is part of this analysis; these
+fixed values are not facts established by the data."""),
+    code("""prior = bilby.core.prior.PriorDict()
+prior["chirp_mass"] = Uniform(30.0, 32.5, name="chirp_mass")
+prior["mass_ratio"] = Uniform(0.5, 1.0, name="mass_ratio")
+prior["phase"] = Uniform(0, 2 * np.pi, name="phase", boundary="periodic")
+prior["geocent_time"] = Uniform(
+    time_of_event - 0.1, time_of_event + 0.1, name="geocent_time"
+)
+prior["luminosity_distance"] = PowerLaw(
+    alpha=2, minimum=50, maximum=2000,
+    name="luminosity_distance", unit="Mpc"
+)
+prior.update({
+    "a_1": 0.0, "a_2": 0.0, "tilt_1": 0.0, "tilt_2": 0.0,
+    "phi_12": 0.0, "phi_jl": 0.0, "dec": -1.2232,
+    "ra": 2.19432, "theta_jn": 1.89694, "psi": 0.532268,
+})
+prior"""),
+    md(r"""## 4. Build the waveform and likelihood
+
+`WaveformGenerator` maps parameters to polarizations. Each interferometer then
+applies its response and arrival-time delay. `GravitationalWaveTransient`
+evaluates the coherent PSD-weighted residual likelihood. Time, phase, and
+distance are analytically marginalised during sampling and reconstructed later."""),
+    code("""waveform_arguments = dict(
+    waveform_approximant="IMRPhenomPv2",
+    reference_frequency=50.0,
+    minimum_frequency=20.0,
+)
+waveform_generator = bilby.gw.WaveformGenerator(
+    duration=duration,
+    sampling_frequency=sampling_frequency,
+    frequency_domain_source_model=bilby.gw.source.lal_binary_black_hole,
+    parameter_conversion=convert_to_lal_binary_black_hole_parameters,
+    waveform_arguments=waveform_arguments,
+)
+
+likelihood = bilby.gw.likelihood.GravitationalWaveTransient(
+    interferometers=interferometers,
+    waveform_generator=waveform_generator,
+    priors=prior,
+    time_marginalization=True,
+    phase_marginalization=True,
+    distance_marginalization=True,
+)
+print("Likelihood:", type(likelihood).__name__)
+print("Frequency bins used:", sum(ifo.strain_data.frequency_mask.sum() for ifo in interferometers))"""),
+    md("""## 5. Run Dynesty
+
+This is the genuine sampler call from the GWOSC workflow. The deliberately
+loose stopping criterion and small live-point count reduce classroom runtime.
+Do not reuse them as production defaults."""),
+    code("""result_short = bilby.run_sampler(
+    likelihood=likelihood,
+    priors=prior,
+    sampler="dynesty",
+    outdir="gw150914_short",
+    label="GW150914",
+    conversion_function=generate_all_bbh_parameters,
+    nlive=250,
+    dlogz=1.0,
+    sample="rwalk",
+    clean=False,
+)
+
+parameters = ["chirp_mass", "mass_ratio", "geocent_time", "phase"]
+print(result_short.posterior[parameters].describe(percentiles=[0.05, 0.5, 0.95]))
+print(f"log Bayes factor: {result_short.log_bayes_factor:.1f} +/- {result_short.log_evidence_err:.1f}")
+result_short.plot_corner(parameters=parameters, prior=True, save=False)
+plt.show()""", figure="lvk-gwosc-bilby-corner"),
+    *_exercise(
+        "Report the median and symmetric 90% credible interval for detector-frame "
+        "chirp mass. Then state one reason it should not match every published "
+        "GW150914 posterior exactly.",
+        """# Your code here
+chirp_mass_samples = result_short.posterior["chirp_mass"].to_numpy()
+raise NotImplementedError("calculate the 5th, 50th, and 95th percentiles")""",
+        "Use `np.quantile(chirp_mass_samples, [0.05, 0.5, 0.95])`. The waveform, "
+        "fixed spins/extrinsic parameters, calibration treatment, PSD, priors, "
+        "and sampler settings all define the comparison.",
+        """low, median, high = np.quantile(chirp_mass_samples, [0.05, 0.5, 0.95])
+print(f"Mc_det = {median:.2f} [{low:.2f}, {high:.2f}] Msun")
+print("This restricted non-spinning workshop model is not the published full analysis.")""",
+    ),
+]
+write(
+    "03_lvk_gw150914_bilby.ipynb",
+    "Part 2B: GW150914 with Bilby",
+    gwosc_bilby_cells,
+)
+
+
+# Part 2C: the compact population demonstration becomes an independent module
+# and gains local exercises/checks.
+population_setup = code("""import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import norm
+
+rng = np.random.default_rng(20260817)
+plt.style.use("seaborn-v0_8-whitegrid")""")
+lvk_c_cells = [
+    _module_intro(
+        "Turn event-level information into a population statement and see why "
+        "the detected catalogue is not the underlying population.",
+        "Run the selection-bias laboratory, then complete the question cell.",
+        "The toy treats event masses as exactly measured. Production population "
+        "inference reweights uncertain event posterior samples and estimates "
+        "selection with injection campaigns.",
+    ),
+    population_setup,
+    *_between(lvk_source, "## 6. From events to a population", "## 7. The full Bilby analysis"),
+    *_exercise(
+        "Move the detection turn-on from 22 to 28 mass units and recompute both "
+        "population posteriors. Which estimate moves more, and why?",
+        """# Your code here
+def harder_detection_probability(mass):
+    return 1 / (1 + np.exp(-(mass - 28) / 3.5))
+
+raise NotImplementedError("redraw the detected catalogue and selection correction")""",
+        "Use the same underlying `all_masses`. The hyperlikelihood correction "
+        "must use the same selection function that generated the detected sample.",
+        """hard_detected = all_masses[
+    rng.random(all_masses.size) < harder_detection_probability(all_masses)
+][:40]
+hard_naive, hard_corrected = [], []
+for mean in mean_grid:
+    event_term = norm.logpdf(hard_detected, mean, population_width).sum()
+    alpha = np.trapezoid(
+        norm.pdf(integration_grid, mean, population_width)
+        * harder_detection_probability(integration_grid), integration_grid
+    )
+    hard_naive.append(event_term)
+    hard_corrected.append(event_term - len(hard_detected) * np.log(alpha))
+print("naive MAP:", mean_grid[np.argmax(hard_naive)])
+print("selection-aware MAP:", mean_grid[np.argmax(hard_corrected)])""",
+    ),
+    md("""## PE checks before population claims
+
+- Inspect sampler convergence and effective sample size at event level.
+- Check prior support and whether posterior samples press against boundaries.
+- Perform posterior-predictive and residual checks.
+- Reweight using the actual event-level sampling priors.
+- Verify that injections represent the analysed population and detection pipeline.
+- Repeat under plausible waveform, calibration, and population-model alternatives."""),
+]
+write(
+    "04_lvk_population_and_checks.ipynb",
+    "Part 2C: LVK populations and PE checks",
+    lvk_c_cells,
+)
+
+
+# Part 3A: response and signal foundations, including the manual likelihood and
+# AnalysisContainer bridge.  WDM and global fitting are moved to their own files.
+lisa_setup = _between(lisa_source, "import os", "## 1. LISA's band and source zoo")
+lisa_a_cells = [
+    _module_intro(
+        "Connect LISA's source zoo to its moving constellation, delayed links, "
+        "TDI variables, sensitivity, and likelihood interfaces.",
+        "Follow orbit -> links -> XYZ/AET, then the inner-product likelihood. "
+        "The Fisher section is optional.",
+    ),
+    *lisa_setup,
+    *_between(lisa_source, "## 1. LISA's band and source zoo", "## 3. Real LISA data will be more complicated"),
+    *_between(lisa_source, "## 4. Inner product, SNR, and likelihood", "## 5. The global fit: a wheel of conditional analyses"),
+    md("""## Analysis-code map
+
+| Tool family | Typical role in a LISA analysis |
+| --- | --- |
+| LISA Analysis Tools / `lisatools` | sensitivity, response containers, likelihood plumbing |
+| JaxGB | fast Galactic-binary response generation |
+| GLASS / Erebor-style pipelines | overlapping-source and global-fit workflows |
+| Eryn | ensemble and trans-dimensional sampling machinery |
+| Gemoo-style searches | source search/proposal construction in crowded data |
+
+These packages are not interchangeable single commands. Each occupies a layer
+between waveform/response generation, search, likelihood construction, and
+posterior exploration. The following notebooks isolate the global-fit, PSD,
+and time-frequency layers."""),
+    *_exercise(
+        "Set `USE_BREATHING_ORBITS = True`, rerun the orbit-to-TDI chain, and "
+        "compare the RMS of T against A. Why is T an approximate rather than "
+        "universal null channel?",
+        """# Change the switch near the orbit construction, then rerun Sections 1a--1f.
+USE_BREATHING_ORBITS = True
+raise NotImplementedError("report the recomputed T/A RMS ratio")""",
+        "The cancellation depends on frequency, arm equality, response details, "
+        "and which physical contribution is being considered.",
+        """print("T/A RMS ratio:", np.std(T) / np.std(A))
+print("Interpret this for the simulated link model only, not as a universal null.")""",
+    ),
+]
+write(
+    "05_lisa_signals_response_codes.ipynb",
+    "Part 3A: LISA signals, response, and analysis codes",
+    lisa_a_cells,
+)
+
+
+global_lisa_state = code("""orbits = EqualArmlengthOrbits()
+t_obs = 90 * 86400.0
+df = 1.0 / t_obs
+simulator = JaxGB(orbits, t_obs=t_obs, t0=0, n=128)
+print("Response model:", type(orbits).__name__)
+print("Observation time [days]:", t_obs / 86400)""")
+lisa_b_cells = [
+    _module_intro(
+        "Understand a global fit as communicating conditional analyses through "
+        "a shared residual, then implement exact and Metropolis-within-Gibbs blocks.",
+        "Run the fixed-shape demonstration and the search -> seed -> cycle toy.",
+        "The examples use fixed source counts or BIC enumeration and simplified "
+        "responses. They are not production trans-dimensional LISA inference.",
+    ),
+    *lisa_setup,
+    global_lisa_state,
+    *_between(lisa_source, "## 5. The global fit: a wheel of conditional analyses", "## Optional LISA Data Challenge input and boundary"),
+    *_exercise(
+        "Reverse the order of the one-pass source subtraction. Compare the final "
+        "residual norm with the blocked chain. Why can one-pass subtraction "
+        "depend on ordering?",
+        """# Your code here
+reverse_order = [2, 1, 0]
+raise NotImplementedError("repeat the one-pass updates in reverse_order")""",
+        "Each early subtraction is conditional on an incomplete residual. Its "
+        "error is inherited by later blocks and is never revisited.",
+        """reverse_residual = data.copy()
+reverse_amplitudes = np.zeros(3)
+for source_index in reverse_order:
+    template_i = templates[source_index]
+    reverse_amplitudes[source_index] = global_inner(template_i, reverse_residual) / global_inner(template_i, template_i)
+    reverse_residual -= reverse_amplitudes[source_index] * template_i
+print("reverse one-pass residual norm:", global_inner(reverse_residual, reverse_residual))""",
+    ),
+]
+write(
+    "06_lisa_global_fit_gibbs.ipynb",
+    "Part 3B: LISA global fitting and Gibbs sampling",
+    lisa_b_cells,
+)
+
+
+# Part 3C: a compact, self-contained P-spline PSD laboratory.  It uses the
+# Whittle objective directly and a Laplace approximation only for a visual
+# uncertainty band; that approximation is labelled rather than promoted as a
+# production posterior.
+lisa_c_cells = [
+    _module_intro(
+        "Estimate a smooth PSD with a cubic P-spline inside a Whittle likelihood "
+        "and see how the roughness penalty changes the answer.",
+        "Fit the simulated spectrum, inspect posterior-predictive whitening, then "
+        "change the smoothing strength in the question cell.",
+        "The coefficient band uses a local Laplace approximation. A production "
+        "Bayesian P-spline analysis must sample the full posterior and validate "
+        "coverage, convergence, line treatment, and foreground identifiability.",
+    ),
+    code("""import numpy as np
+import matplotlib.pyplot as plt
+from scipy.interpolate import BSpline
+from scipy.optimize import minimize
+
+rng = np.random.default_rng(20260817)
+plt.style.use("seaborn-v0_8-whitegrid")"""),
+    md(r"""## 1. Why estimate the PSD inside the analysis?
+
+For approximately independent complex Fourier coefficients $d_k$ with
+one-sided PSD $S_k$, the Whittle negative log likelihood is, up to constants,
+
+$$
+-\log\mathcal L = \sum_k\left[\log S_k + \frac{I_k}{S_k}\right],
+\qquad I_k=|d_k|^2.
+$$
+
+A raw periodogram is too variable to use as a smooth noise model. Write
+$\log S(f)=B(f)\beta$ in a cubic B-spline basis and penalise second differences,
+
+$$
+-\log p(\beta\mid I)= -\log\mathcal L
++\frac{\lambda}{2}\lVert D_2\beta\rVert^2 + \mathrm{constant}.
+$$"""),
+    code("""n_frequency = 1200
+frequency = np.geomspace(2e-4, 2e-2, n_frequency)
+log_frequency = np.log(frequency)
+
+true_psd = 2.5e-40 * (
+    1 + (8e-4 / frequency) ** 4 + 0.12 * (frequency / 7e-3) ** 2
+)
+true_psd *= 1 + 1.8 * np.exp(-0.5 * ((np.log10(frequency) + 2.55) / 0.09) ** 2)
+periodogram = true_psd * rng.exponential(size=n_frequency)
+
+degree = 3
+n_basis = 24
+interior = np.linspace(log_frequency.min(), log_frequency.max(), n_basis - degree + 1)
+knots = np.r_[[interior[0]] * degree, interior, [interior[-1]] * degree]
+basis = np.column_stack([
+    BSpline(knots, np.eye(n_basis)[index], degree)(log_frequency)
+    for index in range(n_basis)
+])
+second_difference = np.diff(np.eye(n_basis), n=2, axis=0)
+
+fig, ax = plt.subplots(figsize=(9, 3.8))
+ax.loglog(frequency, periodogram, color="0.75", lw=0.6, label="periodogram")
+ax.loglog(frequency, true_psd, "k--", lw=2, label="injected PSD")
+ax.set(xlabel="frequency [Hz]", ylabel="PSD", title="A periodogram is not a smooth PSD estimate")
+ax.legend()
+plt.show()""", figure="lisa-pspline-periodogram"),
+    md("""## 2. Fit the penalised Whittle objective
+
+The positive PSD constraint is automatic because the spline represents
+`log(PSD)`. The smoothing strength `PENALTY` controls curvature, not an
+arbitrary moving-window width."""),
+    code("""PENALTY = 80.0
+
+def pspline_objective(coefficients, penalty=PENALTY):
+    log_psd = basis @ coefficients
+    roughness = second_difference @ coefficients
+    return np.sum(log_psd + periodogram * np.exp(-log_psd)) + 0.5 * penalty * np.sum(roughness**2)
+
+initial = np.linalg.lstsq(basis, np.log(np.maximum(periodogram, np.median(periodogram) * 1e-6)), rcond=None)[0]
+fit = minimize(pspline_objective, initial, method="L-BFGS-B")
+if not fit.success:
+    raise RuntimeError(fit.message)
+
+log_psd_map = basis @ fit.x
+psd_map = np.exp(log_psd_map)
+curvature = periodogram * np.exp(-log_psd_map)
+hessian = basis.T @ (curvature[:, None] * basis) + PENALTY * second_difference.T @ second_difference
+coefficient_covariance = np.linalg.pinv(hessian)
+draws = rng.multivariate_normal(fit.x, coefficient_covariance, size=400)
+psd_draws = np.exp(draws @ basis.T)
+low, high = np.quantile(psd_draws, [0.05, 0.95], axis=0)
+
+fig, ax = plt.subplots(figsize=(9, 4))
+ax.loglog(frequency, periodogram, color="0.82", lw=0.5, label="periodogram")
+ax.loglog(frequency, true_psd, "k--", lw=2, label="injected PSD")
+ax.loglog(frequency, psd_map, color="C3", lw=2, label="P-spline MAP")
+ax.fill_between(frequency, low, high, color="C3", alpha=0.22, label="local 90% band")
+ax.set(xlabel="frequency [Hz]", ylabel="PSD", title="Penalised Whittle P-spline fit")
+ax.legend()
+plt.show()""", figure="lisa-pspline-fit"),
+    md("""## 3. Check the implied whitening
+
+If the PSD model is adequate, `periodogram / psd_map` should fluctuate around
+one without broad frequency-dependent structure. This is a numerical model
+check, not proof that the physical noise components are identifiable."""),
+    code("""whitened_power = periodogram / psd_map
+log_bins = np.array_split(np.arange(n_frequency), 12)
+bin_frequency = np.array([np.exp(np.mean(log_frequency[index])) for index in log_bins])
+bin_power = np.array([np.mean(whitened_power[index]) for index in log_bins])
+
+fig, ax = plt.subplots(figsize=(9, 3.4))
+ax.semilogx(frequency, whitened_power, ".", ms=2, alpha=0.25, label="bins")
+ax.semilogx(bin_frequency, bin_power, "o-", lw=2, label="log-band mean")
+ax.axhline(1, color="k", ls="--")
+ax.set(xlabel="frequency [Hz]", ylabel="whitened power", title="PSD posterior-predictive diagnostic")
+ax.legend()
+plt.show()
+print("mean whitened power:", whitened_power.mean())""", figure="lisa-pspline-whitening"),
+    *_exercise(
+        "Refit with penalties 2, 80, and 5000. Which fit follows periodogram "
+        "spikes, and which erases the broad bump near 3 mHz?",
+        """# Your code here
+penalties = [2.0, 80.0, 5000.0]
+fits_by_penalty = {}
+raise NotImplementedError("minimise pspline_objective for each penalty")""",
+        "Pass the penalty explicitly and warm-start each fit from `fit.x`. Plot "
+        "the resulting PSDs against the injected PSD.",
+        """for penalty in penalties:
+    result = minimize(lambda beta: pspline_objective(beta, penalty), fit.x, method="L-BFGS-B")
+    fits_by_penalty[penalty] = np.exp(basis @ result.x)
+for penalty, estimate in fits_by_penalty.items():
+    plt.loglog(frequency, estimate, label=f"lambda={penalty:g}")
+plt.loglog(frequency, true_psd, "k--", label="truth")
+plt.legend(); plt.show()""",
+    ),
+    md("""## Instrument noise and foregrounds
+
+One observed total spectrum does not identify two unrestricted positive smooth
+surfaces. Separating an instrumental PSD from Galactic confusion requires
+additional structure: response-informed shapes, multiple TDI channels,
+time dependence, informative regularisation, resolved-source information, or
+other data. A visually good total-PSD fit alone is not component recovery."""),
+]
+write(
+    "07_lisa_pspline_psd.ipynb",
+    "Part 3C: LISA PSD estimation with P-splines",
+    lisa_c_cells,
+)
+
+
+# Part 3D: repeat the global-fit wheel in WDM coefficients, now with a gap.
+wdm_global_fit_cells = [
+    md(
+        r"""## 4. The same global fit, now in the WDM domain
+
+Nothing about blocked Gibbs sampling belongs specifically to a Fourier basis.
+Module 06 used frequency-domain residuals. Here the data model is unchanged,
+
+$$
+d_{nm}=\sum_{i=1}^{3} a_i h^{(i)}_{nm}+n_{nm},
+$$
+
+but every datum, template, and residual is a WDM coefficient. The conditional
+for amplitude $a_i$ uses the shared residual
+
+$$
+r^{(i)}_{nm}=d_{nm}-\sum_{j\ne i}a_jh^{(j)}_{nm},
+$$
+
+and the same Gaussian update as Module 06, with the **masked WDM inner
+product** replacing the frequency-domain inner product. Columns in the gap and
+a conservative edge guard have infinite uncertainty operationally: they are
+excluded from every source and noise update.
+
+This is a controlled counterpart to Module 06's fixed-shape example. The
+source shapes and source count are known; only their amplitudes and a common
+noise scale are inferred. The point is to expose residual handoff with missing
+data, not to claim a production LISA global fit."""
+    ),
+    md(
+        """**Predict before running:** Does localising the gap in a handful of WDM
+columns make the three overlapping sources independent of one another? What
+information should the gap remove from every conditional update?"""
+    ),
+    code(
+        r'''# Three nearly coincident binaries: visually they share one WDM ridge, but
+# their phase evolution still lets the joint likelihood distinguish them.
+WDM_GLOBAL_F0 = 3.0e-3 + np.array([0.0, 0.25e-6, 0.50e-6])
+WDM_GLOBAL_PHASE = np.array([0.2, 0.5, 0.8])
+WDM_GLOBAL_TRUTH = np.array([1.0, 0.75, 0.55])
+WDM_GLOBAL_BASE_SNR = 30.0
+
+wdm_global_time_templates = np.asarray([
+    np.sin(2 * np.pi * frequency * toy_time + phase0)
+    for frequency, phase0 in zip(WDM_GLOBAL_F0, WDM_GLOBAL_PHASE)
+])
+wdm_global_templates = np.asarray([
+    np.asarray(
+        WDM.from_time_series(
+            WDMTimeSeries(time_template, dt=cadence), nt=WDM_NT
+        ).coeffs[0]
+    )
+    for time_template in wdm_global_time_templates
+])
+
+# A hard gap rings beyond the literally missing samples. The introductory lab
+# deliberately shows that edge leakage; inference uses a wider, visible guard
+# so those contaminated columns do not enter any source or noise block.
+WDM_GLOBAL_GAP_GUARD_DAYS = 0.75
+wdm_global_pixel_time = np.arange(WDM_NT) * wdm_data.delta_t / 86400
+wdm_global_gap_pixels = (
+    (wdm_global_pixel_time >= GAP_DAYS[0] - WDM_GLOBAL_GAP_GUARD_DAYS)
+    & (wdm_global_pixel_time <= GAP_DAYS[1] + WDM_GLOBAL_GAP_GUARD_DAYS)
+)
+wdm_global_masked_var = wdm_stationary_var.copy()
+wdm_global_masked_var[wdm_global_gap_pixels, :] = np.nan
+
+
+def wdm_global_inner(first, second, variance=wdm_global_masked_var):
+    """Gap-aware diagonal WDM inner product used by every block."""
+    return wdm_inner_product(first, second, variance)
+
+
+# Give each unit-amplitude template the same retained-data SNR. Scaling the time
+# series and its WDM coefficients together preserves their exact relationship.
+template_normalisations = WDM_GLOBAL_BASE_SNR / np.sqrt([
+    wdm_global_inner(template, template) for template in wdm_global_templates
+])
+wdm_global_time_templates *= template_normalisations[:, None]
+wdm_global_templates *= template_normalisations[:, None, None]
+
+wdm_global_rng = np.random.default_rng(20260831)
+wdm_global_noise_time = wdm_global_rng.normal(size=toy_time.size)
+wdm_global_data_time = (
+    np.sum(WDM_GLOBAL_TRUTH[:, None] * wdm_global_time_templates, axis=0)
+    + wdm_global_noise_time
+)
+wdm_global_data_time[~available] = 0.0
+wdm_global_data = np.asarray(
+    WDM.from_time_series(
+        WDMTimeSeries(wdm_global_data_time, dt=cadence), nt=WDM_NT
+    ).coeffs[0]
+)
+
+# wdm_inner_product excludes the DC and Nyquist edge channels. Count the same
+# real Gaussian coefficients for the exact inverse-gamma noise update below.
+wdm_global_n_valid = np.isfinite(wdm_global_masked_var[:, 1:-1]).sum()
+
+wdm_global_precision = np.asarray([
+    [wdm_global_inner(first, second) for second in wdm_global_templates]
+    for first in wdm_global_templates
+])
+wdm_global_rhs = np.asarray([
+    wdm_global_inner(template, wdm_global_data)
+    for template in wdm_global_templates
+])
+wdm_global_joint = np.linalg.solve(wdm_global_precision, wdm_global_rhs)
+wdm_global_covariance = np.linalg.inv(wdm_global_precision)
+
+# The same templates without a gap quantify the information actually lost.
+wdm_global_full_precision = np.asarray([
+    [wdm_inner_product(first, second, wdm_stationary_var)
+     for second in wdm_global_templates]
+    for first in wdm_global_templates
+])
+wdm_global_full_covariance = np.linalg.inv(wdm_global_full_precision)
+uncertainty_inflation = np.sqrt(
+    np.diag(wdm_global_covariance) / np.diag(wdm_global_full_covariance)
+)
+
+print("injected amplitudes        ", WDM_GLOBAL_TRUTH)
+print("masked joint estimate      ", np.round(wdm_global_joint, 3))
+print("masked posterior sigma     ", np.round(np.sqrt(np.diag(wdm_global_covariance)), 3))
+print("gap/full sigma ratio       ", np.round(uncertainty_inflation, 3))
+print(f"masked WDM columns          {wdm_global_gap_pixels.sum()}/{WDM_NT} "
+      f"({wdm_global_gap_pixels.mean():.1%}, including the edge guard)")'''
+    ),
+    md(
+        r"""### One pass versus a blocked chain
+
+A WDM representation localises the missing interval; it does **not** make
+overlapping source templates orthogonal. A one-pass subtraction still hands
+every fitting error to the next block and never revisits it.
+
+The blocked chain below cycles through the three amplitudes and then the noise
+scale. With a flat amplitude prior, each source conditional is Gaussian. If
+$\eta$ multiplies the WDM variance, the final block is also an exact draw:
+
+$$
+\eta\mid r \sim \mathrm{InvGamma}\!\left(
+\frac{N_{\rm valid}}{2},\frac{(r\mid r)_{\eta=1}}{2}\right).
+$$
+
+Only valid, non-edge WDM pixels enter $N_{\rm valid}$ or the residual norm."""
+    ),
+    code(
+        r'''# One forward pass, retained as the deliberately order-dependent baseline.
+wdm_one_pass = np.zeros(3)
+wdm_one_pass_residual = wdm_global_data.copy()
+for source_index, template in enumerate(wdm_global_templates):
+    wdm_one_pass[source_index] = (
+        wdm_global_inner(template, wdm_one_pass_residual)
+        / wdm_global_inner(template, template)
+    )
+    wdm_one_pass_residual -= wdm_one_pass[source_index] * template
+
+# Exact blocked Gibbs updates for amplitudes plus an exact noise-scale block.
+WDM_GIBBS_SWEEPS = 1600
+WDM_GIBBS_BURN_IN = 300
+wdm_gibbs_state = np.zeros(3)
+wdm_gibbs_noise_scale = 1.0
+wdm_gibbs_history = [wdm_gibbs_state.copy()]
+wdm_gibbs_noise_history = []
+wdm_gibbs_substates = []
+wdm_gibbs_active_blocks = []
+wdm_gibbs_conditional_means = []
+wdm_gibbs_conditional_sds = []
+
+for sweep in range(WDM_GIBBS_SWEEPS):
+    for source_index, template in enumerate(wdm_global_templates):
+        conditional_residual = (
+            wdm_global_data
+            - np.sum(
+                wdm_gibbs_state[:, None, None] * wdm_global_templates, axis=0
+            )
+            + wdm_gibbs_state[source_index] * template
+        )
+        base_precision = wdm_global_inner(template, template)
+        conditional_mean = (
+            wdm_global_inner(template, conditional_residual) / base_precision
+        )
+        conditional_sd = np.sqrt(wdm_gibbs_noise_scale / base_precision)
+        wdm_gibbs_state[source_index] = wdm_global_rng.normal(
+            conditional_mean, conditional_sd
+        )
+        wdm_gibbs_substates.append(wdm_gibbs_state.copy())
+        wdm_gibbs_active_blocks.append(source_index)
+        wdm_gibbs_conditional_means.append(conditional_mean)
+        wdm_gibbs_conditional_sds.append(conditional_sd)
+
+    current_residual = wdm_global_data - np.sum(
+        wdm_gibbs_state[:, None, None] * wdm_global_templates, axis=0
+    )
+    residual_power = wdm_global_inner(current_residual, current_residual)
+    wdm_gibbs_noise_scale = (residual_power / 2) / wdm_global_rng.gamma(
+        wdm_global_n_valid / 2, 1.0
+    )
+    wdm_gibbs_history.append(wdm_gibbs_state.copy())
+    wdm_gibbs_noise_history.append(wdm_gibbs_noise_scale)
+
+wdm_gibbs_history = np.asarray(wdm_gibbs_history)
+wdm_gibbs_noise_history = np.asarray(wdm_gibbs_noise_history)
+wdm_gibbs_substates = np.asarray(wdm_gibbs_substates)
+wdm_gibbs_active_blocks = np.asarray(wdm_gibbs_active_blocks)
+wdm_gibbs_conditional_means = np.asarray(wdm_gibbs_conditional_means)
+wdm_gibbs_conditional_sds = np.asarray(wdm_gibbs_conditional_sds)
+wdm_gibbs_samples = wdm_gibbs_history[WDM_GIBBS_BURN_IN:]
+wdm_gibbs_noise_samples = wdm_gibbs_noise_history[WDM_GIBBS_BURN_IN:]
+
+wdm_final_residual = wdm_global_data - np.sum(
+    wdm_gibbs_samples.mean(axis=0)[:, None, None] * wdm_global_templates, axis=0
+)
+
+print("true             ", np.round(WDM_GLOBAL_TRUTH, 3))
+print("one pass         ", np.round(wdm_one_pass, 3))
+print("joint mean       ", np.round(wdm_global_joint, 3))
+print("Gibbs mean       ", np.round(wdm_gibbs_samples.mean(axis=0), 3))
+print("Gibbs uncertainty", np.round(wdm_gibbs_samples.std(axis=0), 3))
+print(f"noise scale       {wdm_gibbs_noise_samples.mean():.3f} "
+      f"+/- {wdm_gibbs_noise_samples.std():.3f}")
+print(f"final (r|r)/N_valid = "
+      f"{wdm_global_inner(wdm_final_residual, wdm_final_residual)/wdm_global_n_valid:.3f}")'''
+    ),
+    code(
+        r'''fig, axes = plt.subplots(2, 2, figsize=(12, 6.5), layout="constrained")
+
+for source_index in range(3):
+    axes[0, 0].plot(
+        wdm_gibbs_history[:100, source_index],
+        lw=0.9,
+        color=f"C{source_index}",
+        label=f"source {source_index + 1}",
+    )
+    axes[0, 0].axhline(
+        WDM_GLOBAL_TRUTH[source_index],
+        color=f"C{source_index}",
+        ls="--",
+        alpha=0.6,
+    )
+    axes[0, 1].hist(
+        wdm_gibbs_samples[:, source_index],
+        bins=34,
+        density=True,
+        histtype="step",
+        color=f"C{source_index}",
+        label=f"source {source_index + 1}",
+    )
+    axes[0, 1].axvline(
+        wdm_global_joint[source_index],
+        color=f"C{source_index}",
+        ls="--",
+        alpha=0.7,
+    )
+axes[0, 0].set(
+    xlabel="Gibbs sweep", ylabel="amplitude multiplier", title="WDM conditional chains"
+)
+axes[0, 1].set(
+    xlabel="amplitude multiplier", ylabel="posterior density", title="Masked WDM posterior"
+)
+axes[0, 0].legend(fontsize=8)
+axes[0, 1].legend(fontsize=8)
+
+wdm_global_show = (wdm_frequency > 2.75e-3) & (wdm_frequency < 3.25e-3)
+data_display = np.abs(wdm_global_data[:, wdm_global_show].T)
+residual_display = np.abs(wdm_final_residual[:, wdm_global_show].T)
+data_display[:, wdm_global_gap_pixels] = np.nan
+residual_display[:, wdm_global_gap_pixels] = np.nan
+global_colour_scale = np.nanpercentile(data_display, 99.5)
+
+for ax, image_data, title in zip(
+    axes[1],
+    (data_display, residual_display),
+    ("shared WDM data", "posterior-mean residual"),
+):
+    image = ax.pcolormesh(
+        wdm_global_pixel_time,
+        1e3 * wdm_frequency[wdm_global_show],
+        image_data,
+        shading="nearest",
+        cmap="magma",
+        vmin=0,
+        vmax=global_colour_scale,
+    )
+    mark_gap(
+        ax,
+        GAP_DAYS[0] - WDM_GLOBAL_GAP_GUARD_DAYS,
+        GAP_DAYS[1] + WDM_GLOBAL_GAP_GUARD_DAYS,
+        label="gap + edge guard",
+    )
+    ax.set(xlabel="mission time [days]", ylabel="frequency [mHz]", title=title)
+axes[1, 0].legend(fontsize=8, loc="upper right")
+fig.colorbar(image, ax=axes[1], label=r"$|w_{nm}|$", pad=0.02)
+plt.show()''',
+        figure="lisa-wdm-global-fit",
+    ),
+    md(
+        r"""### Animation: the WDM residual handed from block to block
+
+As in Module 06, every frame is one conditional source update rather than one
+completed sweep. The parameter-space move is on the left. On the right, the
+same shared WDM residual is updated and passed to the next source block. The
+hatched gap-plus-guard interval is absent from **every** update; Gibbs sampling
+does not invent coefficients inside the missing interval."""
+    ),
+    code(
+        r'''wdm_animation_start = 12
+wdm_animation_stop = wdm_animation_start + 30
+wdm_animation_states = wdm_gibbs_substates[
+    wdm_animation_start:wdm_animation_stop
+]
+wdm_animation_blocks = wdm_gibbs_active_blocks[
+    wdm_animation_start:wdm_animation_stop
+]
+wdm_animation_means = wdm_gibbs_conditional_means[
+    wdm_animation_start:wdm_animation_stop
+]
+wdm_animation_sds = wdm_gibbs_conditional_sds[
+    wdm_animation_start:wdm_animation_stop
+]
+wdm_animation_initial = wdm_gibbs_substates[wdm_animation_start - 1]
+wdm_animation_path = np.vstack([wdm_animation_initial, wdm_animation_states])
+
+wdm_covariance_12 = wdm_global_covariance[:2, :2]
+wdm_sigma_12 = np.sqrt(np.diag(wdm_covariance_12))
+wdm_a1_grid = np.linspace(
+    wdm_global_joint[0] - 4 * wdm_sigma_12[0],
+    wdm_global_joint[0] + 4 * wdm_sigma_12[0],
+    120,
+)
+wdm_a2_grid = np.linspace(
+    wdm_global_joint[1] - 4 * wdm_sigma_12[1],
+    wdm_global_joint[1] + 4 * wdm_sigma_12[1],
+    120,
+)
+WDM_A1_GRID, WDM_A2_GRID = np.meshgrid(wdm_a1_grid, wdm_a2_grid)
+wdm_offsets_12 = np.stack(
+    [WDM_A1_GRID - wdm_global_joint[0], WDM_A2_GRID - wdm_global_joint[1]],
+    axis=-1,
+)
+wdm_mahalanobis_12 = np.einsum(
+    "...i,ij,...j->...",
+    wdm_offsets_12,
+    np.linalg.inv(wdm_covariance_12),
+    wdm_offsets_12,
+)
+
+fig, (wdm_posterior_ax, wdm_residual_ax) = plt.subplots(1, 2, figsize=(12, 4.5))
+wdm_posterior_ax.contour(
+    WDM_A1_GRID,
+    WDM_A2_GRID,
+    np.exp(-0.5 * wdm_mahalanobis_12),
+    levels=np.exp(-0.5 * np.array([9.0, 4.0, 1.0])),
+    colors=".65",
+)
+wdm_posterior_ax.plot(
+    WDM_GLOBAL_TRUTH[0], WDM_GLOBAL_TRUTH[1], "*", color="k", ms=10, label="injected"
+)
+wdm_posterior_ax.plot(
+    wdm_global_joint[0], wdm_global_joint[1], "+", color="C3", ms=10,
+    mew=2, label="joint mean"
+)
+(wdm_path_line,) = wdm_posterior_ax.plot([], [], color=".7", lw=1)
+(wdm_step_line,) = wdm_posterior_ax.plot([], [], lw=3)
+(wdm_point,) = wdm_posterior_ax.plot([], [], "o", color="k", ms=5)
+wdm_posterior_ax.set(
+    xlabel="source 1 amplitude", ylabel="source 2 amplitude",
+    title="conditional moves through the WDM posterior"
+)
+wdm_posterior_ax.legend(fontsize=8)
+
+wdm_initial_animation_residual = wdm_global_data.copy()
+wdm_initial_animation_display = np.abs(
+    wdm_initial_animation_residual[:, wdm_global_show].T
+)
+wdm_initial_animation_display[:, wdm_global_gap_pixels] = np.nan
+wdm_residual_image = wdm_residual_ax.pcolormesh(
+    wdm_global_pixel_time,
+    1e3 * wdm_frequency[wdm_global_show],
+    wdm_initial_animation_display,
+    shading="nearest",
+    cmap="magma",
+    vmin=0,
+    vmax=global_colour_scale,
+)
+mark_gap(
+    wdm_residual_ax,
+    GAP_DAYS[0] - WDM_GLOBAL_GAP_GUARD_DAYS,
+    GAP_DAYS[1] + WDM_GLOBAL_GAP_GUARD_DAYS,
+    label=None,
+)
+wdm_conditional_text = wdm_residual_ax.text(
+    0.02, 0.95, "", transform=wdm_residual_ax.transAxes, va="top",
+    bbox=dict(facecolor="white", alpha=0.88, edgecolor="none")
+)
+wdm_residual_ax.set(
+    xlabel="mission time [days]", ylabel="frequency [mHz]",
+    title="shared WDM residual"
+)
+
+
+def animate_wdm_gibbs_block(frame):
+    state = wdm_animation_states[frame]
+    previous = wdm_animation_path[frame]
+    active = int(wdm_animation_blocks[frame])
+    colour = f"C{active}"
+    wdm_path_line.set_data(
+        wdm_animation_path[: frame + 2, 0], wdm_animation_path[: frame + 2, 1]
+    )
+    wdm_step_line.set_data([previous[0], state[0]], [previous[1], state[1]])
+    wdm_step_line.set_color(colour)
+    wdm_point.set_data([state[0]], [state[1]])
+
+    residual_after = wdm_global_data - np.sum(
+        state[:, None, None] * wdm_global_templates, axis=0
+    )
+    residual_display = np.abs(residual_after[:, wdm_global_show].T)
+    residual_display[:, wdm_global_gap_pixels] = np.nan
+    wdm_residual_image.set_array(residual_display.ravel())
+    wdm_conditional_text.set_text(
+        f"draw a{active + 1} from its conditional\n"
+        f"mean {wdm_animation_means[frame]:.3f}, "
+        f"sd {wdm_animation_sds[frame]:.3f}\n"
+        f"new value {state[active]:.3f}"
+    )
+    wdm_posterior_ax.set_title(f"block {active + 1}: condition on the other sources")
+    wdm_residual_ax.set_title(f"pass this residual to block {(active + 1) % 3 + 1}")
+    return wdm_path_line, wdm_step_line, wdm_point, wdm_residual_image, wdm_conditional_text
+
+
+wdm_gibbs_animation = FuncAnimation(
+    fig,
+    animate_wdm_gibbs_block,
+    frames=len(wdm_animation_states),
+    interval=320,
+)
+plt.close(fig)
+show_animation(wdm_gibbs_animation)'''
+    ),
+    md(
+        r""":::{admonition} What WDM changes—and what it does not
+:class: warning
+
+- The gap is localised, so most WDM pixels remain usable rather than every
+  Fourier bin being contaminated by a mission-long window.
+- The likelihood, source blocks, and noise block all use exactly the same mask.
+- Source coupling remains: one-pass subtraction is still order-dependent, and
+  an imperfect source model still leaves structure for later blocks to absorb.
+- Masking whole columns discards more than the literal missing samples. Gap-edge
+  pixels can remain correlated. The 0.75-day guard is a visible conservative
+  teaching choice, not a calibrated production rule, so this diagonal
+  likelihood is not a complete gap-marginalised analysis.
+:::"""
+    ),
+]
+
+
+# Part 3D: the validated WDM laboratory is now independently runnable.
+lisa_d_cells = [
+    _module_intro(
+        "Repeat the global-fit Gibbs wheel in a WDM time-frequency representation "
+        "with a real gap mask and a shared residual.",
+        "Run the gap/WDM laboratory, then compare one-pass subtraction with the "
+        "masked WDM Gibbs chain.",
+        "The diagonal WDM likelihood is exact only under its covariance "
+        "assumptions. Gaps and non-stationarity can correlate pixels.",
+    ),
+    *lisa_setup,
+    *_between(lisa_source, "## 3. Real LISA data will be more complicated", "## 4. Inner product, SNR, and likelihood"),
+    *wdm_global_fit_cells,
+    *_exercise(
+        "Reverse the one-pass source order and compare its masked residual norm "
+        "with the forward pass and the joint fit. Why does WDM gap localisation "
+        "not remove order dependence between overlapping sources?",
+        """reverse_order = [2, 1, 0]
+# Your code here: repeat the one-pass updates in reverse_order.
+print("Exercise ready:", reverse_order)""",
+        "Each source is fitted to a residual containing the current errors from "
+        "the other sources. WDM localises the gap, not source-model error.",
+        """reverse_residual = wdm_global_data.copy()
+reverse_amplitudes = np.zeros(3)
+for source_index in reverse_order:
+    template = wdm_global_templates[source_index]
+    reverse_amplitudes[source_index] = (
+        wdm_global_inner(template, reverse_residual)
+        / wdm_global_inner(template, template)
+    )
+    reverse_residual -= reverse_amplitudes[source_index] * template
+
+joint_residual = wdm_global_data - np.sum(
+    wdm_global_joint[:, None, None] * wdm_global_templates, axis=0
+)
+print("forward one-pass norm:", wdm_global_inner(wdm_one_pass_residual, wdm_one_pass_residual))
+print("reverse one-pass norm:", wdm_global_inner(reverse_residual, reverse_residual))
+print("joint-fit norm:", wdm_global_inner(joint_residual, joint_residual))""",
+    ),
+]
+write(
+    "08_lisa_wdm_time_frequency.ipynb",
+    "Part 3D: LISA WDM time-frequency analysis",
+    lisa_d_cells,
+)
+
+
+# Supplement: a genuinely blind student worksheet and a separate worked answer.
+# The answer is built by a hidden toctree in index.md, but is deliberately not
+# listed in _toc.yml.  The HDF5 strain is generated reproducibly by
+# scripts/build_lvk_blind_challenge_data.py and contains no injection metadata.
+LVK_CHALLENGE_DATA_SETUP = [
+    code(
+        """import os, sys, subprocess, importlib.util
+
+IN_COLAB = "COLAB_RELEASE_TAG" in os.environ
+missing = [
+    package
+    for package in ("corner", "h5py")
+    if importlib.util.find_spec(package) is None
+]
+if missing:
+    if IN_COLAB:
+        subprocess.check_call([
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "-q",
+            "corner>=2.2",
+            "h5py>=3.11",
+        ])
+    else:
+        raise ImportError(
+            "Install corner>=2.2 and h5py>=3.11, "
+            "or use the locked workshop environment."
+        )"""
+    ),
+    code(
+        """from pathlib import Path
+from urllib.request import urlretrieve
+
+import corner
+import h5py
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.signal import butter, find_peaks, sosfiltfilt, spectrogram, welch
+
+plt.style.use("seaborn-v0_8-whitegrid")
+
+local_candidates = [
+    Path("assets/lvk_blind_challenge.h5"),
+    Path("../assets/lvk_blind_challenge.h5"),
+]
+DATA_PATH = next((path for path in local_candidates if path.exists()), local_candidates[0])
+DATA_URL = (
+    "https://raw.githubusercontent.com/nz-gravity/"
+    "FQCP2026_GW_data_analysis/main/assets/lvk_blind_challenge.h5"
+)
+if not DATA_PATH.exists():
+    DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
+    urlretrieve(DATA_URL, DATA_PATH)
+
+with h5py.File(DATA_PATH, "r") as source:
+    sampling_frequency = int(source.attrs["sampling_frequency_hz"])
+    duration = float(source.attrs["duration_s"])
+    start_time = float(source.attrs["start_time_s"])
+    strain = {
+        detector: np.asarray(source[f"strain/{detector}"][:], dtype=np.float64)
+        for detector in ("H1", "L1")
+    }
+
+time = start_time + np.arange(len(strain["H1"])) / sampling_frequency
+assert len(strain["H1"]) == len(strain["L1"]) == int(duration * sampling_frequency)
+assert all(np.isfinite(values).all() for values in strain.values())
+print(f"Loaded {duration:.0f} s at {sampling_frequency} Hz from {DATA_PATH}")
+print("Detector arrays:", {name: values.shape for name, values in strain.items()})"""
+    ),
+]
+
+
+def challenge_task(number, title, prompt, starter):
+    """A runnable blind task with no answer embedded in the student notebook."""
+    return [
+        md(f"""## {number}. {title}
+
+{prompt}"""),
+        code(starter),
+    ]
+
+
+student_challenge_cells = [
+    _module_intro(
+        "Search two synthetic detector streams for compact-binary signals, "
+        "separate a detector transient from an astrophysical coincidence, "
+        "estimate off-source PSDs, and run restricted parameter estimation.",
+        "Complete Tasks 1--7 in order. Record candidate times before opening "
+        "any instructor material.",
+        "This is a controlled classroom challenge: Gaussian line-free noise, "
+        "Newtonian inspiral teaching signals, fixed response and mass ratio for PE, no "
+        "calibration uncertainty, and no false-alarm-rate claim.",
+    ),
+    md(
+        r"""## Rules and supplied search ranges
+
+The HDF5 file contains only H1/L1 strain and acquisition metadata. It may
+contain more than one CBC and at least one data-quality problem. The events do
+not overlap.
+
+Use two template-bank ranges:
+
+- bank A: $\mathcal M\in[16.5,26.0]M_\odot$;
+- bank B: $\mathcal M\in[26.6,41.0]M_\odot$.
+
+Use $q=0.9$ for the inexpensive search bank. For the two-dimensional PE, the
+instructor supplies a fixed mass ratio for each candidate. These search ranges
+are not detection-rate priors, and the ranking statistic below is not assigned
+a false-alarm rate.
+
+### What you do—and what is supplied
+
+You will **choose and justify analysis settings, run the search, read trigger
+tables, diagnose the transient, define the two priors, and interpret posterior
+and residual plots**. You are not expected to derive or debug an FFT matched
+filter or MCMC implementation on your first day. The waveform, bank runner,
+coincidence bookkeeping, likelihood, sampler, and plotting scaffolds are
+provided and deliberately kept visible so you can connect the equations to the
+code.
+
+[Download the HDF5 data directly](../assets/lvk_blind_challenge.h5)."""
+    ),
+    *[deepcopy(cell) for cell in LVK_CHALLENGE_DATA_SETUP],
+    *challenge_task(
+        1,
+        "Inspect the data",
+        "Check shapes, finite values, and detector-by-detector scale. Plot a "
+        "downsampled overview, but do not expect a CBC to be visible in raw strain. "
+        "**Tip:** failure to see a chirp here is expected, not evidence that the "
+        "file is empty. **Suggested plot:** two aligned time-series panels with "
+        "the same time axis.",
+        """# Your overview here. Keep the plot light by downsampling.
+step = sampling_frequency // 8
+fig, axes = plt.subplots(2, 1, figsize=(11, 4.5), sharex=True)
+for axis, detector in zip(axes, ("H1", "L1")):
+    axis.plot(time[::step], strain[detector][::step], lw=0.35)
+    axis.set(ylabel=f"{detector} strain")
+axes[-1].set_xlabel("time after file start [s]")
+plt.show()""",
+    ),
+    *challenge_task(
+        2,
+        "Choose the analysis duration",
+        r"Use the lowest chirp mass in each bank and $f_\mathrm{low}=20$ Hz. "
+        "Compute the leading-order inspiral time and justify an FFT-friendly "
+        "analysis duration no longer than 8 seconds. **Tip:** round upward to a "
+        "convenient power-of-two duration and leave room around coalescence. "
+        "**Optional plot:** inspiral duration versus chirp mass across both banks.",
+        r"""MTSUN_SI = 4.925490947e-6
+
+
+def inspiral_time(chirp_mass, f_low=20.0):
+    return (
+        5
+        / 256
+        * (MTSUN_SI * chirp_mass) ** (-5 / 3)
+        * (np.pi * f_low) ** (-8 / 3)
+    )
+
+
+for lower_edge in (16.5, 26.6):
+    print(lower_edge, inspiral_time(lower_edge), "s")
+
+analysis_duration = 8.0  # supplied default; explain why it is adequate
+print("Chosen analysis duration:", analysis_duration)
+
+mass_grid = np.linspace(16.5, 41.0, 200)
+fig, ax = plt.subplots(figsize=(7, 3.5))
+ax.plot(mass_grid, inspiral_time(mass_grid))
+ax.axhline(analysis_duration, color="C3", ls="--", label="chosen segment")
+ax.set(xlabel=r"chirp mass [$M_\\odot$]", ylabel="time from 20 Hz [s]")
+ax.legend()
+plt.show()""",
+    ),
+    md(
+        r"""### How the supplied template bank works
+
+Each template is a deliberately simplified Newtonian inspiral,
+
+$$
+\tilde h(f;\mathcal M,t_c)\propto f^{-7/6}
+\exp\left[i\left(-\frac{\pi}{4}
++\frac{3}{128}(\pi\mathcal M_{\rm sec}f)^{-5/3}
+-2\pi f t_c\right)\right],
+$$
+
+with a smooth cutoff near the mass-dependent ISCO. The supplied bank runner:
+
+1. chooses a grid of chirp masses;
+2. builds one waveform for each grid point;
+3. correlates it with each detector using the PSD-weighted matched filter;
+4. keeps the largest SNR and corresponding template mass at every time.
+
+This is a teaching bank, not a production LVK search. On the first pass, focus
+on what goes into `run_template_bank` and what it returns; the FFT details are
+optional reading."""
+    ),
+    *challenge_task(
+        3,
+        "Build an initial PSD and run the supplied search",
+        "Matched filtering needs a PSD before the event times are known. Start "
+        "with a robust median-Welch estimate from the full record. The toy "
+        "waveform, matched filter, and template-bank loop are supplied below: "
+        "read their inputs and outputs, then run them. Your job is to identify "
+        "the common-detector peaks and explain why maximising over the bank is "
+        "useful. **Suggested plot:** bank-maximum H1/L1 SNR versus time for each "
+        "mass range, with an exploratory threshold at 6.",
+        """WELCH_SECONDS = 4
+
+
+def median_welch(values):
+    return welch(
+        values,
+        fs=sampling_frequency,
+        window=("tukey", 0.2),
+        nperseg=WELCH_SECONDS * sampling_frequency,
+        noverlap=WELCH_SECONDS * sampling_frequency // 2,
+        detrend=False,
+        average="median",
+    )
+
+
+initial_psd = {detector: median_welch(values) for detector, values in strain.items()}
+
+# --- Supplied first-day search machinery ---
+n_samples = len(time)
+frequency = np.fft.rfftfreq(n_samples, 1 / sampling_frequency)
+frequency_spacing = 1 / duration
+data_frequency = {
+    detector: np.fft.rfft(values) / sampling_frequency
+    for detector, values in strain.items()
+}
+psd_on_search_grid = {
+    detector: np.interp(frequency, *initial_psd[detector])
+    for detector in ("H1", "L1")
+}
+
+
+def component_masses(chirp_mass, mass_ratio):
+    eta = mass_ratio / (1 + mass_ratio) ** 2
+    total_mass = chirp_mass / eta ** (3 / 5)
+    primary_mass = total_mass / (1 + mass_ratio)
+    return primary_mass, mass_ratio * primary_mass
+
+
+def newtonian_chirp(frequency_array, chirp_mass, mass_ratio, coalescence_time=0.0):
+    '''Supplied toy frequency-domain inspiral with a smooth ISCO cutoff.'''
+    waveform = np.zeros(frequency_array.size, dtype=complex)
+    primary_mass, secondary_mass = component_masses(chirp_mass, mass_ratio)
+    f_isco = 1 / (6 ** 1.5 * np.pi * MTSUN_SI * (primary_mass + secondary_mass))
+    taper_start = 0.85 * f_isco
+    usable = (frequency_array >= 20.0) & (frequency_array < f_isco)
+    taper = np.ones(frequency_array.size)
+    taper_region = (frequency_array >= taper_start) & (frequency_array < f_isco)
+    taper[taper_region] = 0.5 * (
+        1 + np.cos(np.pi * (frequency_array[taper_region] - taper_start)
+                   / (f_isco - taper_start))
+    )
+    phase = (
+        -np.pi / 4
+        + 3 / 128 * (np.pi * MTSUN_SI * chirp_mass
+                     * frequency_array[usable]) ** (-5 / 3)
+        - 2 * np.pi * frequency_array[usable] * coalescence_time
+    )
+    waveform[usable] = frequency_array[usable] ** (-7 / 6) * taper[usable] * np.exp(1j * phase)
+    return waveform
+
+
+def matched_filter_snr(data_fd, template_fd, psd):
+    '''Return phase-maximised SNR as a function of coalescence time.'''
+    usable = (frequency >= 20) & (frequency <= 400) & np.isfinite(psd) & (psd > 0)
+    integrand = np.zeros(frequency.size, dtype=complex)
+    integrand[usable] = data_fd[usable] * np.conj(template_fd[usable]) / psd[usable]
+    padded = np.zeros(n_samples, dtype=complex)
+    padded[: frequency.size] = integrand
+    correlation = 4 * frequency_spacing * n_samples * np.fft.ifft(padded)
+    norm = np.sqrt(4 * frequency_spacing * np.sum(
+        np.abs(template_fd[usable]) ** 2 / psd[usable]
+    ))
+    return np.abs(correlation) / norm
+
+
+def run_template_bank(chirp_masses, mass_ratio=0.9):
+    '''Maximise the SNR time series over a supplied chirp-mass grid.'''
+    maximum_snr = {detector: np.zeros(n_samples) for detector in ("H1", "L1")}
+    maximum_mass = {detector: np.zeros(n_samples) for detector in ("H1", "L1")}
+    for chirp_mass in chirp_masses:
+        template = newtonian_chirp(frequency, chirp_mass, mass_ratio)
+        for detector in ("H1", "L1"):
+            trial = matched_filter_snr(
+                data_frequency[detector], template, psd_on_search_grid[detector]
+            )
+            better = trial > maximum_snr[detector]
+            maximum_snr[detector][better] = trial[better]
+            maximum_mass[detector][better] = chirp_mass
+    return maximum_snr, maximum_mass
+
+
+banks = {
+    "A: 16.5--26": np.linspace(16.5, 26.0, 20),
+    "B: 26.6--41": np.linspace(26.6, 41.0, 24),
+}
+search_snr, best_mass = {}, {}
+for bank_name, chirp_masses in banks.items():
+    search_snr[bank_name], best_mass[bank_name] = run_template_bank(chirp_masses)
+
+fig, axes = plt.subplots(2, 1, figsize=(11, 6), sharex=True)
+for axis, bank_name in zip(axes, banks):
+    for detector in ("H1", "L1"):
+        axis.plot(time, search_snr[bank_name][detector], lw=0.8, label=detector)
+    axis.axhline(6, color="k", ls="--", lw=0.8)
+    axis.set(ylabel="bank-max SNR", title=bank_name, xlim=(145, 235))
+    axis.legend()
+axes[-1].set_xlabel("time after file start [s]")
+plt.show()""",
+    ),
+    *challenge_task(
+        4,
+        "Apply coincidence and handle the transient",
+        "List single-detector peaks above your exploratory threshold. Pair H1 "
+        "and L1 triggers within 20 ms. Inspect the unmatched loud feature in a "
+        "time-frequency plot and state whether you will veto, gate, inpaint, or "
+        "model it. Do not use it in a PSD estimate. The peak finder and "
+        "coincidence bookkeeping are supplied; focus on reading the table. "
+        "**Suggested plots:** the SNR-time plot above and matched H1/L1 "
+        "spectrograms spanning ten seconds around the unmatched feature.",
+        """COINCIDENCE_WINDOW = 0.020
+SNR_THRESHOLD = 6.0
+peak_tables = {}
+coincident_candidates = []
+for bank_name in banks:
+    peak_tables[bank_name] = {}
+    for detector in ("H1", "L1"):
+        peaks, _ = find_peaks(
+            search_snr[bank_name][detector],
+            height=SNR_THRESHOLD,
+            distance=int(0.5 * sampling_frequency),
+        )
+        peak_tables[bank_name][detector] = peaks
+        print(f"\\n{bank_name} {detector} peaks")
+        for peak in peaks:
+            print(
+                f"  t={time[peak]:8.3f} s  "
+                f"rho={search_snr[bank_name][detector][peak]:5.1f}  "
+                f"Mc~{best_mass[bank_name][detector][peak]:5.1f}"
+            )
+    for h1_peak in peak_tables[bank_name]["H1"]:
+        l1_peaks = peak_tables[bank_name]["L1"]
+        separations = np.abs(time[l1_peaks] - time[h1_peak])
+        if len(separations) and separations.min() <= COINCIDENCE_WINDOW:
+            l1_peak = l1_peaks[np.argmin(separations)]
+            candidate_time = 0.5 * (time[h1_peak] + time[l1_peak])
+            coincident_candidates.append((bank_name, candidate_time, h1_peak, l1_peak))
+
+# Cluster duplicate triggers from the two overlapping banks.
+unique_candidates = []
+for candidate in sorted(coincident_candidates, key=lambda item: item[1]):
+    bank_name, candidate_time, h1_peak, l1_peak = candidate
+    rank = np.hypot(
+        search_snr[bank_name]["H1"][h1_peak],
+        search_snr[bank_name]["L1"][l1_peak],
+    )
+    if unique_candidates and abs(candidate_time - unique_candidates[-1][1]) < 0.2:
+        if rank > unique_candidates[-1][-1]:
+            unique_candidates[-1] = (*candidate, rank)
+    else:
+        unique_candidates.append((*candidate, rank))
+
+print("\\nTime-clustered coincidences")
+for bank_name, candidate_time, h1_peak, l1_peak, rank in unique_candidates:
+    print(f"  {bank_name}: t~{candidate_time:.3f} s, network rank={rank:.1f}")
+
+# The loud single-detector feature is deliberately away from either CBC.
+transient_window = (time >= 185) & (time <= 195)
+sos = butter(4, (20, 250), btype="bandpass", fs=sampling_frequency, output="sos")
+fig, axes = plt.subplots(2, 1, figsize=(10, 5), sharex=True, sharey=True)
+for axis, detector in zip(axes, ("H1", "L1")):
+    filtered = sosfiltfilt(sos, strain[detector][transient_window])
+    filtered /= np.std(filtered)
+    spec_frequency, spec_time, power = spectrogram(
+        filtered, fs=sampling_frequency, window=("tukey", 0.2),
+        nperseg=128, noverlap=112, mode="psd",
+    )
+    band = (spec_frequency >= 20) & (spec_frequency <= 250)
+    image = axis.pcolormesh(
+        185 + spec_time, spec_frequency[band],
+        10 * np.log10(power[band] + 1e-12), shading="auto",
+    )
+    axis.set(ylabel="frequency [Hz]", title=detector)
+axes[-1].set_xlabel("time after file start [s]")
+fig.colorbar(image, ax=axes, label="relative power [dB]")
+plt.show()
+
+print("Write 2--3 sentences: why is the unmatched feature not a CBC candidate,")
+print("and which treatment is sufficient given its separation from the signals?")""",
+    ),
+    *challenge_task(
+        5,
+        "Estimate final off-source PSDs",
+        "After locating the earliest signal, choose 128 clean seconds before it. "
+        "Use four-second Tukey-windowed periodograms, 50% overlap, and median "
+        "averaging. The calculation is supplied; explain why this interval is "
+        "off-source and count the contributing periodograms. **Suggested plot:** "
+        "H1 and L1 ASD on log-log axes from 15--450 Hz.",
+        """clean = time < 128.0  # justify this only after locating the candidates
+final_psd = {
+    detector: median_welch(values[clean]) for detector, values in strain.items()
+}
+number_of_averages = 1 + (
+    clean.sum() - WELCH_SECONDS * sampling_frequency
+) // (WELCH_SECONDS * sampling_frequency // 2)
+print("Final PSD segment length:", clean.sum() / sampling_frequency, "s")
+print("Overlapping periodograms:", number_of_averages)
+
+fig, ax = plt.subplots(figsize=(9, 4))
+for detector, (frequency_welch, psd_welch) in final_psd.items():
+    usable = (frequency_welch >= 15) & (frequency_welch <= 450)
+    ax.loglog(frequency_welch[usable], np.sqrt(psd_welch[usable]), label=detector)
+ax.set(xlabel="frequency [Hz]", ylabel=r"ASD [1/$\\sqrt{\\mathrm{Hz}}$]")
+ax.legend()
+plt.show()""",
+    ),
+    *challenge_task(
+        6,
+        "Plot the PE priors",
+        "For each candidate, plot the chirp-mass and coalescence-time priors "
+        "before sampling. The response, mass ratio, amplitude (hence distance), "
+        "and phase are supplied and held fixed. The code below converts your "
+        "coincidences into the two PE specifications. **Suggested plot:** four "
+        "one-dimensional prior histograms in a 2-by-2 layout. Before running, "
+        "predict which prior will be narrowed most strongly by the likelihood.",
+        """KNOWN_RESPONSE = {
+    "H1": dict(gain=1.0 + 0.0j, delay=0.004),
+    "L1": dict(gain=0.82 * np.exp(0.35j), delay=-0.006),
+}
+KNOWN_MASS_RATIOS = {"event_a": 0.85, "event_b": 1.0}
+KNOWN_AMPLITUDES = {
+    "event_a": 1.7273387669253173e-21,
+    "event_b": 9.826371643184475e-22,
+}
+KNOWN_PHASES = {"event_a": 0.0, "event_b": 0.0}
+
+ordered_candidates = sorted(unique_candidates, key=lambda candidate: candidate[1])
+assert len(ordered_candidates) == 2, "Resolve the coincidence table before PE."
+candidate_specs = []
+for index, (bank_name, candidate_time, h1_peak, l1_peak, rank) in enumerate(ordered_candidates):
+    label = f"event_{'ab'[index]}"
+    candidate_specs.append(dict(
+        label=label,
+        time=candidate_time,
+        chirp_bounds=((16.5, 26.0), (26.6, 41.0))[index],
+        mass_ratio=KNOWN_MASS_RATIOS[label],
+        amplitude=KNOWN_AMPLITUDES[label],
+        phase=KNOWN_PHASES[label],
+        search_mass=best_mass[bank_name]["H1"][h1_peak],
+    ))
+
+challenge_priors = {
+    spec["label"]: dict(
+        chirp_mass=spec["chirp_bounds"],
+        geocent_time=(spec["time"] - 0.05, spec["time"] + 0.05),
+    )
+    for spec in candidate_specs
+}
+prior_rng = np.random.default_rng(20260830)
+fig, axes = plt.subplots(2, 2, figsize=(8, 5.5))
+for row, spec in enumerate(candidate_specs):
+    for axis, parameter in zip(axes[row], ("chirp_mass", "geocent_time")):
+        bounds = challenge_priors[spec["label"]][parameter]
+        axis.hist(prior_rng.uniform(*bounds, 4000), bins=35,
+                  density=True, histtype="step")
+        axis.set(xlabel=parameter, ylabel="density")
+    axes[row, 0].set_title(spec["label"])
+fig.suptitle("Priors before sampling")
+fig.tight_layout()
+plt.show()""",
+    ),
+    md(
+        r"""### Supplied two-parameter likelihood
+
+For fixed amplitude, phase, mass ratio, and detector response, the only varying
+parameters are $\theta=(\mathcal M,t_c)$. The supplied class evaluates the
+Gaussian log-likelihood ratio
+
+$$
+\log \Lambda(\theta)=(d|h_\theta)-\frac{1}{2}(h_\theta|h_\theta),
+\qquad
+(a|b)=4\,\mathrm{Re}\sum_f
+\frac{a^*(f)b(f)}{S_n(f)}\,\Delta f.
+$$
+
+Read the class from top to bottom and locate: (1) the eight-second data segment,
+(2) the fixed quantities, (3) where chirp mass changes the waveform, and (4)
+where coalescence time enters. You do not need to rewrite this class."""
+    ),
+    *challenge_task(
+        7,
+        "Run the sampler and check the result",
+        "Analyse an eight-second segment around each coincident trigger with "
+        "the supplied Newtonian inspiral model, response, mass ratio, amplitude, "
+        "and phase. Sample only chirp mass and coalescence time with an ordinary "
+        "Gaussian-noise likelihood. The likelihood and Metropolis sampler are "
+        "supplied: identify where the two sampled parameters enter, then run "
+        "them. Report medians and symmetric 90% intervals. **Suggested plots:** "
+        "two-chain traces, chirp-mass marginals, the chirp-mass/time joint "
+        "posterior, and whitened data versus residual around each merger.",
+        """PE_DURATION = 8.0
+
+
+class TwoParameterCBCLikelihood:
+    '''Supplied Gaussian likelihood in chirp mass and geocentric time only.'''
+
+    def __init__(self, specification):
+        self.parameters = {"chirp_mass": None, "geocent_time": None}
+        self.specification = specification
+        requested_start = specification["time"] - 6.0
+        first = int(round((requested_start - start_time) * sampling_frequency))
+        self.segment_start = start_time + first / sampling_frequency
+        count = int(PE_DURATION * sampling_frequency)
+        self.frequency = np.fft.rfftfreq(count, 1 / sampling_frequency)
+        self.frequency_spacing = 1 / PE_DURATION
+        self.data_frequency = {
+            detector: np.fft.rfft(strain[detector][first : first + count])
+            / sampling_frequency
+            for detector in ("H1", "L1")
+        }
+        self.psd = {
+            detector: np.interp(self.frequency, *final_psd[detector])
+            for detector in ("H1", "L1")
+        }
+        self.usable = (self.frequency >= 20) & (self.frequency <= 400)
+
+    def detector_templates(self, parameters):
+        local_time = parameters["geocent_time"] - self.segment_start
+        return {
+            detector: self.specification["amplitude"]
+            * np.exp(1j * self.specification["phase"])
+            * response["gain"]
+            * newtonian_chirp(
+                self.frequency,
+                parameters["chirp_mass"],
+                self.specification["mass_ratio"],
+                local_time + response["delay"],
+            )
+            for detector, response in KNOWN_RESPONSE.items()
+        }
+
+    def log_likelihood(self, parameters):
+        log_likelihood = 0.0
+        for detector, template in self.detector_templates(parameters).items():
+            data = self.data_frequency[detector]
+            psd = self.psd[detector]
+            overlap = 4 * self.frequency_spacing * np.real(np.sum(
+                np.conj(template[self.usable]) * data[self.usable]
+                / psd[self.usable]
+            ))
+            norm = 4 * self.frequency_spacing * np.sum(
+                np.abs(template[self.usable]) ** 2 / psd[self.usable]
+            )
+            log_likelihood += overlap - 0.5 * norm
+        return float(log_likelihood)
+
+
+def log_posterior(likelihood, specification, state):
+    chirp_mass, geocent_time = state
+    mass_low, mass_high = specification["chirp_bounds"]
+    if not (mass_low <= chirp_mass <= mass_high):
+        return -np.inf
+    if not (specification["time"] - 0.05 <= geocent_time
+            <= specification["time"] + 0.05):
+        return -np.inf
+    return likelihood.log_likelihood(dict(
+        chirp_mass=float(chirp_mass), geocent_time=float(geocent_time)
+    ))
+
+
+def run_metropolis(likelihood, specification, seed, proposal_scale,
+                   steps=6000, chains=2):
+    '''Supplied random-walk sampler; returns chains and acceptance fractions.'''
+    sampler_rng = np.random.default_rng(20260831)
+    output, acceptance = [], []
+    for chain_index in range(chains):
+        state = np.asarray(seed, dtype=float) + sampler_rng.normal(
+            scale=0.2 * proposal_scale
+        )
+        current_logp = log_posterior(likelihood, specification, state)
+        chain = np.empty((steps, 2))
+        accepted = 0
+        for step_index in range(steps):
+            proposal = state + sampler_rng.normal(scale=proposal_scale)
+            proposal_logp = log_posterior(likelihood, specification, proposal)
+            if np.log(sampler_rng.random()) < proposal_logp - current_logp:
+                state, current_logp = proposal, proposal_logp
+                accepted += 1
+            chain[step_index] = state
+        output.append(chain)
+        acceptance.append(accepted / steps)
+    return output, acceptance
+
+
+challenge_likelihoods = {
+    spec["label"]: TwoParameterCBCLikelihood(spec) for spec in candidate_specs
+}
+challenge_chains, challenge_samples = {}, {}
+for spec in candidate_specs:
+    label = spec["label"]
+    proposal_scale = np.array([
+        0.025 if label == "event_a" else 0.06, 0.00025
+    ])
+    chains, acceptance = run_metropolis(
+        challenge_likelihoods[label], spec,
+        seed=(spec["search_mass"], spec["time"]),
+        proposal_scale=proposal_scale,
+    )
+    challenge_chains[label] = chains
+    challenge_samples[label] = np.concatenate([chain[1000:] for chain in chains])
+    print(label, "acceptance fractions:", np.round(acceptance, 3))
+
+posterior_parameters = ["chirp_mass", "geocent_time"]
+fig, axes = plt.subplots(2, 2, figsize=(10, 6))
+for column, spec in enumerate(candidate_specs):
+    label = spec["label"]
+    posterior = challenge_samples[label]
+    print(f"\\n{label}")
+    for parameter_index, parameter in enumerate(posterior_parameters):
+        low, median, high = np.quantile(
+            posterior[:, parameter_index], [0.05, 0.5, 0.95]
+        )
+        print(f"  {parameter:15s}: {median:.6f} [{low:.6f}, {high:.6f}]")
+    mass_quantiles = np.quantile(posterior[:, 0], [0.05, 0.5, 0.95])
+    time_offsets_ms = 1000 * (posterior[:, 1] - spec["time"])
+    axes[0, column].hist(posterior[:, 0], bins=40, density=True, histtype="step")
+    axes[0, column].axvspan(
+        mass_quantiles[0], mass_quantiles[2], color="C0", alpha=0.15
+    )
+    axes[0, column].set(title=label, xlabel=r"$\\mathcal{M}$ [$M_\\odot$]",
+                        ylabel="density")
+    axes[1, column].hexbin(
+        posterior[:, 0], time_offsets_ms, gridsize=38, mincnt=1, cmap="Blues"
+    )
+    axes[1, column].set(xlabel=r"$\\mathcal{M}$ [$M_\\odot$]",
+                        ylabel=r"$t_c-t_{\\rm search}$ [ms]")
+fig.suptitle("Two-parameter conditional posteriors")
+fig.tight_layout()
+plt.show()
+
+# Trace plots: both chains should overlap after burn-in and look stationary.
+for spec in candidate_specs:
+    fig, trace_axes = plt.subplots(2, 1, figsize=(8, 3.2), sharex=True)
+    for chain in challenge_chains[spec["label"]]:
+        trace_axes[0].plot(chain[:, 0], lw=0.35)
+        trace_axes[1].plot(1000 * (chain[:, 1] - spec["time"]), lw=0.35)
+    trace_axes[0].set(ylabel="chirp mass")
+    trace_axes[1].set(xlabel="step", ylabel="time offset [ms]")
+    fig.suptitle(f"{spec['label']}: convergence check")
+    plt.show()
+
+fig, residual_axes = plt.subplots(2, 2, figsize=(12, 6), sharex="col")
+for column, spec in enumerate(candidate_specs):
+    label = spec["label"]
+    posterior = challenge_samples[label]
+    median_parameters = dict(zip(posterior_parameters, np.median(posterior, axis=0)))
+    likelihood = challenge_likelihoods[label]
+    templates = likelihood.detector_templates(median_parameters)
+    for row, detector in enumerate(("H1", "L1")):
+        data_fd = likelihood.data_frequency[detector]
+        residual_fd = data_fd - templates[detector]
+        whitened_data_fd = np.zeros_like(data_fd)
+        whitened_residual_fd = np.zeros_like(residual_fd)
+        whitened_data_fd[likelihood.usable] = (
+            data_fd[likelihood.usable]
+            / np.sqrt(likelihood.psd[detector][likelihood.usable])
+        )
+        whitened_residual_fd[likelihood.usable] = (
+            residual_fd[likelihood.usable]
+            / np.sqrt(likelihood.psd[detector][likelihood.usable])
+        )
+        count = int(PE_DURATION * sampling_frequency)
+        whitened_data = np.fft.irfft(whitened_data_fd, n=count)
+        whitened_residual = np.fft.irfft(whitened_residual_fd, n=count)
+        scale = np.std(whitened_data[: 3 * sampling_frequency])
+        local_time = likelihood.segment_start + np.arange(count) / sampling_frequency - spec["time"]
+        residual_axes[row, column].plot(
+            local_time, whitened_data / scale, color="0.65", lw=0.5, label="data"
+        )
+        residual_axes[row, column].plot(
+            local_time, whitened_residual / scale, color="C3", lw=0.6,
+            label="residual",
+        )
+        residual_axes[row, column].set(
+            xlim=(-1, 0.15), ylabel=f"{detector} whitened",
+            title=label if row == 0 else None,
+        )
+        residual_axes[row, column].legend(fontsize=7)
+residual_axes[-1, 0].set_xlabel("time from candidate [s]")
+residual_axes[-1, 1].set_xlabel("time from candidate [s]")
+fig.suptitle("Posterior-median residual check")
+fig.tight_layout()
+plt.show()
+
+print("Interpretation prompt: does coherent chirp-like structure remain in either")
+print("residual, and what would that imply about the model?")""",
+    ),
+    md(
+        """## Submission checklist
+
+- candidate geocentric times and H1/L1 peak SNRs;
+- duration calculation from each bank's lower chirp-mass edge;
+- treatment of the unmatched transient;
+- final H1/L1 ASD plot and PSD-segment justification;
+- two-dimensional prior plot;
+- sampler acceptance fractions and a convergence comment;
+- posterior corner plots, waveform overlays, and residual checks.
+
+Do not claim an astrophysical detection probability or false-alarm rate from
+this classroom bank."""
+    ),
+]
+write(
+    "09_lvk_blind_data_challenge.ipynb",
+    "Supplement: blind LVK data challenge",
+    student_challenge_cells,
+)
+
+
+answer_challenge_cells = [
+    _module_intro(
+        "Worked instructor analysis of the blind H1/L1 challenge.",
+        "Run the search and coincidence sections first; unblind only in the "
+        "last section.",
+        "The search statistic is illustrative and uncalibrated. The PE uses a "
+        "restricted Newtonian-inspiral, fixed-response and fixed-mass-ratio model. "
+        "Only chirp mass and coalescence time are sampled with fast workshop "
+        "Dynesty settings.",
+    ),
+    md(
+        """## Data and supplied ranges
+
+This answer deliberately follows the same order as the student worksheet.
+The generating PSD and injection parameters are not read from the HDF5 file.
+
+[Download the HDF5 data directly](../assets/lvk_blind_challenge.h5)."""
+    ),
+    *[deepcopy(cell) for cell in LVK_CHALLENGE_DATA_SETUP],
+    md("""## 1. Inspect the data
+
+The raw overview is a data-integrity check, not a detection plot."""),
+    code(
+        """step = sampling_frequency // 8
+fig, axes = plt.subplots(2, 1, figsize=(11, 4.5), sharex=True)
+for axis, detector in zip(axes, ("H1", "L1")):
+    axis.plot(time[::step], strain[detector][::step], lw=0.35)
+    axis.set(ylabel=f"{detector} strain")
+axes[-1].set_xlabel("time after file start [s]")
+fig.suptitle("Blind strain overview: no CBC is visible by eye")
+plt.show()""",
+        figure="lvk-challenge-overview",
+    ),
+    md(
+        r"""## 2. Duration from the supplied prior
+
+At leading order,
+
+$$
+t(f_\mathrm{low})=\frac{5}{256}
+\left(\frac{G\mathcal M}{c^3}\right)^{-5/3}
+(\pi f_\mathrm{low})^{-8/3}.
+$$
+
+The lower edge, not the unknown injected value, sets the longest template."""
+    ),
+    code(
+        r"""MTSUN_SI = 4.925490947e-6
+
+
+def inspiral_time(chirp_mass, f_low=20.0):
+    return (
+        5
+        / 256
+        * (MTSUN_SI * chirp_mass) ** (-5 / 3)
+        * (np.pi * f_low) ** (-8 / 3)
+    )
+
+
+for label, lower_edge in (("bank A", 16.5), ("bank B", 26.6)):
+    print(f"{label}: t20 at lower edge = {inspiral_time(lower_edge):.3f} s")
+ANALYSIS_DURATION = 8.0
+print("Use an 8 s PE segment: 6 s before and 2 s after coalescence.")"""
+    ),
+    md(
+        """## 3. Robust initial PSD
+
+For discovery only, median Welch averaging over the full record is robust to a
+few short signals/transients. After locating candidates we replace it with a
+clean off-source estimate."""
+    ),
+    code(
+        """WELCH_SECONDS = 4
+
+
+def median_welch(values):
+    return welch(
+        values,
+        fs=sampling_frequency,
+        window=("tukey", 0.2),
+        nperseg=WELCH_SECONDS * sampling_frequency,
+        noverlap=WELCH_SECONDS * sampling_frequency // 2,
+        detrend=False,
+        average="median",
+    )
+
+
+initial_psd = {detector: median_welch(values) for detector, values in strain.items()}
+fig, ax = plt.subplots(figsize=(9, 4))
+for detector, (frequency_welch, psd_welch) in initial_psd.items():
+    usable = (frequency_welch >= 15) & (frequency_welch <= 450)
+    ax.loglog(frequency_welch[usable], np.sqrt(psd_welch[usable]), label=detector)
+ax.set(xlabel="frequency [Hz]", ylabel=r"ASD [1/$\\sqrt{\\mathrm{Hz}}$]", title="Initial line-free median-Welch estimates")
+ax.legend()
+plt.show()""",
+        figure="lvk-challenge-initial-psd",
+    ),
+    md(
+        r"""## 4. Coarse matched-filter search
+
+We use a single representative mass ratio, $q=0.9$, and maximise over the
+listed chirp masses. The template is the Newtonian stationary-phase inspiral
+
+$$
+\tilde h(f)\propto f^{-7/6}\exp\left[i\left(-\frac{\pi}{4}
++\frac{3}{128}(\pi\mathcal M_{\rm sec}f)^{-5/3}-2\pi f t_c\right)\right],
+$$
+
+with a smooth taper at the mass-dependent ISCO. Chirp mass and time therefore
+retain their physical meanings, but merger/ringdown and higher-order phase are
+absent. This is enough to locate the controlled signals; it is not a production
+template bank, realistic LVK BBH model, or calibrated search."""
+    ),
+    code(
+        """n_samples = len(time)
+frequency = np.fft.rfftfreq(n_samples, 1 / sampling_frequency)
+frequency_spacing = 1 / duration
+data_frequency = {
+    detector: np.fft.rfft(values) / sampling_frequency
+    for detector, values in strain.items()
+}
+psd_on_search_grid = {
+    detector: np.interp(frequency, *initial_psd[detector])
+    for detector in ("H1", "L1")
+}
+
+MTSUN_SI = 4.925490947e-6
+
+
+def component_masses(chirp_mass, mass_ratio):
+    eta = mass_ratio / (1 + mass_ratio) ** 2
+    total_mass = chirp_mass / eta ** (3 / 5)
+    primary_mass = total_mass / (1 + mass_ratio)
+    return primary_mass, mass_ratio * primary_mass
+
+
+def newtonian_chirp(frequency_array, chirp_mass, mass_ratio, coalescence_time=0.0):
+    '''Newtonian SPA inspiral with an explicit smooth ISCO cutoff.'''
+    waveform = np.zeros(frequency_array.size, dtype=complex)
+    primary_mass, secondary_mass = component_masses(chirp_mass, mass_ratio)
+    f_isco = 1 / (
+        6 ** 1.5 * np.pi * MTSUN_SI * (primary_mass + secondary_mass)
+    )
+    taper_start = 0.85 * f_isco
+    usable = (frequency_array >= 20.0) & (frequency_array < f_isco)
+    taper = np.ones(frequency_array.size)
+    taper_region = (frequency_array >= taper_start) & (frequency_array < f_isco)
+    taper[taper_region] = 0.5 * (
+        1
+        + np.cos(
+            np.pi
+            * (frequency_array[taper_region] - taper_start)
+            / (f_isco - taper_start)
+        )
+    )
+    phase = (
+        -np.pi / 4
+        + 3
+        / 128
+        * (np.pi * MTSUN_SI * chirp_mass * frequency_array[usable]) ** (-5 / 3)
+        - 2 * np.pi * frequency_array[usable] * coalescence_time
+    )
+    waveform[usable] = (
+        frequency_array[usable] ** (-7 / 6)
+        * taper[usable]
+        * np.exp(1j * phase)
+    )
+    return waveform
+
+
+def matched_filter_snr(data_fd, template_fd, psd):
+    usable = (frequency >= 20) & (frequency <= 400) & np.isfinite(psd) & (psd > 0)
+    integrand = np.zeros(frequency.size, dtype=complex)
+    integrand[usable] = data_fd[usable] * np.conj(template_fd[usable]) / psd[usable]
+    padded = np.zeros(n_samples, dtype=complex)
+    padded[: frequency.size] = integrand
+    correlation = 4 * frequency_spacing * n_samples * np.fft.ifft(padded)
+    norm = np.sqrt(
+        4
+        * frequency_spacing
+        * np.sum(np.abs(template_fd[usable]) ** 2 / psd[usable])
+    )
+    return np.abs(correlation) / norm
+
+
+banks = {
+    "A: 16.5--26": np.linspace(16.5, 26.0, 20),
+    "B: 26.6--41": np.linspace(26.6, 41.0, 24),
+}
+search_snr = {
+    bank_name: {detector: np.zeros(n_samples) for detector in ("H1", "L1")}
+    for bank_name in banks
+}
+best_mass = {
+    bank_name: {detector: np.zeros(n_samples) for detector in ("H1", "L1")}
+    for bank_name in banks
+}
+for bank_name, chirp_masses in banks.items():
+    for chirp_mass in chirp_masses:
+        template = newtonian_chirp(frequency, chirp_mass, mass_ratio=0.9)
+        for detector in ("H1", "L1"):
+            trial = matched_filter_snr(
+                data_frequency[detector], template, psd_on_search_grid[detector]
+            )
+            better = trial > search_snr[bank_name][detector]
+            search_snr[bank_name][detector][better] = trial[better]
+            best_mass[bank_name][detector][better] = chirp_mass
+
+fig, axes = plt.subplots(2, 1, figsize=(11, 6), sharex=True)
+for axis, bank_name in zip(axes, banks):
+    for detector in ("H1", "L1"):
+        axis.plot(time, search_snr[bank_name][detector], lw=0.8, label=detector)
+    axis.axhline(6, color="k", ls="--", lw=0.8)
+    axis.set(ylabel="bank-max SNR", title=bank_name, xlim=(145, 235), ylim=(0, None))
+    axis.legend()
+axes[-1].set_xlabel("time after file start [s]")
+plt.show()""",
+        figure="lvk-challenge-search",
+    ),
+    md(
+        """## 5. Coincidence and the glitch
+
+A loud H1 trigger near 190 s lacks an L1 partner. Both banks instead contain
+time-consistent H1/L1 peaks near the two CBC candidates. A 20 ms window is
+generous relative to the inter-site light-travel time."""
+    ),
+    code(
+        """SNR_THRESHOLD = 6.0
+COINCIDENCE_WINDOW = 0.020
+peak_tables = {}
+coincident_candidates = []
+for bank_name in banks:
+    peak_tables[bank_name] = {}
+    for detector in ("H1", "L1"):
+        peaks, properties = find_peaks(
+            search_snr[bank_name][detector],
+            height=SNR_THRESHOLD,
+            distance=int(0.5 * sampling_frequency),
+        )
+        peak_tables[bank_name][detector] = peaks
+        print(f"\\n{bank_name} {detector} peaks")
+        for peak in peaks:
+            print(
+                f"  t={time[peak]:8.3f} s  rho={search_snr[bank_name][detector][peak]:5.1f}  "
+                f"Mc~{best_mass[bank_name][detector][peak]:5.1f}"
+            )
+    for h1_peak in peak_tables[bank_name]["H1"]:
+        separations = np.abs(time[peak_tables[bank_name]["L1"]] - time[h1_peak])
+        if len(separations) and separations.min() <= COINCIDENCE_WINDOW:
+            l1_peak = peak_tables[bank_name]["L1"][np.argmin(separations)]
+            geocent_guess = 0.5 * (time[h1_peak] + time[l1_peak])
+            coincident_candidates.append((bank_name, geocent_guess, h1_peak, l1_peak))
+
+print("\\nCoincident candidates")
+for bank_name, candidate_time, h1_peak, l1_peak in coincident_candidates:
+    print(
+        f"  {bank_name}: t~{candidate_time:.3f} s, "
+        f"H1/L1 SNR={search_snr[bank_name]['H1'][h1_peak]:.1f}/"
+        f"{search_snr[bank_name]['L1'][l1_peak]:.1f}"
+    )
+
+# One physical event can trigger both coarse banks. Cluster coincidences in
+# time, then retain the bank with the larger quadrature-summed detector SNR.
+unique_candidates = []
+for candidate in sorted(coincident_candidates, key=lambda item: item[1]):
+    bank_name, candidate_time, h1_peak, l1_peak = candidate
+    rank = np.hypot(
+        search_snr[bank_name]["H1"][h1_peak],
+        search_snr[bank_name]["L1"][l1_peak],
+    )
+    if unique_candidates and abs(candidate_time - unique_candidates[-1][1]) < 0.2:
+        if rank > unique_candidates[-1][-1]:
+            unique_candidates[-1] = (*candidate, rank)
+    else:
+        unique_candidates.append((*candidate, rank))
+
+print("\\nTwo time-clustered candidates")
+for bank_name, candidate_time, h1_peak, l1_peak, rank in unique_candidates:
+    print(f"  {bank_name}: t~{candidate_time:.3f} s, network rank={rank:.1f}")"""
+    ),
+    code(
+        """transient_window = (time >= 185) & (time <= 195)
+sos = butter(4, (20, 250), btype="bandpass", fs=sampling_frequency, output="sos")
+fig, axes = plt.subplots(2, 1, figsize=(10, 5), sharex=True, sharey=True)
+for axis, detector in zip(axes, ("H1", "L1")):
+    filtered = sosfiltfilt(sos, strain[detector][transient_window])
+    filtered /= np.std(filtered)
+    spec_frequency, spec_time, power = spectrogram(
+        filtered,
+        fs=sampling_frequency,
+        window=("tukey", 0.2),
+        nperseg=128,
+        noverlap=112,
+        mode="psd",
+    )
+    band = (spec_frequency >= 20) & (spec_frequency <= 250)
+    image = axis.pcolormesh(
+        185 + spec_time,
+        spec_frequency[band],
+        10 * np.log10(power[band] + 1e-12),
+        shading="auto",
+    )
+    axis.set(ylabel="frequency [Hz]", title=detector)
+axes[-1].set_xlabel("time after file start [s]")
+fig.colorbar(image, ax=axes, label="relative power [dB]")
+fig.suptitle("The 190 s transient is confined to H1")
+plt.show()""",
+        figure="lvk-challenge-glitch",
+    ),
+    md(
+        """The answer is to veto the short interval around 190 s from this
+search and exclude it from PSD estimation. Because it is far from both event
+segments, no subtraction is needed. If continuous filtering through the
+interval were required, use a tapered gate or validated inpainting rather than
+an abrupt rectangular zero."""
+    ),
+    md("""## 6. Final off-source Welch PSDs
+
+The first 128 seconds are clean and precede the earliest candidate by more than
+the allowed waveform duration. Four-second, 50%-overlapped segments give 63
+median-averaged periodograms per detector."""),
+    code(
+        """clean = time < 128.0
+final_psd = {
+    detector: median_welch(values[clean]) for detector, values in strain.items()
+}
+number_of_averages = 1 + (clean.sum() - 4 * sampling_frequency) // (2 * sampling_frequency)
+print("clean duration:", clean.sum() / sampling_frequency, "s")
+print("overlapping periodograms:", number_of_averages)
+
+fig, ax = plt.subplots(figsize=(9, 4))
+for detector, (frequency_welch, psd_welch) in final_psd.items():
+    usable = (frequency_welch >= 15) & (frequency_welch <= 450)
+    ax.loglog(frequency_welch[usable], np.sqrt(psd_welch[usable]), label=detector)
+ax.set(xlabel="frequency [Hz]", ylabel=r"ASD [1/$\\sqrt{\\mathrm{Hz}}$]", title="Final 128 s off-source PSD estimates")
+ax.legend()
+plt.show()""",
+        figure="lvk-challenge-final-psd",
+    ),
+    md(
+        """## 7. Restricted priors and likelihoods
+
+For workshop speed, the response, mass ratio, zero spins, amplitude (hence
+distance), and phase are supplied and fixed. We sample only chirp mass and
+geocentric time with an ordinary Gaussian-noise likelihood. This is a proper
+two-parameter posterior **conditional on those known quantities**, not a full
+CBC posterior. An actual LVK analysis would infer distance, orientation, phase,
+calibration, and waveform systematics."""
+    ),
+    code(
+        r"""KNOWN_RESPONSE = {
+    "H1": dict(gain=1.0 + 0.0j, delay=0.004),
+    "L1": dict(gain=0.82 * np.exp(0.35j), delay=-0.006),
+}
+candidate_specs = [
+    dict(
+        label="event_a", time=160.0, chirp_bounds=(16.5, 26.0),
+        mass_ratio=0.85, amplitude=1.7273387669253173e-21, phase=0.0,
+        search_mass=22.0,
+    ),
+    dict(
+        label="event_b", time=224.0, chirp_bounds=(26.6, 41.0),
+        mass_ratio=1.00, amplitude=9.826371643184475e-22, phase=0.0,
+        search_mass=31.0,
+    ),
+]
+
+
+challenge_priors = {
+    spec["label"]: dict(
+        chirp_mass=spec["chirp_bounds"],
+        geocent_time=(spec["time"] - 0.05, spec["time"] + 0.05),
+    )
+    for spec in candidate_specs
+}
+prior_rng = np.random.default_rng(20260830)
+fig, axes = plt.subplots(2, 2, figsize=(8, 5.5))
+for row, spec in enumerate(candidate_specs):
+    draws = {
+        parameter: prior_rng.uniform(*bounds, 4000)
+        for parameter, bounds in challenge_priors[spec["label"]].items()
+    }
+    for axis, parameter in zip(axes[row], ("chirp_mass", "geocent_time")):
+        axis.hist(draws[parameter], bins=35, density=True, histtype="step")
+        axis.set(xlabel=parameter, ylabel="density" if parameter == "chirp_mass" else None)
+    axes[row, 0].set_title(spec["label"])
+fig.suptitle("Priors are plotted before seeing the posterior")
+fig.tight_layout()
+plt.show()""",
+        figure="lvk-challenge-priors",
+    ),
+    code(
+        """PE_DURATION = 8.0
+
+
+class TwoParameterCBCLikelihood:
+    '''Toy network likelihood in chirp mass and geocentric time only.'''
+
+    def __init__(self, specification):
+        self.parameters = {"chirp_mass": None, "geocent_time": None}
+        self.specification = specification
+        self.segment_start = specification["time"] - 6.0
+        first = int(round((self.segment_start - start_time) * sampling_frequency))
+        count = int(PE_DURATION * sampling_frequency)
+        self.frequency = np.fft.rfftfreq(count, 1 / sampling_frequency)
+        self.frequency_spacing = 1 / PE_DURATION
+        self.data_frequency = {
+            detector: np.fft.rfft(strain[detector][first : first + count])
+            / sampling_frequency
+            for detector in ("H1", "L1")
+        }
+        self.psd = {
+            detector: np.interp(self.frequency, *final_psd[detector])
+            for detector in ("H1", "L1")
+        }
+        self.usable = (self.frequency >= 20) & (self.frequency <= 400)
+
+    def detector_templates(self, parameters):
+        local_geocent_time = parameters["geocent_time"] - self.segment_start
+        return {
+            detector: self.specification["amplitude"]
+            * np.exp(1j * self.specification["phase"])
+            * response["gain"]
+            * newtonian_chirp(
+                self.frequency,
+                parameters["chirp_mass"],
+                self.specification["mass_ratio"],
+                local_geocent_time + response["delay"],
+            )
+            for detector, response in KNOWN_RESPONSE.items()
+        }
+
+    def network_statistics(self, parameters):
+        templates = self.detector_templates(parameters)
+        overlap = 0.0
+        norm = 0.0
+        for detector, template in templates.items():
+            overlap += 4 * self.frequency_spacing * np.real(
+                np.sum(
+                    np.conj(template[self.usable])
+                    * self.data_frequency[detector][self.usable]
+                    / self.psd[detector][self.usable]
+                )
+            )
+            norm += (
+                4
+                * self.frequency_spacing
+                * np.sum(
+                    np.abs(template[self.usable]) ** 2
+                    / self.psd[detector][self.usable]
+                )
+            )
+        return overlap, norm, templates
+
+    def log_likelihood(self):
+        overlap, norm, _ = self.network_statistics(self.parameters)
+        if not np.isfinite(norm) or norm <= 0:
+            return -np.inf
+        # The data-only Gaussian normalisation is constant in (Mc, tc), so the
+        # likelihood ratio is (d|h) - 1/2 (h|h).
+        return float(overlap - 0.5 * norm)
+
+
+challenge_likelihoods = {
+    spec["label"]: TwoParameterCBCLikelihood(spec) for spec in candidate_specs
+}
+print("Built two independent two-parameter toy likelihoods.")"""
+    ),
+    md(
+        r"""## 8. Run a two-dimensional Metropolis sampler
+
+Two independent random-walk chains sample only $(\mathcal M,t_c)$. The coarse
+matched-filter estimates from Section 4 supply the starting masses. This matters
+because fixing phase makes the likelihood much narrower than the phase-maximised
+search statistic. Acceptance fractions and trace agreement are required checks;
+this short classroom run is not an evidence calculation."""
+    ),
+    code(
+        """sampler_rng = np.random.default_rng(20260831)
+challenge_chains = {}
+challenge_samples = {}
+
+
+def log_posterior(likelihood, specification, state):
+    chirp_mass, geocent_time = state
+    low, high = specification["chirp_bounds"]
+    if not (low <= chirp_mass <= high):
+        return -np.inf
+    if not (
+        specification["time"] - 0.05
+        <= geocent_time
+        <= specification["time"] + 0.05
+    ):
+        return -np.inf
+    likelihood.parameters.update(
+        chirp_mass=float(chirp_mass), geocent_time=float(geocent_time)
+    )
+    return likelihood.log_likelihood()
+
+
+for spec in candidate_specs:
+    label = spec["label"]
+    likelihood = challenge_likelihoods[label]
+    seed = np.array([spec["search_mass"], spec["time"]])
+    proposal_scale = np.array([
+        0.025 if label == "event_a" else 0.06,
+        0.00025,
+    ])
+    event_chains = []
+    for chain_index in range(2):
+        state = seed + sampler_rng.normal(scale=0.2 * proposal_scale)
+        state[0] = np.clip(state[0], *spec["chirp_bounds"])
+        state[1] = np.clip(
+            state[1], spec["time"] - 0.05, spec["time"] + 0.05
+        )
+        current_logp = log_posterior(likelihood, spec, state)
+        chain = np.empty((6000, 2))
+        accepted = 0
+        for step_index in range(len(chain)):
+            proposal = state + sampler_rng.normal(scale=proposal_scale)
+            proposal_logp = log_posterior(likelihood, spec, proposal)
+            if np.log(sampler_rng.random()) < proposal_logp - current_logp:
+                state, current_logp = proposal, proposal_logp
+                accepted += 1
+            chain[step_index] = state
+        print(label, "chain", chain_index + 1, "acceptance", accepted / len(chain))
+        event_chains.append(chain)
+    challenge_chains[label] = event_chains
+    challenge_samples[label] = np.concatenate([chain[1000:] for chain in event_chains])
+    print(label, "retained samples:", len(challenge_samples[label]))"""
+    ),
+    code(
+        """posterior_parameters = ["chirp_mass", "geocent_time"]
+for spec in candidate_specs:
+    label = spec["label"]
+    posterior = challenge_samples[label]
+    print(f"\\n{label}")
+    for column, parameter in enumerate(posterior_parameters):
+        low, median, high = np.quantile(posterior[:, column], [0.05, 0.5, 0.95])
+        print(f"  {parameter:22s} {median:9.3f} [{low:9.3f}, {high:9.3f}]")
+    fig, trace_axes = plt.subplots(2, 1, figsize=(8, 3.5), sharex=True)
+    for chain in challenge_chains[label]:
+        trace_axes[0].plot(chain[:, 0], lw=0.35, alpha=0.75)
+        trace_axes[1].plot(chain[:, 1] - spec["time"], lw=0.35, alpha=0.75)
+    trace_axes[0].set(ylabel="chirp mass")
+    trace_axes[1].set(xlabel="step", ylabel=r"$t_c-t_0$ [s]")
+    fig.suptitle(f"{label}: two-chain trace check")
+    plt.show()
+
+fig, axes = plt.subplots(2, 2, figsize=(10, 6))
+for column, spec in enumerate(candidate_specs):
+    label = spec["label"]
+    posterior = challenge_samples[label]
+    mass_quantiles = np.quantile(posterior[:, 0], [0.05, 0.5, 0.95])
+    time_offsets_ms = 1000 * (posterior[:, 1] - spec["time"])
+    time_quantiles = np.quantile(time_offsets_ms, [0.05, 0.5, 0.95])
+    axes[0, column].hist(posterior[:, 0], bins=40, density=True, histtype="step")
+    axes[0, column].axvspan(
+        mass_quantiles[0], mass_quantiles[2], color="C0", alpha=0.15
+    )
+    axes[0, column].axvline(mass_quantiles[1], color="C0", ls="--")
+    axes[0, column].set(
+        xlabel=r"$\\mathcal{M}$ [$M_\\odot$]", ylabel="density", title=label
+    )
+    axes[1, column].hexbin(
+        posterior[:, 0], time_offsets_ms, gridsize=38, mincnt=1, cmap="Blues"
+    )
+    axes[1, column].axvline(mass_quantiles[1], color="C3", ls="--", lw=1)
+    axes[1, column].axhline(time_quantiles[1], color="C3", ls="--", lw=1)
+    axes[1, column].set(
+        xlabel=r"$\\mathcal{M}$ [$M_\\odot$]",
+        ylabel=r"$t_c-t_0$ [ms]",
+    )
+fig.suptitle("Two-parameter conditional posteriors")
+fig.tight_layout()
+plt.show()""",
+        figure="lvk-challenge-posteriors",
+    ),
+    md(
+        """## 9. Waveform and residual checks
+
+The posterior median should explain coherent power in both detectors. A corner
+plot alone does not test whether a CBC waveform actually removed the candidate."""
+    ),
+    code(
+        """fig, axes = plt.subplots(2, 2, figsize=(12, 6), sharex="col")
+for column, spec in enumerate(candidate_specs):
+    label = spec["label"]
+    posterior = challenge_samples[label]
+    median_parameters = dict(
+        zip(posterior_parameters, np.median(posterior, axis=0))
+    )
+    likelihood = challenge_likelihoods[label]
+    overlap, norm, templates = likelihood.network_statistics(median_parameters)
+    for row, detector in enumerate(("H1", "L1")):
+        model = templates[detector]
+        residual = likelihood.data_frequency[detector] - model
+        usable = likelihood.usable
+        psd = likelihood.psd[detector]
+        whitened_data_fd = np.zeros_like(likelihood.data_frequency[detector])
+        whitened_residual_fd = np.zeros_like(residual)
+        whitened_data_fd[usable] = (
+            likelihood.data_frequency[detector][usable] / np.sqrt(psd[usable])
+        )
+        whitened_residual_fd[usable] = residual[usable] / np.sqrt(psd[usable])
+        whitened_data = np.fft.irfft(
+            whitened_data_fd, n=int(PE_DURATION * sampling_frequency)
+        )
+        whitened_residual = np.fft.irfft(
+            whitened_residual_fd, n=int(PE_DURATION * sampling_frequency)
+        )
+        reference_scale = np.std(whitened_data[: 3 * sampling_frequency])
+        whitened_data /= reference_scale
+        whitened_residual /= reference_scale
+        local_time = np.arange(len(whitened_data)) / sampling_frequency - 6
+        axes[row, column].plot(
+            local_time, whitened_data, color="0.65", lw=0.5, label="data"
+        )
+        axes[row, column].plot(
+            local_time,
+            whitened_residual,
+            color="C3",
+            lw=0.6,
+            label="residual",
+        )
+        axes[row, column].set(
+            xlim=(-1.0, 0.15),
+            ylabel=f"{detector} whitened",
+            title=label if row == 0 else None,
+        )
+        axes[row, column].legend(fontsize=7)
+axes[-1, 0].set_xlabel("time from candidate [s]")
+axes[-1, 1].set_xlabel("time from candidate [s]")
+fig.suptitle("Median-model residual with fixed amplitude and phase")
+fig.tight_layout()
+plt.show()""",
+        figure="lvk-challenge-residuals",
+    ),
+    md("""## 10. Unblind
+
+Only now compare the recovered values with the data-generation truth."""),
+    code(
+        """truth = [
+    dict(chirp_mass=22.0, mass_ratio=0.85, geocent_time=160.0, network_snr=30.0),
+    dict(chirp_mass=31.0, mass_ratio=1.00, geocent_time=224.0, network_snr=15.0),
+]
+for event in truth:
+    eta = event["mass_ratio"] / (1 + event["mass_ratio"]) ** 2
+    total_mass = event["chirp_mass"] / eta ** (3 / 5)
+    primary_mass = total_mass / (1 + event["mass_ratio"])
+    secondary_mass = event["mass_ratio"] * primary_mass
+    print(
+        f"Mc={event['chirp_mass']:.1f}, q={event['mass_ratio']:.2f}, "
+        f"m1={primary_mass:.2f}, m2={secondary_mass:.2f}, "
+        f"t={event['geocent_time']:.1f} s, target network SNR={event['network_snr']:.0f}"
+    )
+print("H1-only sine-Gaussian: t=190.0 s, f0=75 Hz, target optimal SNR=45")"""
+    ),
+]
+write(
+    "09_lvk_blind_data_challenge_answer.ipynb",
+    "Instructor answer: blind LVK data challenge",
+    answer_challenge_cells,
+    orphan=True,
+)
+
+
+# Remove the three transitional monoliths.  They are still generated above as
+# the migration source, but they are not part of the public course artefacts.
+for transitional_name in (
+    "00_basics_parameter_estimation.ipynb",
+    "01_lvk_compact_binary_parameter_estimation.ipynb",
+    "02_lisa_parameter_estimation_and_global_fit.ipynb",
+):
+    (OUT / transitional_name).unlink()

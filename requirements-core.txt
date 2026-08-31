@@ -14,4 +14,6 @@ lisaanalysistools==1.2.5
 gpubackendtools==0.1.1
 eryn==1.2.6
 gwpy>=3.0,<4
+h5py>=3.11
+lalsuite==7.26.15
 wdm-transform==0.5.0

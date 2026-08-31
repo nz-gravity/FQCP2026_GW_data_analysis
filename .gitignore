@@ -2,6 +2,7 @@
 _site/
 _build/
 .DS_Store
+notebooks/gw150914_short
 
 # Python bytecode and build products
 __pycache__/

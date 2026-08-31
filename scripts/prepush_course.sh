@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regenerate, execute, validate, and render the complete FQCP course locally.
+# Regenerate, execute, validate, and render all eight FQCP modules locally.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -13,6 +13,7 @@ echo "==> Synchronising the locked environment"
 uv sync --locked
 
 echo "==> Regenerating notebooks"
+uv run --locked python scripts/build_lvk_blind_challenge_data.py
 uv run --locked python build_course.py
 
 echo "==> Validating notebooks"
@@ -24,12 +25,12 @@ for notebook in notebooks/*.ipynb; do
     --ExecutePreprocessor.timeout=900
 done
 
-echo "==> Building JupyterBook"
-uv run --locked python build_site.py
-
 # Catches a figure= marker on a cell that no longer draws anything.
 echo "==> Extracting reference figures"
 uv run --locked python publish_assets.py
+
+echo "==> Building JupyterBook"
+uv run --locked python build_site.py
 
 # Outputs are for the site and the assets branch, never for a commit.
 echo "==> Re-stripping notebooks"

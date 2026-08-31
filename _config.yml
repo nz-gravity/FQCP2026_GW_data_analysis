@@ -29,4 +29,5 @@ exclude_patterns:
   - .venv/**
   - venv/**
   - env/**
+  - AGENTS.md
   - README.md

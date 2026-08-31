@@ -11,10 +11,12 @@ dependencies = [
   "eryn==1.2.6",
   "gpubackendtools==0.1.1",
   "gwpy>=3.0,<4",
+  "h5py>=3.11",
   "ipykernel>=6.29",
   "jaxgb==0.2.1",
   "jupyter-book>=1.0,<2.0",
   "jupyterlab>=4.0",
+  "lalsuite==7.26.15",
   # The published 1.2.5 wheels are macOS-only, so this notebook can only be
   # executed on a Mac.  That is why the course is built and published locally by
   # scripts/prepush_course.sh --publish rather than in CI.
