@@ -960,7 +960,369 @@ nested_animation = FuncAnimation(
 )
 plt.close(fig)
 show_animation(nested_animation)"""),
-        md(r"""## 7. The gravitational-wave bridge: PSD and Whittle likelihood
+        md(r"""## 7. Hamiltonian Monte Carlo and NUTS
+
+Random-walk Metropolis explores by diffusion. To cross a posterior of width $L$
+in steps of size $\epsilon$ it needs about $(L/\epsilon)^2$ steps, and $\epsilon$
+is capped by the *narrowest* direction. That is why the well-tuned chain above
+still needed thousands of steps for a few hundred effective samples, and why the
+cost grows quickly with dimension.
+
+Hamiltonian Monte Carlo replaces the random walk with physics. Give each
+parameter a momentum $p$, treat $-\log p(\theta\mid d)$ as a potential energy,
+and define
+
+\[
+H(\theta,p)=-\log p(\theta\mid d)+\tfrac12\,p^{\mathsf T}M^{-1}p .
+\]
+
+Following Hamilton's equations moves a long way while keeping $H$ — and
+therefore the posterior density — nearly constant. A leapfrog integrator makes a
+small energy error, which a Metropolis-style correction removes exactly.
+
+- The price is the gradient $\nabla_\theta\log p$. Production codes get it from
+  automatic differentiation, which is exactly why differentiable waveforms
+  (JAX-based `ripple`, `jim`, `bilby`-adjacent samplers) are being written.
+- Two things need tuning: the step size $\epsilon$, and how far to integrate.
+  Integrate too far and the trajectory curls back on itself, burning gradients
+  to return to where it started.
+- **NUTS** (the No-U-Turn Sampler) removes the second knob. Double the
+  trajectory repeatedly, forwards or backwards in time at random, and stop when
+  the two ends start approaching each other:
+  $(\theta^+-\theta^-)\cdot p^-<0$ or $(\theta^+-\theta^-)\cdot p^+<0$. Then draw
+  the next sample from the trajectory that was built. Doubling in both
+  directions is what keeps the chain reversible.
+- The mass matrix $M$ is the other half of the tuning: it is the sampler's
+  guess at the posterior scale. Here we take it from the Metropolis run;
+  Stan and NumPyro learn it during warm-up."""),
+        code(r'''# A diagonal mass matrix: the inverse masses are the posterior variances, which
+# a warm-up phase would estimate for itself.
+INVERSE_MASS = samples.var(axis=0)
+
+
+def grad_log_posterior(theta):
+    """Gradient of the log posterior. Rows of `theta` may be a batch of points."""
+    theta = np.atleast_2d(theta)
+    residual = data - (theta[:, :1] * time + theta[:, 1:])
+    gradient = np.stack([residual @ time, residual.sum(axis=1)], axis=1) / sigma**2
+    inside = np.all((theta >= PRIOR_BOX[:, 0]) & (theta <= PRIOR_BOX[:, 1]), axis=1)
+    return np.squeeze(gradient * inside[:, None])  # flat prior: no gradient of its own
+
+
+def leapfrog(theta, momentum, step):
+    """One symplectic step of Hamilton's equations."""
+    momentum = momentum + 0.5 * step * grad_log_posterior(theta)
+    theta = theta + step * INVERSE_MASS * momentum
+    return theta, momentum + 0.5 * step * grad_log_posterior(theta)
+
+
+def hamiltonian(theta, momentum):
+    return log_posterior(theta) - 0.5 * np.sum(INVERSE_MASS * momentum**2)
+
+
+# The analytic gradient is worth checking against finite differences once.
+probe = np.array([0.6, -0.4])
+numeric_gradient = np.array(
+    [
+        (log_posterior(probe + shift) - log_posterior(probe - shift)) / 2e-5
+        for shift in (np.array([1e-5, 0.0]), np.array([0.0, 1e-5]))
+    ]
+)
+print("analytic gradient:", grad_log_posterior(probe).round(4))
+print("finite difference:", numeric_gradient.round(4))'''),
+        code(r'''def build_tree(theta, momentum, log_slice, direction, depth, step, visited):
+    """Recursively double the NUTS trajectory in one time direction."""
+    if depth == 0:
+        theta, momentum = leapfrog(theta, momentum, direction * step)
+        energy = hamiltonian(theta, momentum)
+        visited.append(theta)
+        candidates = [theta] if log_slice <= energy else []
+        # A huge energy error means the integrator diverged: stop this branch.
+        return theta, momentum, theta, momentum, candidates, log_slice < energy + 1000
+
+    minus, minus_p, plus, plus_p, candidates, alive = build_tree(
+        theta, momentum, log_slice, direction, depth - 1, step, visited
+    )
+    if alive:
+        if direction < 0:
+            minus, minus_p, _, _, extra, alive = build_tree(
+                minus, minus_p, log_slice, direction, depth - 1, step, visited
+            )
+        else:
+            _, _, plus, plus_p, extra, alive = build_tree(
+                plus, plus_p, log_slice, direction, depth - 1, step, visited
+            )
+        candidates = candidates + extra
+        span = plus - minus
+        alive = alive and span @ minus_p >= 0 and span @ plus_p >= 0
+    return minus, minus_p, plus, plus_p, candidates, alive
+
+
+def nuts(start, n_steps, step, rng, max_depth=8):
+    """No-U-Turn Sampler (Hoffman & Gelman 2014), slice-sampling version."""
+    theta = np.asarray(start, dtype=float)
+    chain = np.empty((n_steps, theta.size))
+    trajectories = []
+    n_leapfrog = 0
+    for iteration in range(n_steps):
+        momentum = rng.normal(0.0, 1 / np.sqrt(INVERSE_MASS))
+        log_slice = hamiltonian(theta, momentum) + np.log(rng.uniform())
+        minus = plus = theta
+        minus_p = plus_p = momentum
+        chosen, n_chosen, alive, depth = theta, 1, True, 0
+        visited = [theta]
+        while alive and depth < max_depth:
+            if rng.uniform() < 0.5:
+                minus, minus_p, _, _, new, alive = build_tree(
+                    minus, minus_p, log_slice, -1, depth, step, visited
+                )
+            else:
+                _, _, plus, plus_p, new, alive = build_tree(
+                    plus, plus_p, log_slice, +1, depth, step, visited
+                )
+            if alive and new:
+                # Prefer the freshly built half: it is further from the start.
+                if rng.uniform() < len(new) / n_chosen:
+                    chosen = new[rng.integers(len(new))]
+                n_chosen += len(new)
+            span = plus - minus
+            alive = alive and span @ minus_p >= 0 and span @ plus_p >= 0
+            depth += 1
+        n_leapfrog += 2**depth
+        theta = chosen
+        chain[iteration] = theta
+        trajectories.append(np.array(visited))
+    return chain, trajectories, n_leapfrog
+
+
+nuts_chain, trajectories, n_leapfrog = nuts(
+    start=[1.35, -4.0],  # the same deliberately bad start as the Metropolis run
+    n_steps=1500,
+    step=0.5,
+    rng=np.random.default_rng(3),
+)
+nuts_samples = nuts_chain[200:]
+
+print(f"mean trajectory length: {np.mean([len(t) for t in trajectories]):.1f} points")
+print(f"gradient evaluations  : {2 * n_leapfrog:,}")
+for index, name in enumerate(["m", "c"]):
+    print(
+        f"{name}: NUTS N_eff/N = "
+        f"{effective_sample_size(nuts_samples[:, index]) / len(nuts_samples):.2f}, "
+        f"Metropolis N_eff/N = "
+        f"{effective_sample_size(samples[:, index]) / len(samples):.2f}, "
+        f"posterior sd {nuts_samples[:, index].std():.4f} "
+        f"vs {samples[:, index].std():.4f}"
+    )'''),
+        md(
+            """### Animation: one gradient trajectory per sample
+
+Grey points are the leapfrog trajectory built during a single iteration; the red
+star is the sample drawn from it, and the blue points are everything kept so far.
+Compare with the Metropolis animation: the walker no longer inches along the
+ridge, it traverses it in one iteration, and the burn-in from the same bad
+corner is over in a handful of iterations.
+
+Read the printed diagnostics honestly. In **two** dimensions NUTS costs about
+ten gradients per stored sample to buy a factor of a few in $N_{\\rm eff}/N$,
+so it is not obviously ahead. Its advantage grows with dimension: random-walk
+cost scales roughly as $D^2$ against $D^{5/4}$ for HMC, which is why
+gradient-based samplers are being adopted for high-dimensional
+gravitational-wave problems and not for two-parameter lines."""
+        ),
+        code("""nuts_frames = 60
+fig, (tree_ax, trace_ax) = plt.subplots(1, 2, figsize=(10, 3.6), dpi=72)
+tree_ax.contour(m_grid, c_grid, posterior.T, levels=6, cmap="magma")
+(trajectory_line,) = tree_ax.plot([], [], ".-", color="0.55", lw=0.7, ms=4)
+(kept_points,) = tree_ax.plot([], [], "o", color="C0", ms=3, alpha=0.5)
+(chosen_point,) = tree_ax.plot([], [], "*", color="C3", ms=15)
+tree_ax.set(xlim=(0, 1.5), ylim=(-5, 5), xlabel="slope m", ylabel="intercept c")
+
+(nuts_trace,) = trace_ax.plot([], [], lw=0.9, color="C0")
+trace_ax.axhline(true_parameters["m"], color="k", ls="--")
+trace_ax.set(
+    xlim=(0, nuts_frames), ylim=(0, 1.5), xlabel="iteration", ylabel="slope m"
+)
+
+
+def animate_nuts(i):
+    trajectory_line.set_data(trajectories[i][:, 0], trajectories[i][:, 1])
+    kept_points.set_data(nuts_chain[: i + 1, 0], nuts_chain[: i + 1, 1])
+    chosen_point.set_data([nuts_chain[i, 0]], [nuts_chain[i, 1]])
+    nuts_trace.set_data(np.arange(i + 1), nuts_chain[: i + 1, 0])
+    tree_ax.set_title(f"iteration {i}: {len(trajectories[i])} leapfrog points")
+    return trajectory_line, kept_points, chosen_point, nuts_trace
+
+
+nuts_animation = FuncAnimation(fig, animate_nuts, frames=nuts_frames, interval=180)
+plt.close(fig)
+show_animation(nuts_animation)"""),
+        md(r"""## 8. Variational inference: fit a distribution instead of sampling
+
+Every sampler so far spends its budget *drawing* from the posterior. Variational
+inference (VI) instead picks a tractable family $q_\phi(\theta)$ and
+**optimises** $\phi$ until $q$ is as close to the posterior as the family
+allows. Sampling becomes fitting.
+
+The objective is the evidence lower bound,
+
+\[
+\mathrm{ELBO}(\phi)=\mathbb E_{q_\phi}\!\left[\log p(d,\theta)\right]
++\mathbb H[q_\phi]
+=\log\mathcal Z-\mathrm{KL}\!\left(q_\phi\,\|\,p(\theta\mid d)\right)
+\;\le\;\log\mathcal Z .
+\]
+
+Maximising the ELBO minimises $\mathrm{KL}(q\|p)$, and the gap that remains is
+exactly that KL divergence. Two ingredients make this practical:
+
+- **Reparameterisation.** Write $\theta=\mu+L\varepsilon$ with
+  $\varepsilon\sim\mathcal N(0,I)$. The randomness no longer depends on $\phi$,
+  so $\nabla_\phi$ passes through the expectation and Monte Carlo gradients are
+  cheap and low-variance. This needs $\nabla_\theta\log p$ — the same gradient
+  NUTS needed.
+- **Stochastic optimisation.** A handful of draws per iteration is enough;
+  Adam handles the noise. This is ADVI, as implemented in Stan and NumPyro.
+
+The catch is the family. Below we fit two Gaussians: a **mean-field** one
+($L$ diagonal, parameters independent) and a **full-rank** one ($L$ a full
+Cholesky factor). $\mathrm{KL}(q\|p)$ is mode-seeking: where the family cannot
+represent the correlation, the fit stays *inside* the posterior rather than
+covering it, and the reported uncertainty is too small.
+
+- Mean-field on a Gaussian posterior with correlation $\rho$ shrinks every
+  marginal by $\sqrt{1-\rho^2}$. Our ridge has $\rho\approx-0.86$, so expect a
+  factor of two.
+- The ELBO is a *lower bound* on $\log\mathcal Z$, never an estimate of it. A
+  larger ELBO means a better fit, but the gap is unknown unless the posterior
+  is known.
+- VI is the workhorse behind machine-learning approaches to GW inference —
+  normalising-flow posteriors, amortised and simulation-based inference — where
+  it buys speed that MCMC cannot. It should always be validated against a
+  sampler on a subset of events."""),
+        code(r'''LOG_PRIOR_DENSITY = -np.log(np.prod(PRIOR_BOX[:, 1] - PRIOR_BOX[:, 0]))
+
+
+def fit_gaussian_vi(
+    mean, scale, full_rank, rng, n_iterations=1500, n_draw=32, learning_rate=0.03
+):
+    """Maximise the ELBO over q(theta) = N(mean, L L^T) by Adam on (mean, L)."""
+    mean = np.asarray(mean, dtype=float)
+    factor = np.diag(np.asarray(scale, dtype=float))
+    # Mean field keeps L diagonal; full rank frees the lower triangle.
+    mask = np.tril(np.ones_like(factor)) if full_rank else np.eye(mean.size)
+    moments = [np.zeros_like(mean), np.zeros_like(mean)] + [np.zeros_like(factor)] * 2
+    history = []
+
+    for iteration in range(n_iterations):
+        noise = rng.normal(size=(n_draw, mean.size))
+        draws = mean + noise @ factor.T  # reparameterisation trick
+        gradient = grad_log_posterior(draws)
+        entropy = 0.5 * mean.size * np.log(2 * np.pi * np.e) + np.sum(
+            np.log(np.abs(np.diag(factor)))
+        )
+        elbo = (
+            np.mean([log_posterior(draw) for draw in draws])
+            + LOG_PRIOR_DENSITY
+            + entropy
+        )
+        history.append((mean.copy(), factor.copy(), elbo))
+
+        gradients = (
+            gradient.mean(axis=0),
+            ((gradient.T @ noise) / n_draw + np.diag(1 / np.diag(factor))) * mask,
+        )
+        rate = learning_rate * (1 - iteration / n_iterations)  # decay, or it jitters
+        updates = []
+        for index, value in enumerate(gradients):  # Adam
+            moments[2 * index] = 0.9 * moments[2 * index] + 0.1 * value
+            moments[2 * index + 1] = 0.999 * moments[2 * index + 1] + 0.001 * value**2
+            updates.append(
+                rate
+                * (moments[2 * index] / (1 - 0.9 ** (iteration + 1)))
+                / (np.sqrt(moments[2 * index + 1] / (1 - 0.999 ** (iteration + 1))) + 1e-8)
+            )
+        mean, factor = mean + updates[0], factor + updates[1]
+
+    return mean, factor, history
+
+
+vi_fits = {
+    name: fit_gaussian_vi(
+        [1.0, -2.0], [0.3, 1.0], full_rank, np.random.default_rng(5)
+    )
+    for name, full_rank in [("mean field", False), ("full rank", True)]
+}
+
+print(f"{'':<12}{'sd(m)':>9}{'sd(c)':>9}{'corr':>9}{'ELBO':>11}")
+for name, (vi_mean, vi_factor, history) in vi_fits.items():
+    covariance = vi_factor @ vi_factor.T
+    deviation = np.sqrt(np.diag(covariance))
+    correlation_q = covariance[0, 1] / (deviation[0] * deviation[1])
+    print(
+        f"{name:<12}{deviation[0]:>9.4f}{deviation[1]:>9.4f}"
+        f"{correlation_q:>9.3f}{np.mean([h[2] for h in history[-100:]]):>11.2f}"
+    )
+print(
+    f"{'NUTS':<12}{nuts_samples[:, 0].std():>9.4f}{nuts_samples[:, 1].std():>9.4f}"
+    f"{np.corrcoef(nuts_samples.T)[0, 1]:>9.3f}{log_z_free_intercept:>11.2f}"
+    "   <- grid log Z, not an ELBO"
+)'''),
+        md(
+            """### Animation: the approximation moves and then stops
+
+Each frame shows the 2-sigma contour of $q$ as the optimiser runs, with the
+ELBO on the right against the grid $\\log\\mathcal Z$. Watch three things:
+
+- both families first move the *mean* onto the ridge, then adjust the width;
+- the full-rank ellipse tilts until it lies along the degeneracy, and its ELBO
+  climbs to $\\log\\mathcal Z$ — for this exactly Gaussian posterior the family
+  contains the truth, so the gap closes to zero;
+- the mean-field ellipse cannot tilt, so it settles *inside* the posterior. Its
+  ELBO stops about $-\\tfrac12\\log(1-\\rho^2)\\approx0.7$ nats short, and that
+  shortfall is the KL divergence you would pay in every quoted error bar."""
+        ),
+        code(r"""vi_frames = np.arange(0, 1500, 25)
+angles = np.linspace(0, 2 * np.pi, 200)
+unit_circle = np.column_stack([np.cos(angles), np.sin(angles)])
+
+fig, (q_ax, elbo_ax) = plt.subplots(1, 2, figsize=(10, 3.6), dpi=72)
+q_ax.contour(m_grid, c_grid, posterior.T, levels=6, cmap="magma")
+q_ax.set(xlim=(0, 1.5), ylim=(-5, 5), xlabel="slope m", ylabel="intercept c")
+elbo_ax.axhline(log_z_free_intercept, color="k", ls="--", label=r"grid $\log\mathcal{Z}$")
+elbo_ax.set(
+    xlim=(0, vi_frames[-1]),
+    ylim=(log_z_free_intercept - 12, log_z_free_intercept + 2),
+    xlabel="iteration",
+    ylabel="ELBO",
+)
+
+styles = {"mean field": ("C0", "--"), "full rank": ("C2", "-")}
+ellipses, elbo_lines = {}, {}
+for name, (colour, dashes) in styles.items():
+    (ellipses[name],) = q_ax.plot([], [], color=colour, ls=dashes, lw=2, label=name)
+    (elbo_lines[name],) = elbo_ax.plot([], [], color=colour, ls=dashes, lw=1.2, label=name)
+q_ax.legend(loc="upper right", fontsize=8)
+elbo_ax.legend(loc="lower right", fontsize=8)
+
+
+def animate_vi(i):
+    step = vi_frames[i]
+    for name, (_, _, history) in vi_fits.items():
+        vi_mean, vi_factor, _ = history[step]
+        ellipse = vi_mean + 2 * unit_circle @ vi_factor.T
+        ellipses[name].set_data(ellipse[:, 0], ellipse[:, 1])
+        elbo_lines[name].set_data(
+            np.arange(step + 1), [h[2] for h in history[: step + 1]]
+        )
+    q_ax.set_title(f"iteration {step}")
+    return (*ellipses.values(), *elbo_lines.values())
+
+
+vi_animation = FuncAnimation(fig, animate_vi, frames=len(vi_frames), interval=120)
+plt.close(fig)
+show_animation(vi_animation)"""),
+        md(r"""## 9. The gravitational-wave bridge: PSD and Whittle likelihood
 
 A power spectral density (PSD) describes how a stationary random process's
 variance is distributed over frequency. For one-sided $S_n(f)$,
@@ -1185,7 +1547,8 @@ cumulative curve is a diagonal.
 
 This is how the LVK collaboration validates parameter-estimation pipelines,
 and it catches errors that no single analysis can reveal. Here the linear model
-has an exact Gaussian posterior (Section 6), so hundreds of trials are cheap.
+has an exact Gaussian posterior (the Fisher extension above), so hundreds of
+trials are cheap.
 A deviating curve means a bug, a wrong noise model, or a prior mismatch."""
         ),
         code("""from scipy.stats import norm
@@ -1228,6 +1591,209 @@ ax.set(
 )
 ax.legend()
 plt.show()"""),
+        md(r"""## Extension: predictive comparison with ELPD and PSIS-LOO
+
+Section 3 compared models with a Bayes factor. Most of the modern Bayesian
+workflow literature argues that this is the wrong default, and compares
+**out-of-sample predictive performance** instead. Two reasons:
+
+**Prior sensitivity.** The evidence averages the likelihood over the
+*normalised* prior, so it depends on prior volume the data never probed.
+Widen an unconstrained prior by a factor of ten and $\log\mathcal Z$ drops by
+$\log 10$ for no physical reason — the Lindley/Bartlett paradox. Taken far
+enough, a vague prior makes the Bayes factor favour the simpler model
+arbitrarily strongly while the posterior does not move at all.
+
+**Goal alignment.** A Bayes factor answers "which model is *true*?", assuming
+one of them is. Predictive comparison asks "which model *predicts* better?",
+which is answerable even when both models are wrong — and both models are
+always wrong.
+
+The predictive target is the expected log pointwise predictive density,
+
+\[
+\mathrm{elpd}=\sum_{i=1}^{n}\log p(d_i\mid d_{-i}),\qquad
+p(d_i\mid d_{-i})=\int p(d_i\mid\theta)\,p(\theta\mid d_{-i})\,d\theta ,
+\]
+
+which needs $n$ separate posteriors. **PSIS-LOO** gets all of them from one
+posterior by importance sampling: the leave-one-out posterior differs from the
+full posterior by the factor $1/p(d_i\mid\theta)$, so
+
+\[
+p(d_i\mid d_{-i})\simeq
+\frac{\sum_s w_s^{i}\,p(d_i\mid\theta_s)}{\sum_s w_s^{i}},
+\qquad w_s^{i}\propto\frac{1}{p(d_i\mid\theta_s)} .
+\]
+
+Those weights are heavy-tailed, so the largest ones are replaced by the
+quantiles of a generalised Pareto distribution fitted to the tail. The fitted
+shape $\hat k$ is the diagnostic that makes the method usable: $\hat k<0.7$ is
+fine, and a point above it should be refitted exactly rather than trusted.
+
+Models are then compared by the **difference** $\Delta\mathrm{elpd}_{\rm loo}$
+and its paired standard error, which is computed pointwise —
+$\mathrm{se}_{\rm diff}=\sqrt{n\,\mathrm{Var}_i(\mathrm{elpd}_i^{1}-\mathrm{elpd}_i^{2})}$
+— and is much smaller than the errors on the two totals separately, because the
+same data points appear in both."""),
+        md(
+            """**Predict before running:** the cell below widens the prior on the intercept
+from $\\pm1$ to $\\pm300$ without touching the data. What should happen to the
+Bayes factor, and what should happen to a leave-one-out predictive comparison?"""
+        ),
+        code(r'''from scipy.special import logsumexp
+from scipy.stats import genpareto
+
+
+def pointwise_log_likelihood(m_values, c_values):
+    """log p(d_i | theta_s) for every sample and datum: shape (n_sample, n_data)."""
+    residual = data - (np.asarray(m_values)[:, None] * time + np.asarray(c_values)[:, None])
+    return -0.5 * ((residual / sigma) ** 2 + np.log(2 * np.pi * sigma**2))
+
+
+def psis_loo(log_lik):
+    """Pareto-smoothed importance-sampling LOO: pointwise elpd and Pareto k."""
+    n_sample, n_data = log_lik.shape
+    n_tail = int(min(0.2 * n_sample, 3 * np.sqrt(n_sample)))
+    elpd = np.empty(n_data)
+    k_hat = np.empty(n_data)
+    for i in range(n_data):
+        log_weight = -log_lik[:, i]  # w = 1 / p(d_i | theta)
+        log_weight -= log_weight.max()
+        order = np.argsort(log_weight)
+        tail = order[-n_tail:]
+        cutoff = np.exp(log_weight[order[-n_tail - 1]])
+        # scipy's MLE stands in for the Zhang & Stephens estimator ArviZ uses.
+        k_hat[i], _, scale = genpareto.fit(np.exp(log_weight[tail]) - cutoff, floc=0)
+        quantiles = (np.arange(n_tail) + 0.5) / n_tail
+        log_weight[tail] = np.log(cutoff + genpareto.ppf(quantiles, k_hat[i], scale=scale))
+        elpd[i] = logsumexp(log_weight + log_lik[:, i]) - logsumexp(log_weight)
+    return elpd, k_hat
+
+
+def sample_line_model(prior_half_width, seed):
+    """Metropolis samples for the free-intercept model under a box prior."""
+    box = np.array([[0.0, 1.5], [-prior_half_width, prior_half_width]])
+
+    def log_target(theta):
+        if np.any(theta < box[:, 0]) or np.any(theta > box[:, 1]):
+            return -np.inf
+        return log_likelihood(theta[0], theta[1])
+
+    chain, _ = metropolis(
+        log_target, [0.5, 0.0], 6000, np.array([0.12, 0.7]), np.random.default_rng(seed)
+    )
+    return chain[1000::5]  # thin: PSIS costs one Pareto fit per datum
+
+
+# M0: the intercept is fixed at zero, so its prior width never enters.
+zero_chain, _ = metropolis(
+    lambda theta: log_likelihood(theta[0], 0.0) if 0 < theta[0] < 1.5 else -np.inf,
+    [0.5],
+    6000,
+    np.array([0.1]),
+    np.random.default_rng(12),
+)
+zero_samples = zero_chain[1000::5]
+elpd_zero, k_zero = psis_loo(
+    pointwise_log_likelihood(zero_samples[:, 0], np.zeros(len(zero_samples)))
+)
+half_widths = np.array([1.0, 3.0, 10.0, 30.0, 100.0, 300.0])
+log_bayes_factors, delta_elpd, se_diff, unreliable = [], [], [], []
+for half_width in half_widths:
+    free_samples = sample_line_model(half_width, seed=13)
+    elpd_free, k_free = psis_loo(
+        pointwise_log_likelihood(free_samples[:, 0], free_samples[:, 1])
+    )
+
+    # Evidence on a grid that stays fine near the posterior however wide the prior.
+    c_nodes = np.unique(
+        np.concatenate([np.linspace(-half_width, half_width, 801), np.linspace(-4, 4, 401)])
+    )
+    log_like_grid = np.array([[log_likelihood(m, c) for c in c_nodes] for m in m_grid])
+    log_z_free = log_trapezoid_exp(
+        np.array([log_trapezoid_exp(row, c_nodes) for row in log_like_grid]), m_grid
+    ) - np.log((m_grid[-1] - m_grid[0]) * 2 * half_width)
+
+    difference = elpd_free - elpd_zero
+    log_bayes_factors.append(log_z_free - log_z_zero_intercept)
+    delta_elpd.append(difference.sum())
+    se_diff.append(np.sqrt(difference.size * difference.var()))
+    unreliable.append(int((k_free > 0.7).sum() + (k_zero > 0.7).sum()))
+
+fig, (bf_ax, elpd_ax) = plt.subplots(1, 2, figsize=(11, 3.4), sharex=True)
+bf_ax.semilogx(half_widths, log_bayes_factors, "o-", color="C3")
+bf_ax.axhline(0, color="k", lw=0.8)
+bf_ax.set(
+    xlabel="intercept prior half-width",
+    ylabel=r"$\log$ Bayes factor, free/zero",
+    title="Evidence follows the prior",
+)
+elpd_ax.errorbar(half_widths, delta_elpd, yerr=se_diff, fmt="o-", color="C0", capsize=3)
+elpd_ax.axhline(0, color="k", lw=0.8)
+elpd_ax.set(
+    xlabel="intercept prior half-width",
+    ylabel=r"$\Delta\,\mathrm{elpd}_{\rm loo}\pm\mathrm{se}_{\rm diff}$",
+    title="Prediction does not",
+)
+elpd_ax.set_xscale("log")
+plt.tight_layout()
+plt.show()
+
+print(f"data points with Pareto k > 0.7: {max(unreliable)} of {2 * time.size}")
+print(f"log Bayes factor : {log_bayes_factors[0]:+.2f} -> {log_bayes_factors[-1]:+.2f}")
+print(
+    f"delta elpd_loo   : {delta_elpd[0]:+.2f} -> {delta_elpd[-1]:+.2f}"
+    f"  (se_diff {se_diff[-1]:.2f})"
+)'''),
+        md(r"""The Bayes factor slides by several nats as an *unconstrained* prior is
+widened; $\Delta\mathrm{elpd}_{\rm loo}$ does not move once the prior is wide
+enough to contain the posterior. That is the whole argument in one figure.
+
+Read the predictive comparison as carefully as the evidence:
+
+- A difference is only meaningful against its own error. The usual rule of
+  thumb is that $|\Delta\mathrm{elpd}_{\rm loo}|\lesssim4$, or fewer than about
+  100 data points, puts you where the Gaussian approximation behind
+  $\mathrm{se}_{\rm diff}$ is unreliable (Sivula et al. 2025). Our
+  $\Delta\mathrm{elpd}$ is around $-1$: the honest conclusion is that these two
+  models predict this dataset about equally well, which is exactly what the
+  Bayes factor obscured.
+- Picking the single best model out of many candidates by maximising
+  $\mathrm{elpd}_{\rm loo}$ overfits the cross-validation estimate itself
+  (McLatchie & Vehtari 2023). Averaging with stacking weights predicts better
+  than selecting a winner (Yao et al. 2018).
+- $\hat k>0.7$ at any data point means the importance sampling failed there;
+  refit that point exactly instead of quoting the number.
+
+:::{admonition} This does not delete the Bayes factor from GW astronomy
+:class: warning
+
+Detection statements — "signal versus noise", "this event is a binary neutron
+star" — are genuinely questions about which model produced the data, and their
+priors are physically meaningful rather than arbitrary. Prior dependence there
+is a feature, and it is why the LVK quotes Bayes factors and odds. The
+predictive view is the right tool when the models are competing descriptions
+none of which is true: waveform systematics, PSD and noise models, and
+population models. Notebook 04 uses exactly this distinction.
+:::
+
+**Further reading**
+
+- Vehtari, Gelman & Gabry (2017), *Practical Bayesian model evaluation using
+  leave-one-out cross-validation and WAIC* — PSIS-LOO, $\hat k$, and
+  $\mathrm{se}_{\rm diff}$.
+- Gelman, Hwang & Vehtari (2014), *Understanding predictive information criteria
+  for Bayesian models* — why predictive density rather than AIC, DIC, or
+  marginal likelihood.
+- Gelman & Shalizi (2013), *Philosophy and the practice of Bayesian statistics*
+  — model criticism instead of posterior model probabilities.
+- Sivula, Magnusson, Matamoros & Vehtari (2025), *Uncertainty in Bayesian
+  leave-one-out cross-validation based model comparison* — when
+  $\mathrm{se}_{\rm diff}$ breaks down.
+- McLatchie & Vehtari (2023), *Efficiency and risks of selection bias in
+  cross-validation*; Yao, Vehtari, Simpson & Gelman (2018), *Using stacking to
+  average Bayesian predictive distributions*."""),
         md(
             """## Reference: the parameter-estimation checklist
 
@@ -1243,6 +1809,7 @@ result, is built from exactly these pieces.
 | sampler | how do we explore the posterior? | poor tuning, unconverged chains, missed modes |
 | diagnostics | can we trust this particular run? | too few effective samples, no burn-in check |
 | evidence $\\mathcal Z$ | which model does the data prefer? | prior-volume dependence, under-converged runs |
+| predictive comparison ($\\Delta$elpd) | which model predicts new data better? | selection bias over many models, unreliable $\\hat k$ |
 | calibration (P-P) | is the whole pipeline correct? | only detectable over many simulations |
 
 **Vocabulary quick reference**
