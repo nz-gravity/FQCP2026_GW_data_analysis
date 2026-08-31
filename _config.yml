@@ -3,6 +3,18 @@ title: FQCP 2026 GW data analysis
 author: Avi Vajpeyi
 copyright: "2026"
 
+# Listing myst_enable_extensions replaces JupyterBook's defaults, so the defaults
+# are repeated here; deflist is the addition, for the glossary's term/definition
+# pairs.  colon_fence keeps the ::: admonitions in the notebooks working.
+parse:
+  myst_enable_extensions:
+    - colon_fence
+    - deflist
+    - dollarmath
+    - linkify
+    - substitution
+    - tasklist
+
 execute:
   # git holds stripped notebooks; the build pipeline executes them in place just
   # before this step, so the site is rendered from real outputs without those

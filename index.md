@@ -7,6 +7,12 @@ independently runnable modules: Bayesian inference, LVK analysis, and LISA
 analysis. The complete book is a reference resource; the live route selects a
 small subset.
 
+**No previous Bayesian statistics or gravitational-wave analysis is assumed.**
+If you can read a `for` loop and a NumPy array, you have the prerequisites.
+Start with the [glossary](glossary.md) — it lists what you need beforehand, and
+defines every term the notebooks use, including what each one is commonly
+mistaken for. Keep it open in a second tab.
+
 ## Live route
 
 | Live block | Time | Modules used |

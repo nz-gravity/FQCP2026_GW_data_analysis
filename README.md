@@ -2,6 +2,15 @@
 
 A Colab-first mini-course for a two-hour lecture/tutorial at the 2026 International Training Workshop on Frontiers from Quanta to Cosmos Physics.
 
+## Audience
+
+No previous Bayesian statistics and no previous gravitational-wave analysis are
+assumed. Students need to be able to read a `for` loop and a NumPy array;
+everything else is built up in the notebooks. `glossary.md` collects the
+statistical and gravitational-wave vocabulary in one place, with an explicit
+"what this is **not**" for the terms that are routinely confused, and is the
+first page of the book.
+
 ## Course structure
 
 The core material is organised as three conceptual parts and eight independently
