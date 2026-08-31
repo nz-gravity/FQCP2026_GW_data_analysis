@@ -5134,13 +5134,18 @@ $$
 \qquad I_k=|d_k|^2.
 $$
 
-A raw periodogram is too variable to use as a smooth noise model. Write
-$\log S(f)=B(f)\beta$ in a cubic B-spline basis and penalise second differences,
+A raw periodogram is too variable to use as a smooth noise model.
+
+There are many different models for PSDs. In this notebook we use *penalised*
+splines. Write $\log S(f)=B(f)\beta$ in a cubic B-spline basis and penalise
+second differences,
 
 $$
 -\log p(\beta\mid I)= -\log\mathcal L
 +\frac{\lambda}{2}\lVert D_2\beta\rVert^2 + \mathrm{constant}.
-$$"""),
+$$
+
+![A penalised spline built from weighted basis functions](https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/pspline_explainer.gif)"""),
     code("""n_frequency = 1200
 frequency = np.geomspace(2e-4, 2e-2, n_frequency)
 log_frequency = np.log(frequency)
