@@ -2,9 +2,9 @@
 
 **FQCP 2026 · Beijing**
 
-This two-hour, notebook-first mini-course has three conceptual parts and eight
-independently runnable modules: Bayesian inference, LVK analysis, and LISA
-analysis. The complete book is a reference resource; the live route selects a
+This two-hour, notebook-first mini-course has four conceptual parts and nine
+independently runnable modules: Bayesian inference, LVK analysis, LISA
+analysis, and making the likelihood fast. The complete book is a reference resource; the live route selects a
 small subset.
 
 **No previous Bayesian statistics or gravitational-wave analysis is assumed.**
@@ -73,6 +73,10 @@ visible course navigation.
   keeps the source count fixed rather than trans-dimensional.
 - Part 3C uses a local Laplace approximation to visualise P-spline coefficient
   uncertainty; it is not presented as a validated production posterior.
+- Part 4 builds heterodyning, relative binning, and a reduced-order model on a
+  leading-order stationary-phase inspiral with an analytic toy PSD. Every
+  approximation is checked against the exact likelihood in the same notebook,
+  but the implementations are pedagogical rather than production ones.
 
 ## Follow-on sources
 

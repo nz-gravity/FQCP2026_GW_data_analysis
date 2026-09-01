@@ -16,6 +16,7 @@ dependencies = [
   "jaxgb==0.2.1",
   "jupyter-book>=1.0,<2.0",
   "jupyterlab>=4.0",
+  "jupytext>=1.18,<2",
   "lalsuite==7.26.15",
   # 1.2.5 was the one release in the 1.2.x line published without Linux wheels.
   # 1.2.8 ships cp312 manylinux_2_28 x86_64, which Colab can install, so the
@@ -31,3 +32,13 @@ dependencies = [
 
 [tool.uv]
 package = false
+
+
+
+[tool.jupytext]
+notebook_metadata_filter = "colab,kernelspec,language_info,orphan,jupytext"
+cell_metadata_filter = "fqcp_figure,jupyter,tags"
+
+[tool.jupytext.formats]
+"notebooks/" = "ipynb"
+"notebook_sources/" = "py:percent"

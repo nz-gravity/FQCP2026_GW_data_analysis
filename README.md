@@ -13,7 +13,7 @@ first page of the book.
 
 ## Course structure
 
-The core material is organised as three conceptual parts and eight independently
+The core material is organised as four conceptual parts and nine independently
 runnable notebooks, followed by an LVK blind-data supplement. The split follows the teaching progression of the local
 `nz_bilby_cbc_workshop_2024`, `lisa_analysis_workshop`, and GWOSC parameter-
 estimation tutorials without implying that every module fits into the live
@@ -29,6 +29,7 @@ two-hour session.
 | 3B | **`06_lisa_global_fit_gibbs.ipynb`** | Shared residuals, global fitting, Gibbs, and Metropolis-within-Gibbs |
 | 3C | **`07_lisa_pspline_psd.ipynb`** | Whittle PSD estimation with P-splines and fit diagnostics |
 | 3D | **`08_lisa_wdm_time_frequency.ipynb`** | WDM time-frequency analysis, gaps, and non-stationarity |
+| 4 | **`10_fast_likelihoods.ipynb`** | Heterodyning, relative binning, reduced-order modelling, and parallel/batched likelihoods |
 | LVK challenge | **`09_lvk_blind_data_challenge.ipynb`** | Search, transient handling, off-source PSD estimation, and two-parameter conditional PE on hidden injections |
 
 The worked challenge notebook,
@@ -62,6 +63,8 @@ than take it on faith:
 | GW150914 Bilby/Dynesty | 2B | posterior and evidence read from a genuine Bilby result |
 | search + blocked Gibbs | 3B | all 11 parameters recovered; residual consistent with pure noise |
 | P-spline PSD | 3C | whitened power is checked against its expected unit scale |
+| heterodyning and relative binning | 4 | `dlnL` against the exact 16064-bin likelihood over a chirp-mass scan |
+| reduced-order model + empirical interpolant | 4 | reconstruction of a waveform outside the training set to 1e-12 |
 
 ## Run in Google Colab
 
@@ -137,6 +140,11 @@ platform restriction. Every dependency installs on Linux.
   explicitly only a classroom proxy for RJMCMC/evidence.
 - The P-spline coefficient band is a local Laplace approximation, not a
   validated production posterior or a claim of component identifiability.
+- Part 4 demonstrates the speedup algorithms on a leading-order
+  stationary-phase inspiral with an analytic toy PSD, so every step stays
+  readable. Each approximation is validated against the exact likelihood in the
+  same notebook, but the notebook is not a substitute for Bilby's production
+  relative-binning and ROQ likelihoods.
 
 ## Follow-on sources
 

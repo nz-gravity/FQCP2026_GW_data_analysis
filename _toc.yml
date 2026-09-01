@@ -19,6 +19,9 @@ parts:
       - file: notebooks/06_lisa_global_fit_gibbs
       - file: notebooks/07_lisa_pspline_psd
       - file: notebooks/08_lisa_wdm_time_frequency
+  - caption: Part 4 — Making inference fast
+    chapters:
+      - file: notebooks/10_fast_likelihoods
   - caption: Further study
     chapters:
       - file: notebooks/03_literature

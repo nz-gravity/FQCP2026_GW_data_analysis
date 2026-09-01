@@ -239,8 +239,11 @@ equation in this course is followed by prose that says what it does.
   the run.
 
 **Wavelet / WDM domain**
-: A time–frequency representation. Useful when the noise level or the data
-  quality changes with time, which the plain frequency domain cannot express.
+: A time–frequency representation; WDM stands for
+  Wilson–Daubechies–Meyer. It is useful when the noise level or data quality
+  changes with time, because affected intervals can remain localised rather
+  than contaminating every ordinary Fourier bin. It does not automatically
+  remove gap-edge correlations or make overlapping sources independent.
 
 ## Software
 

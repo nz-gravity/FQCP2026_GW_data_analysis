@@ -2995,12 +2995,9 @@ from this cell."""
         code(
             """year=YRSID_SI; AU=149597870700.
 
-# Default executed configuration: approximately equal arms.
-orbits=EqualArmlengthOrbits()
-
-# BREATHING-ORBIT RE-RUN: comment the line above, uncomment this one, and
-# rerun from here through the XYZ/AET cells below.
-# orbits=KeplerianOrbits()
+# One visible switch controls the complete orbit-to-TDI rerun.
+USE_BREATHING_ORBITS = False
+orbits = KeplerianOrbits() if USE_BREATHING_ORBITS else EqualArmlengthOrbits()
 
 print(f"active orbit model: {type(orbits).__name__}")
 times=np.linspace(0,year,240)
@@ -3450,9 +3447,9 @@ mark_gap(axes[1,1]); axes[1,1].legend(fontsize=8,loc="upper right")
 axes[1,1].set(xlabel="mission time [days]",ylabel="frequency [mHz]",title="Drifting line + gap in time–frequency"); fig.colorbar(image,ax=axes[1,1],label="log power")
 fig.tight_layout(); plt.show()""", figure="lisa-gap-laboratory"),
         md(
-            r"""### WDM time--frequency map and likelihood
+            r"""### Wilson--Daubechies--Meyer (WDM) time--frequency map and likelihood
 
-The WDM transform gives localised real coefficients $w_{nm}$ on a
+The Wilson--Daubechies--Meyer transform gives localised real coefficients $w_{nm}$ on a
 time--frequency grid. For stationary Gaussian noise and a diagonal WDM
 approximation,
 
@@ -4735,6 +4732,14 @@ def _renumber(cells, mapping):
     return cells
 
 
+def _replace_in_cells(cells, replacements):
+    """Apply small teaching-label repairs to a copied notebook slice."""
+    for cell in cells:
+        for old, new in replacements.items():
+            cell.source = cell.source.replace(old, new)
+    return cells
+
+
 def _exercise(question, starter, hint, solution):
     """GWOSC-style question followed immediately by work and a hidden answer."""
     starter = re.sub(
@@ -4792,10 +4797,39 @@ basics_cells = [
     _module_intro(
         "Build Bayesian parameter estimation from a signal and noise model, "
         "without hiding any step behind Bilby.",
-        "Use Sections 1--4 and the PSD/Whittle bridge. Sampling algorithms and "
-        "calibration are reference material.",
+        "Follow Sections 1--5 in order: model, prior, likelihood, posterior "
+        "checks, then the gravitational-wave noise model. Stop at the clear "
+        "end-of-live-route marker.",
     ),
-    *_between(basics_source, "import os", "## Question bank and answer key"),
+    md(r"""## The four pieces of Bayes' theorem
+
+Bayesian inference updates uncertainty. It combines what the model allowed
+before seeing these data with how well each allowed parameter value explains
+the data:
+
+$$
+p(\theta\mid d,M)=
+\frac{\mathcal L(d\mid\theta,M)\,\pi(\theta\mid M)}{\mathcal Z}.
+$$
+
+| Piece | Plain-language question |
+| --- | --- |
+| parameter $\theta$ | what unknown quantity are we trying to learn? |
+| prior $\pi(\theta)$ | what values did the model allow before these data? |
+| likelihood $\mathcal L(d\mid\theta)$ | how well would each proposed value explain the observed data? |
+| posterior $p(\theta\mid d)$ | what values remain plausible after combining prior and likelihood? |
+| evidence $\mathcal Z$ | what normalises the posterior, and how well did the complete model predict the data? |
+
+For parameter estimation, the reusable calculation is
+
+$$
+\text{posterior}\propto\text{likelihood}\times\text{prior}.
+$$
+
+We will calculate every part on a two-parameter grid before introducing any
+sampling algorithm. A posterior is a distribution, not just the location of
+the best-fitting line."""),
+    *_between(basics_source, "import os", "## 5. Why real PE cannot use a grid"),
     *_exercise(
         "Change the assumed noise standard deviation from `sigma` to "
         "`sigma / 2`. Recompute a normalized slope posterior and report how its "
@@ -4815,6 +4849,65 @@ print(interval(m_grid, p_m_test))
 # The interval contracts because the likelihood was made overconfident, not
 # because the data became more informative.""",
     ),
+    *_renumber(
+        _between(
+            basics_source,
+            "## 9. The gravitational-wave bridge",
+            "## Extension: the Fisher matrix",
+        ),
+        {"9": "5"},
+    ),
+    md(r""":::{admonition} End of the live route
+:class: important
+
+You now have the complete inference chain used later in the course:
+
+$$
+\text{data} + \text{signal model} + \text{noise model}
+\longrightarrow \text{likelihood}
+\longrightarrow \text{posterior}
+\longrightarrow \text{checks}.
+$$
+
+The remaining sections explain how real analyses explore a posterior when a
+grid is impossible. They are reference material for a second pass.
+:::"""),
+    md("""## Read later: replacing the grid with samplers
+
+The live lesson used a grid because it makes the prior, likelihood, and
+posterior visible. Real gravitational-wave problems have too many parameters
+for a grid. The next two sections retain readable teaching implementations of
+the two main alternatives: Metropolis--Hastings for posterior samples and
+nested sampling for posterior samples plus evidence."""),
+    *_replace_in_cells(
+        _between(
+            basics_source,
+            "## 5. Why real PE cannot use a grid",
+            "## 7. Hamiltonian Monte Carlo and NUTS",
+        ),
+        {
+            "## 5. Why real PE cannot use a grid": "## Sampler 1: Metropolis--Hastings",
+            "## 6. Nested sampling: where the evidence comes from": "## Sampler 2: nested sampling and evidence",
+        },
+    ),
+    md("""## Further sampler families
+
+You do not need their implementations for this course. The important
+distinctions are:
+
+| Method | Main idea | Main caution |
+| --- | --- | --- |
+| Hamiltonian Monte Carlo / NUTS | gradients move efficiently through a correlated posterior | needs differentiable, well-scaled models |
+| variational inference | optimise an approximate posterior family | can underestimate uncertainty if the family is too simple |
+| simulation-based inference | learn inference from many simulations | must be validated against trusted analyses and simulations |
+
+Return to these methods after you are comfortable identifying the model,
+prior, likelihood, posterior, and checks in a concrete analysis."""),
+    *_between(
+        basics_source,
+        "## Reference: the parameter-estimation checklist",
+        "## Question bank and answer key",
+    ),
 ]
 write(
     "01_bayesian_inference.ipynb",
@@ -4830,10 +4923,34 @@ lvk_a_cells = [
     _module_intro(
         "Follow a compact-binary signal from source parameters through a detector "
         "network, injection, matched filtering, and a manual likelihood.",
-        "Sections 1--4 are the core route; localisation is the extension.",
+        "Follow the source -> detector -> search -> inference path. Stop after "
+        "the one-parameter network posterior; degeneracies and localisation are "
+        "read-later extensions.",
     ),
+    md(""":::{admonition} Three questions that must stay separate
+:class: important
+
+| Stage | Question | Output |
+| --- | --- | --- |
+| search | is there a candidate unlike ordinary noise? | trigger and ranking statistic |
+| parameter estimation | which source parameters remain plausible? | posterior and credible intervals |
+| population inference | what population produced many detected events? | selection-aware population model |
+
+This notebook moves from the first question to the second. Module 04 asks the
+third. A large matched-filter SNR is not itself a parameter posterior or an
+astrophysical detection probability.
+:::"""),
     *lvk_setup,
-    *_between(lvk_source, "## 1. CBC parameters", "## 6. From events to a population"),
+    *_between(
+        lvk_source,
+        "## 1. CBC parameters",
+        "### All-sky network response: predict, then inspect",
+    ),
+    *_between(
+        lvk_source,
+        "## 3. Finding the signal first: matched filtering",
+        "## 4. Inject and infer manually",
+    ),
     *_exercise(
         "Make the template-bank offsets coarser and rerun the scan. What is the "
         "largest spacing that still places a template close to the recovered "
@@ -4846,6 +4963,35 @@ raise NotImplementedError("call student_template_bank_scan and inspect the peak"
         """coarse_snr = student_template_bank_scan(coarse_offsets)
 best_offset = coarse_offsets[np.argmax(coarse_snr)]
 print("best coarse-grid offset:", best_offset)""",
+    ),
+    *_between(
+        lvk_source,
+        "## 4. Inject and infer manually",
+        "### A two-dimensional posterior with a real degeneracy",
+    ),
+    md(""":::{admonition} End of the live route
+:class: important
+
+You have followed one coherent chain: a physical waveform was projected into
+detectors, found with a matched filter, and used in a network likelihood. The
+sections below show two important complications but are not required for a
+first pass.
+:::"""),
+    md("""## Read later: degeneracies and sky localisation"""),
+    *_replace_in_cells(
+        _between(
+            lvk_source,
+            "### All-sky network response: predict, then inspect",
+            "## 3. Finding the signal first: matched filtering",
+        ),
+        {
+            "### All-sky network response: predict, then inspect": "### Extension: all-sky network sensitivity",
+        },
+    ),
+    *_between(
+        lvk_source,
+        "### A two-dimensional posterior with a real degeneracy",
+        "## 6. From events to a population",
     ),
 ]
 write(
@@ -4862,8 +5008,9 @@ gwosc_bilby_cells = [
     _module_intro(
         "Analyse public H1/L1 data around GW150914 with Bilby's standard "
         "compact-binary likelihood.",
-        "Build the data and PSD, inspect the priors and likelihood, then launch "
-        "the sampler. The Dynesty cell can take 10--30 minutes in Colab.",
+        "Build the data and PSD, inspect which parameters are sampled or fixed, "
+        "then construct the likelihood. The final Dynesty cell is optional live "
+        "and can take 10--30 minutes in Colab.",
         "This is a restricted non-spinning analysis with several extrinsic "
         "parameters fixed and fast workshop sampler settings. It is not the "
         "published LVK production analysis.",
@@ -5138,6 +5285,12 @@ Keep the four timescales distinct:
 Median-Welch is common, not the only defensible LVK noise model. BayesLine-like
 on-source fits and pipeline-specific PSD estimators answer related but different
 questions; see [Chatziioannou et al. (2019)](https://arxiv.org/abs/1907.06540)."""),
+    md("""### Optional visual explainer: why use a median?
+
+The next cell builds a separate toy dataset to show how one transient affects
+individual periodograms, their mean, and their median. It is useful reference
+material, but it is not part of the GW150914 data path. On the live route,
+skip to the following cell, which estimates the actual H1/L1 PSDs."""),
     code("""# A visual Welch construction: one transient contaminates a few windows,
 # while the median remains representative of the many quiet windows.
 from scipy.signal import get_window, periodogram, welch
@@ -5279,6 +5432,16 @@ print(band_asd[near_100] / np.median(band_asd))""",
     ),
     md(r"""## 3. Define the restricted prior
 
+Before reading the code, separate what this workshop analysis learns from what
+it assumes:
+
+| Sampled from the data | Fixed for speed |
+| --- | --- |
+| detector-frame chirp mass | both spins |
+| mass ratio | sky position |
+| coalescence time and phase | inclination and polarisation |
+| luminosity distance | calibration uncertainty |
+
 Sample detector-frame chirp mass, mass ratio, phase, coalescence time, and
 luminosity distance. Fix spins, sky position, orientation, and polarisation to
 keep the workshop runtime manageable. The prior is part of this analysis; these
@@ -5382,18 +5545,75 @@ from scipy.stats import norm
 
 rng = np.random.default_rng(20260817)
 plt.style.use("seaborn-v0_8-whitegrid")""")
+population_exact_cells = _renumber(
+    _between(lvk_source, "## 6. From events to a population"), {"6": "1"}
+)
+population_exact_cells[0] = md("""## 1. Start with the catalogue you detected
+
+Imagine an underlying population of binary masses. The detector does not see a
+random subset: louder, heavier systems are easier to detect. The observed
+catalogue can therefore have a different shape from the population that
+produced it.
+
+The next plot deliberately separates three objects:
+
+- the **underlying population** we would like to infer;
+- the **detected catalogue** selected from it;
+- the population mean inferred with and without correcting that selection.
+
+Predict first: if high-mass systems are easier to detect, should the detected
+catalogue look heavier or lighter than the underlying population?""")
 lvk_c_cells = [
     _module_intro(
         "Turn event-level information into a population statement and see why "
         "the detected catalogue is not the underlying population.",
-        "Run the selection-bias laboratory, then complete the question cell.",
+        "Run the selection-bias picture and complete its question. Stop at the "
+        "end-of-live-route marker; posterior-sample reweighting is an extension.",
         "The toy treats event masses as exactly measured. Production population "
         "inference reweights uncertain event posterior samples and estimates "
         "selection with injection campaigns.",
     ),
     population_setup,
-    *_renumber(_between(lvk_source, "## 6. From events to a population"), {"6": "1"}),
-    md(r"""## 2. Events are posteriors, not numbers
+    population_exact_cells[0],
+    *population_exact_cells[1:3],
+    md(r"""### The selection correction in one equation
+
+If $\Lambda$ describes the population, the detected catalogue contributes
+
+$$
+p(\Lambda\mid\{d_i\},\mathrm{det})\propto p(\Lambda)
+\prod_i\frac{\int p(d_i\mid\theta)p(\theta\mid\Lambda)d\theta}
+{\alpha(\Lambda)}.
+$$
+
+$\alpha(\Lambda)$ is the fraction of that proposed population the search would
+detect. Dividing by it corrects the fact that the catalogue is selected rather
+than random. For the first pass, the plot is the main lesson; this equation is
+the bookkeeping that produces the corrected blue curve."""),
+    *population_exact_cells[3:],
+    *_exercise(
+        "Use the printed MAP values to calculate how far the naive estimate and "
+        "the selection-aware estimate are from the injected population mean. "
+        "Which analysis answers the astrophysical question?",
+        """naive_error = abs(mean_grid[np.argmax(naive)] - population_mean)
+corrected_error = abs(mean_grid[np.argmax(corrected)] - population_mean)
+print("naive absolute error:", naive_error)
+print("selection-aware absolute error:", corrected_error)
+# Write one sentence interpreting the comparison.""",
+        "The detected catalogue is not a random draw from the underlying "
+        "population. The relevant curve accounts for the mass-dependent "
+        "probability of entering the catalogue.",
+        """print("The selection-aware analysis answers the population question;")
+print("the naive analysis describes the detected catalogue instead.")""",
+    ),
+    md(""":::{admonition} End of the live route
+:class: important
+
+Selection effects alone can move a population result even when every detected
+event is measured perfectly. The extension below adds the next complication:
+real events are posterior distributions rather than exact masses.
+:::"""),
+    md(r"""## Extension: events are posteriors, not numbers
 
 Section 1 treated every mass as exactly measured so that selection bias stayed
 visible on its own. Real events arrive as **posterior samples**, and that
@@ -5599,12 +5819,37 @@ lisa_a_cells = [
     _module_intro(
         "Connect LISA's source zoo to its moving constellation, delayed links, "
         "TDI variables, sensitivity, and likelihood interfaces.",
-        "Follow orbit -> links -> XYZ/AET, then the inner-product likelihood. "
-        "The Fisher section is optional.",
+        "Follow source zoo -> moving response -> sensitivity -> likelihood. The "
+        "exact link-delay and XYZ/AET construction is a read-later extension.",
     ),
     *lisa_setup,
-    *_between(lisa_source, "## 1. LISA's band and source zoo", "## 3. Real LISA data will be more complicated"),
-    *_renumber(_between(lisa_source, "## 4. Inner product, SNR, and likelihood", "## 5. The global fit: a wheel of conditional analyses"), {"4": "3"}),
+    *_between(
+        lisa_source,
+        "## 1. LISA's band and source zoo",
+        "### 1b. Orbits become six directed delays",
+    ),
+    *_between(
+        lisa_source,
+        "## 2. Sensitivity and Galactic confusion",
+        "## 3. Real LISA data will be more complicated",
+    ),
+    *_renumber(
+        _between(
+            lisa_source,
+            "## 4. Inner product, SNR, and likelihood",
+            "## Extension: Fisher forecasts for LISA",
+        ),
+        {"4": "3"},
+    ),
+    md(""":::{admonition} End of the live route
+:class: important
+
+The beginner-level chain is now complete: LISA's motion changes the response,
+the sensitivity supplies the noise weighting, and the same inner-product
+likelihood used for LVK data compares model and observation. The sections
+below expose how link measurements become TDI channels and how local Fisher
+forecasts approximate uncertainty.
+:::"""),
     md("""## Analysis-code map
 
 | Tool family | Typical role in a LISA analysis |
@@ -5619,6 +5864,25 @@ These packages are not interchangeable single commands. Each occupies a layer
 between waveform/response generation, search, likelihood construction, and
 posterior exploration. The following notebooks isolate the global-fit, PSD,
 and time-frequency layers."""),
+    md(r"""## Extension: from one-way links to XYZ/AET
+
+On a first pass, read the diagrams and outputs rather than every interpolation
+and plotting line. The important data hierarchy is
+
+$$
+\text{one-way link measurements}
+\longrightarrow \text{delayed TDI combinations}
+\longrightarrow X,Y,Z
+\longrightarrow A,E,T.
+$$
+
+The code remains visible so advanced students can trace the delay convention
+and rerun the complete chain with breathing arms."""),
+    *_between(
+        lisa_source,
+        "### 1b. Orbits become six directed delays",
+        "## 2. Sensitivity and Galactic confusion",
+    ),
     *_exercise(
         "Set `USE_BREATHING_ORBITS = True`, rerun the orbit-to-TDI chain, and "
         "compare the RMS of T against A. Why is T an approximate rather than "
@@ -5630,6 +5894,16 @@ raise NotImplementedError("report the recomputed T/A RMS ratio")""",
         "and which physical contribution is being considered.",
         """print("T/A RMS ratio:", np.std(T) / np.std(A))
 print("Interpret this for the simulated link model only, not as a universal null.")""",
+    ),
+    *_replace_in_cells(
+        _between(
+            lisa_source,
+            "## Extension: Fisher forecasts for LISA",
+            "## 5. The global fit: a wheel of conditional analyses",
+        ),
+        {
+            "## 4b. Return to the live route: LISA Analysis Tools": "### Optional package-level likelihood interface",
+        },
     ),
 ]
 write(
@@ -5649,13 +5923,21 @@ lisa_b_cells = [
     _module_intro(
         "Understand a global fit as communicating conditional analyses through "
         "a shared residual, then implement exact and Metropolis-within-Gibbs blocks.",
-        "Run the fixed-shape demonstration and the search -> seed -> cycle toy.",
+        "Run only the fixed-shape residual-handoff demonstration and its local "
+        "exercise. The search -> seed -> cycle pipeline is a read-later extension.",
         "The examples use fixed source counts or BIC enumeration and simplified "
         "responses. They are not production trans-dimensional LISA inference.",
     ),
     *lisa_setup,
     global_lisa_state,
-    *_renumber(_between(lisa_source, "## 5. The global fit: a wheel of conditional analyses", "## Optional LISA Data Challenge input and boundary"), {"5": "1", "6": "2", "7": "3"}),
+    *_renumber(
+        _between(
+            lisa_source,
+            "## 5. The global fit: a wheel of conditional analyses",
+            "## 6. A miniature teaching-toy global fit",
+        ),
+        {"5": "1"},
+    ),
     *_exercise(
         "Reverse the order of the one-pass source subtraction. Compare the final "
         "residual norm with the blocked chain. Why can one-pass subtraction "
@@ -5673,6 +5955,28 @@ for source_index in reverse_order:
     reverse_residual -= reverse_amplitudes[source_index] * template_i
 print("reverse one-pass residual norm:", global_inner(reverse_residual, reverse_residual))""",
     ),
+    md(""":::{admonition} End of the live route
+:class: important
+
+The essential global-fit idea is residual communication: every source block
+sees the data after subtracting the current models for all other blocks. A
+one-pass subtraction freezes early mistakes; repeated conditional updates can
+revisit them.
+
+The extension below adds source searches, nonlinear parameters, a noise block,
+Fisher-scaled proposals, and a fixed-count catalogue comparison. Those are
+important research ideas, but not prerequisites for understanding the shared
+residual.
+:::"""),
+    md("""## Extension: search, seed, and cycle a miniature catalogue"""),
+    *_renumber(
+        _between(
+            lisa_source,
+            "## 6. A miniature teaching-toy global fit",
+            "## Optional LISA Data Challenge input and boundary",
+        ),
+        {"6": "2", "7": "3"},
+    ),
 ]
 write(
     "06_lisa_global_fit_gibbs.ipynb",
@@ -5689,7 +5993,7 @@ lisa_c_cells = [
     _module_intro(
         "Estimate a smooth PSD with a cubic P-spline inside a Whittle likelihood "
         "and see how the roughness penalty changes the answer.",
-        "Fit the simulated spectrum, inspect posterior-predictive whitening, then "
+        "Fit the simulated spectrum, inspect a whitened-power diagnostic, then "
         "change the smoothing strength in the question cell.",
         "The coefficient band uses a local Laplace approximation. A production "
         "Bayesian P-spline analysis must sample the full posterior and validate "
@@ -5703,6 +6007,17 @@ from scipy.optimize import minimize
 rng = np.random.default_rng(20260817)
 plt.style.use("seaborn-v0_8-whitegrid")"""),
     md(r"""## 1. Why estimate the PSD inside the analysis?
+
+A raw spectrum is jagged because every frequency bin contains a new random
+noise draw. A P-spline builds a smooth curve from overlapping B-spline basis
+functions, then penalises rapid changes between neighbouring coefficients.
+The fit balances two requests:
+
+- follow broad features supported by many nearby bins;
+- do not chase every isolated periodogram spike.
+
+The parameter $\lambda$ controls that balance. Small $\lambda$ gives a flexible
+curve; large $\lambda$ gives a smoother curve.
 
 For approximately independent complex Fourier coefficients $d_k$ with
 one-sided PSD $S_k$, the Whittle negative log likelihood is, up to constants,
@@ -5798,7 +6113,7 @@ fig, ax = plt.subplots(figsize=(9, 3.4))
 ax.semilogx(frequency, whitened_power, ".", ms=2, alpha=0.25, label="bins")
 ax.semilogx(bin_frequency, bin_power, "o-", lw=2, label="log-band mean")
 ax.axhline(1, color="k", ls="--")
-ax.set(xlabel="frequency [Hz]", ylabel="whitened power", title="PSD posterior-predictive diagnostic")
+ax.set(xlabel="frequency [Hz]", ylabel="whitened power", title="Whitened-power diagnostic for the MAP PSD")
 ax.legend()
 plt.show()
 print("mean whitened power:", whitened_power.mean())""", figure="lisa-pspline-whitening"),
@@ -5837,7 +6152,7 @@ write(
 # Part 3D: repeat the global-fit wheel in WDM coefficients, now with a gap.
 wdm_global_fit_cells = [
     md(
-        r"""## 2. The same global fit, now in the WDM domain
+        r"""### Controlled three-source counterpart
 
 Nothing about blocked Gibbs sampling belongs specifically to a Fourier basis.
 Module 06 used frequency-domain residuals. Here the data model is unchanged,
@@ -6293,15 +6608,45 @@ show_animation(wdm_gibbs_animation)'''
 # Part 3D: the validated WDM laboratory is now independently runnable.
 lisa_d_cells = [
     _module_intro(
-        "Repeat the global-fit Gibbs wheel in a WDM time-frequency representation "
-        "with a real gap mask and a shared residual.",
-        "Run the gap/WDM laboratory, then compare one-pass subtraction with the "
-        "masked WDM Gibbs chain.",
+        "Use a Wilson--Daubechies--Meyer (WDM) time-frequency representation to "
+        "see where gaps and changing noise enter an analysis.",
+        "Run the gap and non-stationarity laboratory, then complete its local "
+        "question. The masked WDM global-fit counterpart is a read-later extension.",
         "The diagonal WDM likelihood is exact only under its covariance "
         "assumptions. Gaps and non-stationarity can correlate pixels.",
     ),
     *lisa_setup,
     *_renumber(_between(lisa_source, "## 3. Real LISA data will be more complicated", "## 4. Inner product, SNR, and likelihood"), {"3": "1", "4": "2"}),
+    *_exercise(
+        "Calculate the fraction of unavailable time samples and the fraction of "
+        "WDM time columns directly covering the gap. Why can the Fourier-domain "
+        "effect still spread across many frequency bins?",
+        """missing_sample_fraction = 1.0 - available.mean()
+gap_columns = (pixel_time >= GAP_DAYS[0]) & (pixel_time <= GAP_DAYS[1])
+missing_column_fraction = gap_columns.mean()
+print("missing time samples:", missing_sample_fraction)
+print("WDM columns over the gap:", missing_column_fraction)
+# Write one sentence comparing localisation in time and frequency.""",
+        "Multiplication by a gap window in time becomes a convolution in "
+        "frequency. WDM pixels retain time location, although edge pixels can "
+        "still be contaminated and correlated.",
+        """print("The gap is local in time/WDM columns but its sharp edges leak")
+print("power broadly across Fourier frequency bins.")""",
+    ),
+    md(""":::{admonition} End of the live route
+:class: important
+
+WDM does not make missing data harmless. It makes the affected time region
+visible and allows unaffected pixels to remain usable. The analysis must still
+define a mask or model for gap-edge pixels and propagate that decision into the
+likelihood.
+:::"""),
+    md("""## Extension: the global-fit residual in WDM pixels
+
+Module 06 introduced residual handoff in the frequency domain. The following
+controlled extension repeats the same fixed-shape amplitude problem using a
+single gap mask in every source and noise update. Source coupling remains even
+though the missing interval is localised."""),
     *wdm_global_fit_cells,
     *_exercise(
         "Reverse the one-pass source order and compare its masked residual norm "
@@ -6334,6 +6679,774 @@ write(
     "08_lisa_wdm_time_frequency.ipynb",
     "Part 3D: LISA WDM time-frequency analysis",
     lisa_d_cells,
+)
+
+
+# Part 4: the three algorithmic ways to make one likelihood call cheap, plus the
+# one non-algorithmic way.  Everything is measured against an exact reference
+# likelihood in the same notebook, so no speedup is taken on faith.
+fast_likelihood_cells = [
+    _module_intro(
+        "Make one log-likelihood call one hundred times cheaper without "
+        "changing the answer, and measure the error you accept in exchange.",
+        "Sections 1--4: the cost of an exact call, heterodyning, relative "
+        "binning, and the accuracy check that decides whether either is safe. "
+        "Sections 5--7 are extension material.",
+        "The waveform here is a leading-order stationary-phase inspiral with "
+        "an analytic toy PSD, which keeps every step readable. Production "
+        "implementations (`bilby.gw.likelihood.RelativeBinningGravitationalWave"
+        "Likelihood`, `ROQGravitationalWaveTransientLikelihood`) carry the "
+        "same algebra plus the bookkeeping this notebook omits.",
+    ),
+    md(r"""## 1. Where the time goes
+
+A sampler asks for $\ln\mathcal{L}$ between $10^6$ and $10^8$ times. Each call
+evaluates a waveform on every frequency bin and forms two noise-weighted inner
+products,
+
+$$
+\ln\mathcal{L}(\theta)=\langle d\mid h(\theta)\rangle
+-\tfrac12\langle h(\theta)\mid h(\theta)\rangle+\text{constant},
+\qquad
+\langle a\mid b\rangle = 4\,\mathrm{Re}\int_{f_{\rm low}}^{f_{\rm high}}
+\frac{\tilde a(f)\,\tilde b^{*}(f)}{S_n(f)}\,\mathrm{d}f .
+$$
+
+So the wall-clock cost of a run is a product of three things:
+
+$$
+T_{\rm run}\;\approx\;N_{\rm calls}\times\bigl(c_{\rm waveform}+c_{\rm inner}\bigr)
+\times N_f \big/ P .
+$$
+
+The frequency resolution is fixed by the segment duration, $\Delta f = 1/T$, so
+$N_f = T\,(f_{\rm high}-f_{\rm low})$ — a 16-second segment analysed to 1024 Hz
+already needs 16064 bins, and a long BNS segment needs half a million.
+
+This notebook attacks each factor in turn. Sections 2 and 3 cut $N_f$,
+Section 5 cuts $c_{\rm waveform}$, and Section 6 deals with $P$. Nothing here
+touches $N_{\rm calls}$; that is the sampler's problem.
+
+Start with the exact likelihood that everything else is measured against."""),
+    code(
+        """import time
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.interpolate import CubicSpline
+
+rng = np.random.default_rng(20260817)
+plt.style.use("seaborn-v0_8-whitegrid")
+
+MSUN_SECONDS = 4.9254909476412675e-6
+F_LOW, F_HIGH, DF = 20.0, 1024.0, 1.0 / 16.0
+frequency = np.arange(F_LOW, F_HIGH, DF)
+psd = 1e-46 * ((20.0 / frequency) ** 4 + 2.0 + (frequency / 200.0) ** 2)
+weight = 4.0 * DF / psd
+
+
+def inspiral_phase(f, chirp_mass, time_shift, phase_shift):
+    \"\"\"Leading-order stationary-phase inspiral phase.\"\"\"
+    mass_seconds = chirp_mass * MSUN_SECONDS
+    return (
+        2 * np.pi * f * time_shift
+        - phase_shift
+        - np.pi / 4
+        + (3 / 128) * (np.pi * mass_seconds * f) ** (-5 / 3)
+    )
+
+
+def waveform(f, chirp_mass=30.0, time_shift=0.0, phase_shift=0.0, amplitude=1.0):
+    return (
+        amplitude
+        * 1e-23
+        * f ** (-7 / 6)
+        * np.exp(1j * inspiral_phase(f, chirp_mass, time_shift, phase_shift))
+    )
+
+
+# One injection at SNR 20, and the reference point every approximation expands about.
+reference = dict(chirp_mass=30.0, time_shift=0.0, phase_shift=0.0, amplitude=1.0)
+reference["amplitude"] = 20.0 / np.sqrt(
+    np.sum(weight * np.abs(waveform(frequency, **reference)) ** 2)
+)
+reference_waveform = waveform(frequency, **reference)
+noise = (
+    rng.normal(size=frequency.size) + 1j * rng.normal(size=frequency.size)
+) * np.sqrt(psd / (8 * DF))
+data = reference_waveform + noise
+
+
+def exact_log_likelihood(parameters):
+    model = waveform(frequency, **parameters)
+    return (
+        np.sum(weight * data * model.conj()).real
+        - 0.5 * np.sum(weight * np.abs(model) ** 2)
+    )
+
+
+trial = dict(
+    chirp_mass=30.03,
+    time_shift=1.5e-4,
+    phase_shift=0.2,
+    amplitude=reference["amplitude"],
+)
+start = time.perf_counter()
+for _ in range(200):
+    exact_log_likelihood(trial)
+exact_cost = (time.perf_counter() - start) / 200
+
+print("frequency bins:", frequency.size)
+print("optimal SNR:", round(float(np.sqrt(np.sum(weight * np.abs(reference_waveform) ** 2))), 2))
+print("lnL at the reference:", round(exact_log_likelihood(reference), 3))
+print(f"exact call: {1e3 * exact_cost:.3f} ms")
+print(f"10^7 calls on one core: {1e7 * exact_cost / 3600:.1f} hours")"""
+    ),
+    md(r"""## 2. Heterodyning: divide out the carrier
+
+The waveform is not hard to represent; its *carrier phase* is. Everything in
+$\tilde h(f)$ that forces a fine grid is the rapidly winding
+$\Psi(f)$, and two nearby waveforms share almost all of it. Factor any
+$\theta$ against a fixed reference $\theta_0$,
+
+$$
+\tilde h(f;\theta) \;=\; \tilde h(f;\theta_0)\; r(f;\theta),
+\qquad
+r(f;\theta)=\frac{A(f;\theta)}{A(f;\theta_0)}\,
+e^{\,i[\Psi(f;\theta)-\Psi(f;\theta_0)]} .
+$$
+
+The exponent is now a *difference* of phases. For $\theta$ within a few standard
+deviations of the peak it moves by order one radian across the whole band, so
+$r$ is smooth: evaluate it at a few dozen nodes, spline it onto the full grid,
+and multiply by the reference waveform, which was computed once.
+
+The figure below makes the contrast concrete. The $30\,M_\odot$ binary used here
+turns through 9 cycles between 20 Hz and 1 kHz; a $1.4+1.4\,M_\odot$ binary from
+the same starting frequency turns through more than $10^{4}$ radians, which is
+why heterodyning matters most exactly where the analysis is most expensive."""),
+    code(
+        """nodes = np.geomspace(F_LOW, F_HIGH, 50)
+reference_at_nodes = waveform(nodes, **reference)
+
+
+def heterodyne_log_likelihood(parameters):
+    ratio_at_nodes = waveform(nodes, **parameters) / reference_at_nodes
+    model = reference_waveform * CubicSpline(nodes, ratio_at_nodes)(frequency)
+    return (
+        np.sum(weight * data * model.conj()).real
+        - 0.5 * np.sum(weight * np.abs(model) ** 2)
+    )
+
+
+carrier = np.cos(inspiral_phase(frequency, 30.0, 0.0, 0.0))
+trial_ratio = waveform(frequency, **trial) / reference_waveform
+node_ratio = waveform(nodes, **trial) / reference_at_nodes
+spline_ratio = CubicSpline(nodes, node_ratio)(frequency)
+carrier_swing = np.ptp(inspiral_phase(frequency, 30.0, 0.0, 0.0))
+residual_swing = np.ptp(np.unwrap(np.angle(trial_ratio)))
+
+fig, axes = plt.subplots(2, 1, figsize=(9, 5.4), sharex=True)
+axes[0].plot(frequency, carrier, color="0.35", lw=0.4)
+axes[0].set(
+    ylabel=r"$\\cos\\Psi(f)$",
+    ylim=(-1.6, 1.6),
+    title="The carrier sets the grid; the ratio to a reference does not",
+)
+axes[0].text(
+    0.985,
+    0.07,
+    rf"$\\Psi$ sweeps {carrier_swing:.0f} rad ({carrier_swing / (2 * np.pi):.0f} cycles)",
+    transform=axes[0].transAxes,
+    ha="right",
+    color="C3",
+)
+axes[1].plot(frequency, trial_ratio.real, color="C0", lw=1.6, label=r"Re $r(f)$")
+axes[1].plot(frequency, trial_ratio.imag, color="C2", lw=1.6, label=r"Im $r(f)$")
+axes[1].plot(nodes, node_ratio.real, "o", color="C3", ms=4, label="50 spline nodes")
+axes[1].plot(nodes, node_ratio.imag, "o", color="C3", ms=4)
+axes[1].set(
+    xlabel="frequency [Hz]",
+    ylim=(-0.5, 1.45),
+    xscale="log",
+    ylabel=r"$r(f)=\\tilde h(f;\\theta)/\\tilde h(f;\\theta_0)$",
+)
+axes[1].text(
+    0.985,
+    0.06,
+    rf"$\\Delta\\Psi$ sweeps {residual_swing:.1f} rad",
+    transform=axes[1].transAxes,
+    ha="right",
+    color="C3",
+)
+axes[1].legend(loc="upper left", fontsize=8, ncol=3)
+fig.tight_layout()
+plt.show()
+
+print(f"max |r - spline(r)|: {np.abs(trial_ratio - spline_ratio).max():.1e}")
+print(f"exact       lnL = {exact_log_likelihood(trial):.5f}")
+print(f"heterodyned lnL = {heterodyne_log_likelihood(trial):.5f}")""",
+        figure="fast-heterodyne",
+    ),
+    md(r"""## 3. Relative binning: do the frequency sum in advance
+
+Heterodyning still forms the inner products over all 16064 bins. Relative
+binning removes that too. Partition the band into bins with edges $f_b$ and
+midpoints $f_{m,b}$, and expand the same ratio to first order inside each bin,
+
+$$
+r(f)\;\approx\;r_{0,b}+r_{1,b}\,(f-f_{m,b}),\qquad f\in\text{bin }b .
+$$
+
+Substituting into the inner products, every sum over frequency splits into a
+piece that depends only on $(d,\tilde h_0,S_n)$ and a piece that depends only on
+the two coefficients. The first piece is the **summary data**: four arrays of
+length $N_b$, computed once,
+
+$$
+A_{0,b}=4\Delta f\!\!\sum_{f\in b}\frac{\tilde d\,\tilde h_0^{*}}{S_n},\quad
+A_{1,b}=4\Delta f\!\!\sum_{f\in b}(f-f_{m,b})\frac{\tilde d\,\tilde h_0^{*}}{S_n},\quad
+B_{0,b}=4\Delta f\!\!\sum_{f\in b}\frac{|\tilde h_0|^{2}}{S_n},\quad
+B_{1,b}=4\Delta f\!\!\sum_{f\in b}(f-f_{m,b})\frac{|\tilde h_0|^{2}}{S_n}.
+$$
+
+The likelihood then costs $N_b$ terms instead of $N_f$:
+
+$$
+\langle d\mid h\rangle\approx\sum_b\mathrm{Re}\bigl[A_{0,b}r_{0,b}^{*}
++A_{1,b}r_{1,b}^{*}\bigr],\qquad
+\langle h\mid h\rangle\approx\sum_b\bigl[B_{0,b}|r_{0,b}|^{2}
++2B_{1,b}\,\mathrm{Re}(r_{0,b}r_{1,b}^{*})\bigr].
+$$
+
+The waveform is now only ever called at the $N_b+1$ bin edges.
+
+**Choosing the bins.** A bin is narrow enough when the residual phase
+$\Delta\Psi=\Psi(\theta)-\Psi(\theta_0)$ drifts by less than a tolerance across
+it, for the *worst* $\theta$ in the prior. Measuring that drift directly over
+the corners of the prior box is the most explicit way to say it, and produces
+bins that are sub-hertz at 20 Hz and several hertz near 1 kHz. The right-hand
+panel shows what the straight line inside a bin actually misses: a residual of
+a few parts in $10^5$, with the parabolic shape of the first neglected term."""),
+    code(
+        """PRIOR_CORNERS = [
+    (30.0 + delta_mass, delta_time, delta_phase)
+    for delta_mass in (-0.05, 0.05)
+    for delta_time in (-2e-4, 2e-4)
+    for delta_phase in (-0.3, 0.3)
+]
+
+
+def bin_edges(tolerance=0.01, n_grid=4000):
+    \"\"\"Edges such that the residual phase drifts < `tolerance` rad per bin.\"\"\"
+    grid = np.linspace(F_LOW, F_HIGH, n_grid)
+    residual = np.array(
+        [
+            inspiral_phase(grid, *corner) - inspiral_phase(grid, 30.0, 0.0, 0.0)
+            for corner in PRIOR_CORNERS
+        ]
+    )
+    drift = np.abs(np.gradient(residual, grid, axis=1)).max(axis=0)
+    budget = np.concatenate([[0.0], np.cumsum(drift[1:] * np.diff(grid))])
+    n_bins = max(int(budget[-1] / tolerance), 1)
+    return np.interp(np.linspace(0.0, budget[-1], n_bins + 1), budget, grid)
+
+
+edges = bin_edges()
+start_index = np.searchsorted(frequency, edges)
+start_index[-1] = frequency.size
+midpoint = 0.5 * (edges[1:] + edges[:-1])
+offset = frequency - np.repeat(midpoint, np.diff(start_index))
+bin_sum = lambda values: np.add.reduceat(values, start_index[:-1])
+
+# Summary data: four arrays of length N_b, computed once.
+A0 = bin_sum(weight * data * reference_waveform.conj())
+A1 = bin_sum(weight * data * reference_waveform.conj() * offset)
+B0 = bin_sum(weight * np.abs(reference_waveform) ** 2)
+B1 = bin_sum(weight * np.abs(reference_waveform) ** 2 * offset)
+
+
+def binned_log_likelihood(parameters):
+    ratio = waveform(edges, **parameters) / waveform(edges, **reference)
+    r0 = 0.5 * (ratio[1:] + ratio[:-1])
+    r1 = (ratio[1:] - ratio[:-1]) / np.diff(edges)
+    data_model = np.sum(A0 * r0.conj() + A1 * r1.conj()).real
+    model_model = np.sum(B0 * np.abs(r0) ** 2 + 2 * B1 * (r0 * r1.conj()).real)
+    return data_model - 0.5 * model_model
+
+
+show = 20
+zoom = np.linspace(edges[show], edges[show + 1], 200)
+ends = edges[show : show + 2]
+zoom_ratio = waveform(zoom, **trial) / waveform(zoom, **reference)
+end_ratio = waveform(ends, **trial) / waveform(ends, **reference)
+secant = end_ratio[0] + (end_ratio[1] - end_ratio[0]) * (zoom - ends[0]) / (
+    ends[1] - ends[0]
+)
+
+fig, axes = plt.subplots(1, 2, figsize=(9, 3.8))
+axes[0].semilogy(
+    frequency, np.abs(reference_waveform) ** 2 / psd, color="0.6", lw=1.2
+)
+for edge in edges[::3]:
+    axes[0].axvline(edge, color="C0", lw=0.5, alpha=0.7)
+axes[0].axvspan(edges[show], edges[show + 1], color="C3", alpha=0.5)
+axes[0].set(
+    xlabel="frequency [Hz]",
+    ylabel=r"$|\\tilde h_0|^2/S_n$",
+    title=f"{edges.size - 1} bins from a phase-drift budget (every 3rd shown)",
+)
+axes[1].plot(zoom, 1e4 * (zoom_ratio - secant).real, color="C0", lw=2, label="real")
+axes[1].plot(
+    zoom, 1e4 * (zoom_ratio - secant).imag, color="C2", lw=2, label="imaginary"
+)
+axes[1].axhline(0, color="C3", ls="--", lw=1.4)
+axes[1].set(
+    xlabel="frequency [Hz]",
+    ylabel=r"$10^4\\times(r-\\mathrm{secant})$",
+    title=f"bin {show}: what the linear fit misses",
+)
+axes[1].legend(fontsize=8)
+fig.tight_layout()
+plt.show()
+
+start = time.perf_counter()
+for _ in range(200):
+    binned_log_likelihood(trial)
+binned_cost = (time.perf_counter() - start) / 200
+
+print(f"bins: {edges.size - 1}")
+print(f"waveform evaluations per call: {frequency.size} -> {edges.size}")
+print(f"exact  {1e3 * exact_cost:.3f} ms   relative binning {1e3 * binned_cost:.3f} ms")
+print(f"speedup: {exact_cost / binned_cost:.0f}x")""",
+        figure="fast-relative-binning",
+    ),
+    md(r"""## 4. The check that decides whether you may use them
+
+A speedup is only a speedup if the posterior is unchanged. The honest test is
+not agreement at the reference point — both methods are exact there by
+construction — but agreement across the region the sampler actually explores.
+
+A useful working threshold is $|\Delta\ln\mathcal{L}|\lesssim0.1$ over the bulk
+of the posterior; below that the induced change in the posterior is smaller
+than its own Monte Carlo noise. Both methods clear it here by two orders of
+magnitude."""),
+    code(
+        """scan = np.linspace(29.95, 30.05, 240)
+
+
+def scan_likelihood(function):
+    return np.array(
+        [function(dict(reference, chirp_mass=mass)) for mass in scan]
+    )
+
+
+exact_scan = scan_likelihood(exact_log_likelihood)
+heterodyne_scan = scan_likelihood(heterodyne_log_likelihood)
+binned_scan = scan_likelihood(binned_log_likelihood)
+
+fig, axes = plt.subplots(
+    2, 1, figsize=(9, 4.8), sharex=True, gridspec_kw=dict(height_ratios=[2, 1])
+)
+axes[0].plot(
+    scan, exact_scan, color="k", lw=3.5, alpha=0.3, label=f"exact, {frequency.size} bins"
+)
+axes[0].plot(
+    scan, heterodyne_scan, color="C0", lw=1.4, label=f"heterodyned, {nodes.size} nodes"
+)
+axes[0].plot(
+    scan,
+    binned_scan,
+    color="C3",
+    lw=1.4,
+    ls="--",
+    label=f"relative binning, {edges.size} calls",
+)
+axes[0].set(
+    ylabel=r"$\\ln\\mathcal{L}$", title="Both approximations track the exact likelihood"
+)
+axes[0].legend(fontsize=8)
+axes[1].semilogy(
+    scan, np.abs(heterodyne_scan - exact_scan), color="C0", label="heterodyned"
+)
+axes[1].semilogy(
+    scan, np.abs(binned_scan - exact_scan), color="C3", label="relative binning"
+)
+axes[1].axhline(0.1, color="k", ls=":", lw=1)
+axes[1].set(
+    xlabel=r"chirp mass $\\mathcal{M}\\,[M_\\odot]$",
+    ylabel=r"$|\\Delta\\ln\\mathcal{L}|$",
+)
+axes[1].legend(fontsize=8, ncol=2)
+fig.tight_layout()
+plt.show()
+
+print(f"worst heterodyne error:       {np.abs(heterodyne_scan - exact_scan).max():.2e}")
+print(f"worst relative-binning error: {np.abs(binned_scan - exact_scan).max():.2e}")""",
+        figure="fast-likelihood-accuracy",
+    ),
+    md(r"""## 5. Extension: reduced-order modelling
+
+Sections 2 and 3 cut $N_f$. This one cuts $c_{\rm waveform}$ — the cost of
+producing the waveform at all — and it is the factor that dominates when the
+model is an expensive numerical-relativity surrogate or an EOB waveform solved
+by ODE integration.
+
+Waveforms at nearby parameters are smooth deformations of one another, so the
+family $\{\tilde h(\cdot;\theta):\theta\in\Theta\}$ lies close to a
+low-dimensional subspace whose approximation error falls *exponentially*:
+
+$$
+\tilde h(f;\theta)\approx\sum_{i=1}^{N}c_i(\theta)\,e_i(f),
+\qquad
+\sigma_N=\max_{\theta\in\Theta}\bigl\lVert \tilde h(\theta)-P_N\tilde h(\theta)\bigr\rVert
+\sim e^{-cN}.
+$$
+
+An SVD of a training set gives the basis $\{e_i\}$, but that alone is not yet a
+speedup: computing $c_i=\langle e_i\mid \tilde h(\theta)\rangle$ still needs the
+full grid. The second half of the trick is the **empirical interpolant** —
+choose $N$ frequencies $F_j$ greedily and solve the $N\times N$ system
+
+$$
+\sum_i e_i(F_j)\,c_i=\tilde h(F_j;\theta)
+\qquad\Longrightarrow\qquad
+c=\mathbf{A}^{-1}\,\tilde h\big|_{F},
+$$
+
+with $\mathbf{A}^{-1}$ precomputed. The expensive model is then called at $N$
+frequencies only.
+
+The same idea applied to the likelihood integral rather than the waveform is
+the reduced-order quadrature (ROQ) used in production LVK analyses."""),
+    code(
+        """# Offline: a basis from the SVD of a training set.
+training = np.linspace(20.0, 40.0, 200)
+bank = np.array([waveform(frequency, chirp_mass=mass) for mass in training])
+bank /= np.linalg.norm(bank, axis=1, keepdims=True)
+all_modes = np.linalg.svd(bank, full_matrices=False)[2]
+
+
+def projection_error(n):
+    projected = (bank @ all_modes[:n].conj().T) @ all_modes[:n]
+    return np.linalg.norm(bank - projected, axis=1).max()
+
+
+sizes = np.arange(1, 61)
+errors = np.array([projection_error(n) for n in sizes])
+n_basis = int(sizes[errors < 1e-12][0])
+basis = all_modes[:n_basis]
+
+
+# Offline: greedy empirical-interpolation nodes, then one N x N inverse.
+def empirical_nodes(basis):
+    chosen = [int(np.argmax(np.abs(basis[0])))]
+    for i in range(1, len(basis)):
+        coefficients = np.linalg.solve(basis[:i, chosen].T, basis[i, chosen])
+        chosen.append(int(np.argmax(np.abs(basis[i] - coefficients @ basis[:i]))))
+    return np.array(chosen)
+
+
+eim_nodes = empirical_nodes(basis)
+interpolation_matrix = np.linalg.inv(basis[:, eim_nodes].T)
+
+
+# Online: N waveform evaluations and one matrix-vector product.
+def rom_waveform(chirp_mass):
+    at_nodes = waveform(frequency[eim_nodes], chirp_mass=chirp_mass)
+    return (interpolation_matrix @ at_nodes) @ basis
+
+
+test_mass = 27.3  # deliberately not a training point
+exact_unit = waveform(frequency, chirp_mass=test_mass)
+exact_unit /= np.linalg.norm(exact_unit)
+rom_unit = rom_waveform(test_mass)
+rom_unit /= np.linalg.norm(rom_unit)
+
+fig, axes = plt.subplots(1, 2, figsize=(9, 3.8))
+for index in range(3):
+    axes[0].semilogx(
+        frequency,
+        basis[index].real / np.abs(basis[index]).max() - 2.4 * index,
+        lw=0.9,
+        color=f"C{index}",
+        label=rf"$e_{index + 1}$",
+    )
+axes[0].set(
+    xlabel="frequency [Hz]", yticks=[], title="First three reduced-basis modes"
+)
+axes[0].legend(fontsize=8, loc="lower right")
+axes[1].semilogy(sizes, np.maximum(errors, 1e-16), color="C0", lw=2)
+axes[1].plot(n_basis, errors[n_basis - 1], "o", color="C3", ms=7)
+axes[1].annotate(
+    f"N = {n_basis}",
+    (n_basis, errors[n_basis - 1]),
+    textcoords="offset points",
+    xytext=(10, 14),
+    color="C3",
+)
+axes[1].set(
+    xlabel="basis size N",
+    ylabel="worst-case projection error",
+    title="Error falls exponentially with basis size",
+)
+fig.tight_layout()
+plt.show()
+
+print(f"basis size for 1e-12 accuracy: {n_basis}")
+print(f"waveform evaluations per call: {frequency.size} -> {eim_nodes.size}")
+print(f"interpolation error at M = {test_mass}: {np.linalg.norm(rom_unit - exact_unit):.1e}")"""
+        ,
+        figure="fast-reduced-order",
+    ),
+    md(r"""## 6. Extension: parallel likelihoods
+
+This is the one method here that does no less work. It buys latency with cores,
+and what limits it is worth understanding.
+
+Samplers differ in how much of their work is embarrassingly parallel. A single
+MCMC chain is inherently serial. An *ensemble* sampler proposes for all walkers
+at once, and a nested sampler can draw many replacement live points at the same
+time. If a fraction $p$ of the run is inside those parallel batches,
+
+$$
+S(P)=\frac{1}{(1-p)+p/P+P\,\tau_{\rm comm}/T_1}.
+$$
+
+The last term is the one people forget. Every dispatch pays serialisation of
+the parameter vector out and the scalar back — with Python's
+`multiprocessing` that is a pickle round-trip of order 10--100 µs. Once
+Sections 2--5 have brought $T_L$ down to tens of microseconds, the overhead is
+comparable to the useful work and the curve flattens well before $P=N$.
+
+Which is why, at this scale, the first thing to reach for is not more processes
+but **one array operation over the whole ensemble**. The batched relative-binning
+likelihood below evaluates every walker in a single NumPy call.
+
+For genuinely expensive likelihoods, processes are still the right answer. Run
+that as a script rather than in a notebook, and stop NumPy from oversubscribing
+the machine:
+
+```python
+import os
+os.environ["OMP_NUM_THREADS"] = "1"  # before importing numpy, in every worker
+import numpy as np
+from multiprocessing import Pool
+
+if __name__ == "__main__":  # required on macOS and Windows
+    with Pool(8) as pool:
+        values = pool.map(log_likelihood, walkers, chunksize=8)
+```
+
+`chunksize` amortises the round-trip over many tasks and is usually the
+difference between a 2x and a 7x speedup."""),
+    code(
+        """def batched_log_likelihood(chirp_masses, time_shifts, phase_shifts, amplitudes):
+    \"\"\"Relative binning for a whole ensemble in one array operation.\"\"\"
+    ratio = (
+        amplitudes[:, None]
+        * 1e-23
+        * edges ** (-7 / 6)
+        * np.exp(
+            1j
+            * inspiral_phase(
+                edges[None, :],
+                chirp_masses[:, None],
+                time_shifts[:, None],
+                phase_shifts[:, None],
+            )
+        )
+    ) / waveform(edges, **reference)
+    r0 = 0.5 * (ratio[:, 1:] + ratio[:, :-1])
+    r1 = (ratio[:, 1:] - ratio[:, :-1]) / np.diff(edges)
+    data_model = np.sum(A0 * r0.conj() + A1 * r1.conj(), axis=1).real
+    model_model = np.sum(
+        B0 * np.abs(r0) ** 2 + 2 * B1 * (r0 * r1.conj()).real, axis=1
+    )
+    return data_model - 0.5 * model_model
+
+
+n_walkers = 512
+walker_mass = rng.uniform(29.96, 30.04, n_walkers)
+walker_time = rng.uniform(-2e-4, 2e-4, n_walkers)
+walker_phase = rng.uniform(-0.3, 0.3, n_walkers)
+walker_amplitude = reference["amplitude"] * rng.uniform(0.95, 1.05, n_walkers)
+
+start = time.perf_counter()
+looped = [
+    binned_log_likelihood(
+        dict(chirp_mass=a, time_shift=b, phase_shift=c, amplitude=d)
+    )
+    for a, b, c, d in zip(walker_mass, walker_time, walker_phase, walker_amplitude)
+]
+loop_time = time.perf_counter() - start
+
+start = time.perf_counter()
+batched = batched_log_likelihood(
+    walker_mass, walker_time, walker_phase, walker_amplitude
+)
+batch_time = time.perf_counter() - start
+
+start = time.perf_counter()
+for _ in range(100):
+    heterodyne_log_likelihood(trial)
+heterodyne_cost = (time.perf_counter() - start) / 100
+
+fig, axes = plt.subplots(1, 2, figsize=(9, 3.8))
+labels = ["exact", "heterodyne", "relative\\nbinning", "batched\\nrel. binning"]
+costs = 1e3 * np.array(
+    [exact_cost, heterodyne_cost, binned_cost, batch_time / n_walkers]
+)
+axes[0].bar(labels, costs, color=["0.6", "C0", "C3", "C2"])
+axes[0].set(
+    yscale="log",
+    ylabel="time per likelihood [ms]",
+    title="Measured cost of one call",
+)
+for position, value in enumerate(costs):
+    axes[0].text(position, value * 1.3, f"{value:.3f}", ha="center", fontsize=8)
+processes = np.arange(1, 65)
+for ratio_value, style in zip([0.0, 0.01, 0.1, 1.0], ["-", "--", "-.", ":"]):
+    axes[1].plot(
+        processes,
+        processes / (1 + ratio_value * processes),
+        style,
+        color="C0",
+        label=rf"$\\tau_{{\\rm comm}}/T_L={ratio_value:g}$",
+    )
+axes[1].set(
+    xlabel="processes P",
+    ylabel="speedup",
+    title="Communication overhead caps the speedup",
+)
+axes[1].legend(fontsize=8)
+fig.tight_layout()
+plt.show()
+
+print(f"512 walkers, python loop: {1e3 * loop_time:.1f} ms")
+print(f"512 walkers, one batched call: {1e3 * batch_time:.1f} ms")
+print(f"vectorisation speedup: {loop_time / batch_time:.1f}x")
+print(f"largest disagreement: {np.abs(np.array(looped) - batched).max():.1e}")
+print(f"total speedup over the exact likelihood: {exact_cost / (batch_time / n_walkers):.0f}x")""",
+        figure="fast-parallel-scaling",
+    ),
+    md(r"""### Question
+
+The bins were built with `tolerance=0.01` radians. Rebuild them with
+tolerances 0.3, 0.1, 0.03 and 0.01, and for each one record the number of bins
+and the worst $|\Delta\ln\mathcal{L}|$ over the chirp-mass scan of Section 4.
+
+Where does the error cross the 0.1 threshold, and how many bins does that buy
+you? Write your answer in the cell immediately below. The starter runs safely
+before you edit it, so the complete notebook remains reproducible."""),
+    code(
+        """# Your code here
+tolerances = [0.3, 0.1, 0.03, 0.01]
+results_by_tolerance = {}
+print("Exercise ready:", "rebuild the summary data for each tolerance")"""
+    ),
+    md(r"""<details>
+<summary>Hint</summary>
+
+Everything downstream of `edges` has to be rebuilt: `start_index`, `offset`,
+and all four summary arrays. Wrap that in a function that returns a fresh
+`binned_log_likelihood`, then reuse `scan_likelihood` and `exact_scan`.
+</details>
+
+<details>
+<summary>Solution and check</summary>
+
+```python
+def build_binned_likelihood(tolerance):
+    local_edges = bin_edges(tolerance)
+    index = np.searchsorted(frequency, local_edges)
+    index[-1] = frequency.size
+    local_offset = frequency - np.repeat(
+        0.5 * (local_edges[1:] + local_edges[:-1]), np.diff(index)
+    )
+    total = lambda values: np.add.reduceat(values, index[:-1])
+    a0 = total(weight * data * reference_waveform.conj())
+    a1 = total(weight * data * reference_waveform.conj() * local_offset)
+    b0 = total(weight * np.abs(reference_waveform) ** 2)
+    b1 = total(weight * np.abs(reference_waveform) ** 2 * local_offset)
+
+    def likelihood(parameters):
+        ratio = waveform(local_edges, **parameters) / waveform(local_edges, **reference)
+        r0 = 0.5 * (ratio[1:] + ratio[:-1])
+        r1 = (ratio[1:] - ratio[:-1]) / np.diff(local_edges)
+        return (
+            np.sum(a0 * r0.conj() + a1 * r1.conj()).real
+            - 0.5 * np.sum(b0 * np.abs(r0) ** 2 + 2 * b1 * (r0 * r1.conj()).real)
+        )
+
+    return local_edges.size - 1, likelihood
+
+for tolerance in tolerances:
+    n_bins, likelihood = build_binned_likelihood(tolerance)
+    worst = np.abs(scan_likelihood(likelihood) - exact_scan).max()
+    results_by_tolerance[tolerance] = (n_bins, worst)
+    print(f"tolerance {tolerance:>5}: {n_bins:>4} bins, worst dlnL = {worst:.2e}")
+```
+
+The error scales roughly as the square of the tolerance, because the neglected
+term is the quadratic one plotted in Section 3. Tightening the tolerance
+tenfold costs ten times as many bins and buys a hundredfold accuracy, so the
+crossing point is worth locating rather than guessing.
+</details>"""),
+    md(r"""## 7. Other directions, in one paragraph each
+
+**Simulation-based inference.** Train a normalising flow to map data directly
+to a posterior, amortising the whole cost into a one-off training stage and
+returning samples in seconds. It removes the likelihood rather than speeding it
+up, which also removes the ability to check it directly; validation is by
+coverage tests and by importance-reweighting against the true likelihood.
+`DINGO` is the reference implementation.
+
+**Gradient-based sampling.** Hamiltonian Monte Carlo and NUTS scale far better
+with parameter dimension than random-walk or ensemble methods, which matters
+for the 15+ dimensions of a precessing signal with calibration marginalisation.
+The prerequisite is $\nabla_\theta\ln\mathcal{L}$, so the waveform must be
+written in an autodiff framework — hence the JAX reimplementations of the PN
+and phenomenological families. Everything in this notebook stays
+differentiable, so the two compose.
+
+**Hardware and precision.** GPU-resident likelihoods batched over the whole
+ensemble, and single precision where the SNR does not justify double.
+Unglamorous, and frequently the largest single factor available.
+
+**Marginalisation.** Analytic or semi-analytic marginalisation over distance,
+coalescence phase and time removes dimensions from the sampled space instead of
+making each call cheaper. It is the cheapest speedup on this list whenever the
+model permits it, and it is often overlooked."""),
+    md(r"""## What to take away
+
+- The three algorithmic methods multiply together; parallelism is orthogonal
+  and should be applied last, to whatever is left.
+- Heterodyning and relative binning are the same idea at two depths. Relative
+  binning is the faster of the two once you can afford to precompute summary
+  data; the explicit spline is more flexible when the reference or PSD changes
+  often.
+- All of them rest on a reference point $\theta_0$ near the peak. Finding a
+  good one by optimisation is not a preliminary — it is the load-bearing step.
+- The summary data bakes in $d$, $S_n$ and $\theta_0$. A re-estimated PSD, a
+  different segment, or calibration marginalisation means rebuilding it.
+- A reduced-order model is an interpolant, and interpolants do not extrapolate.
+  Outside the training box the error is unbounded and gives no warning.
+- Validate on posterior samples, not at the reference. Re-evaluating the exact
+  likelihood at a few thousand final samples and reweighting turns the whole
+  approximation into an exact result with a computable efficiency.
+
+**Further reading.** Zackay, Dai & Venumadhav, arXiv:1806.08792 (relative
+binning); Cornish, Phys. Rev. D 104, 104054 (heterodyned likelihood); Field
+et al., Phys. Rev. X 4, 031006 (surrogate models); Canizares et al.,
+Phys. Rev. Lett. 114, 071104 (reduced-order quadrature); Dax et al.,
+Phys. Rev. Lett. 127, 241103 (neural posterior estimation); Wong, Isi &
+Edwards, arXiv:2302.05333 (gradient-based sampling)."""),
+]
+write(
+    "10_fast_likelihoods.ipynb",
+    "Part 4: Fast likelihoods",
+    fast_likelihood_cells,
 )
 
 
@@ -6413,11 +7526,22 @@ print("Detector arrays:", {name: values.shape for name, values in strain.items()
 
 def challenge_task(number, title, prompt, starter):
     """A runnable blind task with no answer embedded in the student notebook."""
+    task_code = code(starter)
+    if len(task_code.source.splitlines()) > 70:
+        task_code.source = (
+            "# @title Supplied machinery -- run this cell, inspect the output\n"
+            + task_code.source
+        )
+        task_code.metadata["tags"] = ["hide-input"]
+        task_code.metadata["jupyter"] = {"source_hidden": True}
     return [
-        md(f"""## {number}. {title}
+        md(f"""## Task {number}: {title}
 
 {prompt}"""),
-        code(starter),
+        task_code,
+        md("""> **Record before continuing:** write one or two sentences stating
+what you observed, the decision you made, and the evidence from the output.
+Edit this Markdown cell or keep notes beside the notebook."""),
     ]
 
 
@@ -6426,8 +7550,9 @@ student_challenge_cells = [
         "Search two synthetic detector streams for compact-binary signals, "
         "separate a detector transient from an astrophysical coincidence, "
         "estimate off-source PSDs, and run restricted parameter estimation.",
-        "Complete Tasks 1--7 in order. Record candidate times before opening "
-        "any instructor material.",
+        "Use this as a capstone after Modules 01--03, not as part of the first "
+        "two-hour live route. Complete Tasks 1--7 in order and record each "
+        "decision before opening instructor material.",
         "This is a controlled classroom challenge: Gaussian line-free noise, "
         "Newtonian inspiral teaching signals, fixed response and mass ratio for PE, no "
         "calibration uncertainty, and no false-alarm-rate claim.",
@@ -6509,7 +7634,7 @@ mass_grid = np.linspace(16.5, 41.0, 200)
 fig, ax = plt.subplots(figsize=(7, 3.5))
 ax.plot(mass_grid, inspiral_time(mass_grid))
 ax.axhline(analysis_duration, color="C3", ls="--", label="chosen segment")
-ax.set(xlabel=r"chirp mass [$M_\\odot$]", ylabel="time from 20 Hz [s]")
+ax.set(xlabel=r"chirp mass [$M_\odot$]", ylabel="time from 20 Hz [s]")
 ax.legend()
 plt.show()""",
     ),
@@ -6830,9 +7955,17 @@ $$
 \frac{a^*(f)b(f)}{S_n(f)}\,\Delta f.
 $$
 
-Read the class from top to bottom and locate: (1) the eight-second data segment,
-(2) the fixed quantities, (3) where chirp mass changes the waveform, and (4)
-where coalescence time enters. You do not need to rewrite this class."""
+On a first pass, treat the class as supplied machinery. Use its short interface:
+
+| Input | Meaning |
+| --- | --- |
+| `chirp_mass` | changes the inspiral phase evolution |
+| `geocent_time` | shifts the same model in time |
+| candidate specification | supplies the fixed response, mass ratio, amplitude, and phase |
+
+Locate those three inputs and the returned log likelihood; do not read or
+rewrite every implementation line. The complete class remains visible for
+students who want to inspect the FFT and detector bookkeeping later."""
     ),
     *challenge_task(
         7,
