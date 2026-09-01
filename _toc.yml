@@ -7,6 +7,7 @@ parts:
   - caption: Part 1 — Bayesian inference
     chapters:
       - file: notebooks/01_bayesian_inference
+      - file: notebooks/01b_bayesian_samplers
   - caption: Part 2 — LVK
     chapters:
       - file: notebooks/02_lvk_signals_injections

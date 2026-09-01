@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-for source in notebook_sources/*.py; do
-    name="${source##*/}"
-    uv run --locked jupytext \
-        --to notebook \
-        --output "notebooks/${name%.py}.ipynb" \
-        "$source"
-done
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+uv run --locked python scripts/build_notebooks.py

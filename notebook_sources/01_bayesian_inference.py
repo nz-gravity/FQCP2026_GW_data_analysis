@@ -66,13 +66,24 @@
 # the best-fitting line.
 
 # %%
+import importlib.util
 import os
+import subprocess
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from IPython.display import HTML, display
 from matplotlib.animation import FuncAnimation
 
 IN_COLAB = "COLAB_RELEASE_TAG" in os.environ
+if importlib.util.find_spec("numpyro") is None:
+    if IN_COLAB:
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "-q", "numpyro==0.21.0"]
+        )
+    else:
+        raise ImportError("Install numpyro==0.21.0, or run this notebook in Colab.")
+
 rng = np.random.default_rng(20260817)
 plt.style.use("seaborn-v0_8-whitegrid")
 
@@ -225,6 +236,82 @@ plt.show()
 # <summary><i>Expected output &mdash; open this if your cell has not run yet</i></summary>
 #
 # <img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/basics-grid-posterior.png" alt="expected output: basics-grid-posterior" style="max-width:100%">
+#
+# </details>
+
+# %% [markdown]
+# ### Now let a sampler explore the same posterior
+#
+# The grid above **defined and displayed** the posterior. NumPyro now gives NUTS
+# the same prior, signal model, likelihood, and data. The sampler changes how we
+# explore the posterior; it does not change the posterior itself.
+#
+# You do not need to understand NUTS today. Read the model from top to bottom:
+# sample a slope, sample an intercept, predict the data, and compare that
+# prediction with the observations using the same Gaussian noise model.
+
+# %% fqcp_figure="basics-numpyro-posterior"
+import jax.numpy as jnp
+from jax import random as jax_random
+import numpyro
+import numpyro.distributions as dist
+from numpyro.infer import MCMC, NUTS
+
+
+def numpyro_line_model(time, observed=None):
+    m = numpyro.sample("m", dist.Uniform(0.0, 1.5))
+    c = numpyro.sample("c", dist.Uniform(-5.0, 5.0))
+    mean = m * time + c
+    numpyro.sample("data", dist.Normal(mean, sigma), obs=observed)
+
+
+nuts_run = MCMC(
+    NUTS(numpyro_line_model),
+    num_warmup=400,
+    num_samples=1000,
+    progress_bar=False,
+)
+nuts_run.run(jax_random.PRNGKey(2026), jnp.asarray(time), jnp.asarray(data))
+nuts_draws = {name: np.asarray(values) for name, values in nuts_run.get_samples().items()}
+
+fig, axes = plt.subplots(1, 3, figsize=(12, 3.4))
+axes[0].contour(m_grid, c_grid, posterior.T, levels=7, cmap="magma")
+axes[0].scatter(nuts_draws["m"], nuts_draws["c"], s=5, alpha=0.15)
+axes[0].plot(true_parameters["m"], true_parameters["c"], "c*", ms=11)
+axes[0].set(xlabel="slope m", ylabel="intercept c", title="NUTS draws on grid posterior")
+for ax, name, grid, exact, truth in zip(
+    axes[1:],
+    ["m", "c"],
+    [m_grid, c_grid],
+    [np.trapezoid(posterior, c_grid, axis=1), np.trapezoid(posterior, m_grid, axis=0)],
+    true_parameters.values(),
+):
+    ax.hist(nuts_draws[name], bins=35, density=True, alpha=0.45, label="NUTS")
+    ax.plot(grid, exact, color="C3", lw=2, label="exact grid")
+    ax.axvline(truth, color="k", ls="--", label="injected")
+    ax.set(xlabel=name, ylabel="posterior density", title=f"sampled {name} posterior")
+axes[1].legend(fontsize=8)
+plt.tight_layout()
+plt.show()
+
+print("posterior draws:", len(nuts_draws["m"]))
+
+# %% [markdown]
+# :::{admonition} Live demonstration, not a convergence claim
+# :class: warning
+#
+# This short single-chain run is enough to connect code with a sampled
+# posterior because the exact grid is available as a check. Real parameter
+# estimation uses multiple chains or independent runs and checks divergences,
+# effective sample size, convergence, and missed modes. The
+# [sampler extension lab](01b_bayesian_samplers.ipynb) develops those ideas.
+# :::
+
+# %% [markdown]
+# <details>
+# <summary><i>Expected output &mdash; open this if your cell has not run yet</i></summary>
+#
+# <img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/basics-numpyro-posterior.png" alt="expected output: basics-numpyro-posterior" style="max-width:100%">
 #
 # </details>
 
@@ -623,156 +710,143 @@ print("Exercise ready:", "recompute the posterior with assumed_sigma")
 # </details>
 
 # %% [markdown]
-# ## 5. The gravitational-wave bridge: PSD and Whittle likelihood
+# ## 5. The gravitational-wave bridge: the same likelihood in frequency
 #
-# A power spectral density (PSD) describes how a stationary random process's
-# variance is distributed over frequency. For one-sided $S_n(f)$,
-# $S_n(f)\,df$ is the expected noise variance in a small positive-frequency band.
-# Its units are strain$^2$/Hz; the amplitude spectral density (ASD)
-# $\sqrt{S_n(f)}$ has units strain/$\sqrt{\mathrm{Hz}}$.
+# Nothing fundamentally new happens here. In Sections 1--4 we assumed
 #
-# For an approximately stationary, Gaussian time series, well-behaved Fourier
-# coefficients are approximately independent complex Gaussians. This gives the
-# Whittle approximation
+# $$
+# d_i\sim\mathcal N\!\left(h_i(\theta),\sigma^2\right).
+# $$
+#
+# Every time sample had the same independent variance. That is **white noise**:
+# its variance is spread uniformly over frequency, so its power spectral density
+# (PSD) is flat.
+#
+# Real detector noise is coloured. Nearby time samples are then correlated, but
+# for a stationary Gaussian process the Fourier coefficients are approximately
+# independent. The same Gaussian likelihood becomes
+#
+# $$
+# \widetilde d_k\sim
+# \mathcal{CN}\!\left(\widetilde h_k(\theta),
+# \frac{S_n(f_k)}{4\,\Delta f}\right),
+# $$
+#
+# where $S_n(f)$ is the one-sided PSD. In words:
+#
+# > each Fourier mode is Gaussian around signal + noise, and the PSD tells us
+# > the expected noise variance of that mode.
+#
+# This is the precise version of the “noisy pixels” picture. Raw time samples or
+# image pixels have a covariance matrix; the PSD is the variance map only after
+# transforming a stationary process into Fourier modes.
+
+# %% [markdown]
+# ### From residuals to the Whittle likelihood
+#
+# For residual $\widetilde r_k=\widetilde d_k-\widetilde h_k(\theta)$,
 #
 # $$
 # \log \mathcal L(d\mid\theta,S_n)
 # \simeq -\frac{1}{2}\sum_k
-# \left[\frac{4\,\Delta f\,|\tilde d_k-\tilde h_k(\theta)|^2}{S_n(f_k)}
-# +\log S_n(f_k)\right]+C.
+# \left[
+# \frac{4\,\Delta f\,|\widetilde r_k|^2}{S_n(f_k)}
+# +\log S_n(f_k)
+# \right]+C.
 # $$
 #
-# When the PSD is fixed, the $\log S_n$ term is constant and we often write
+# When the PSD is fixed, this is often written
 #
 # $$
 # \log\mathcal L=-\frac12(d-h\mid d-h)+C,\qquad
 # (a\mid b)=4\,\mathrm{Re}\sum_k
-# \frac{\tilde a_k\tilde b_k^*}{S_n(f_k)}\Delta f.
+# \frac{\widetilde a_k\widetilde b_k^*}{S_n(f_k)}\Delta f.
 # $$
 #
-# The inverse PSD is therefore a frequency-dependent weight: residual power in a
-# quiet band matters more. Gaps, strong lines, spectral leakage, and
-# non-stationarity couple Fourier bins and weaken the simple independence
-# approximation.
+# Compare this with the first Gaussian likelihood: residual squared divided by
+# variance. The only change is that each frequency receives its own variance.
+# Quiet frequencies receive more weight; noisy frequencies receive less.
 
-# %%
-from scipy.signal import welch
+# %% [markdown]
+# **Predict before running:** The raw trace below contains a chirp and strong
+# low-frequency noise. After division by the noise ASD, which feature should
+# become easier to see: the low-frequency wander or the chirp?
 
-sample_rate = 512
-duration = 32
-noise_time = np.arange(0, duration, 1 / sample_rate)
-noise_frequency = np.fft.rfftfreq(noise_time.size, 1 / sample_rate)
+# %% fqcp_figure="basics-psd-whitening-bridge"
+from scipy.signal import chirp, spectrogram, welch, windows
 
-# A deliberately non-white spectrum: large low-frequency noise and a mild
-# high-frequency rise. The absolute normalisation is arbitrary in this toy.
-noise_shape = (
-    1 + (30 / np.maximum(noise_frequency, 1)) ** 4 + (noise_frequency / 180) ** 2
+bridge_rate = 512
+bridge_duration = 8.0
+bridge_time = np.arange(0, bridge_duration, 1 / bridge_rate)
+bridge_frequency = np.fft.rfftfreq(bridge_time.size, 1 / bridge_rate)
+
+# A smooth toy PSD shape: loud at low frequency, quiet in the middle, then rising.
+noise_psd_shape = (
+    1
+    + (45 / np.maximum(bridge_frequency, 1)) ** 4
+    + (bridge_frequency / 220) ** 2
 )
-white_draw = rng.normal(size=noise_time.size)
+noise_psd_shape[0] = noise_psd_shape[1]
+
+white_noise = rng.normal(size=bridge_time.size)
 coloured_noise = np.fft.irfft(
-    np.fft.rfft(white_draw) * np.sqrt(noise_shape), n=noise_time.size
+    np.fft.rfft(white_noise) * np.sqrt(noise_psd_shape),
+    n=bridge_time.size,
 )
+coloured_noise /= np.std(coloured_noise)
+
+bridge_signal = 0.32 * windows.tukey(bridge_time.size, alpha=0.35) * chirp(
+    bridge_time,
+    f0=8,
+    f1=180,
+    t1=bridge_duration,
+    method="quadratic",
+)
+bridge_data = coloured_noise + bridge_signal
+whitened_data = np.fft.irfft(
+    np.fft.rfft(bridge_data) / np.sqrt(noise_psd_shape),
+    n=bridge_time.size,
+)
+whitened_signal = np.fft.irfft(
+    np.fft.rfft(bridge_signal) / np.sqrt(noise_psd_shape),
+    n=bridge_time.size,
+)
+
 psd_frequency, estimated_psd = welch(
     coloured_noise,
-    fs=sample_rate,
-    nperseg=2048,
+    fs=bridge_rate,
+    nperseg=1024,
     average="median",
 )
 
-fig, axes = plt.subplots(1, 2, figsize=(11, 3.3))
-axes[0].plot(noise_time[: 4 * sample_rate], coloured_noise[: 4 * sample_rate])
-axes[0].set(
+fig, axes = plt.subplots(2, 2, figsize=(12, 7), constrained_layout=True)
+axes[0, 0].plot(bridge_time, bridge_data, lw=0.8, label="data")
+axes[0, 0].plot(bridge_time, bridge_signal, lw=1.5, label="signal")
+axes[0, 0].set(
     xlabel="time [s]",
-    ylabel="noise [toy units]",
-    title="One coloured-noise realisation",
+    ylabel="amplitude [toy units]",
+    title="Time series: signal + coloured noise",
 )
-axes[1].loglog(psd_frequency[1:], np.sqrt(estimated_psd[1:]))
-axes[1].set(
+axes[0, 0].legend()
+
+axes[0, 1].loglog(psd_frequency[1:], estimated_psd[1:], color="C3")
+axes[0, 1].set(
     xlabel="frequency [Hz]",
-    ylabel=r"ASD [toy units/$\sqrt{\mathrm{Hz}}$]",
-    title="Welch estimate of the ASD",
-)
-plt.show()
-
-# %% [markdown]
-# ### Optional audio analogy: hear and see what whitening does
-#
-# - This is **not detector strain converted to sound**. It is an audible toy: a
-#   chirp buried in coloured noise.
-# - Whitening divides each Fourier component by the noise ASD,
-#   $\tilde d(f)\rightarrow\tilde d(f)/\sqrt{S_n(f)}$, which is the same
-#   inverse-noise weighting the Whittle likelihood applies.
-# - Listen first, then look at the spectrograms. The low-frequency noise wall
-#   carries almost all the power, which is why the raw clip sounds like rumble.
-# - After whitening every frequency carries comparable noise, so the chirp
-#   becomes the loudest and the brightest feature.
-
-# %%
-from IPython.display import Audio
-from scipy.signal import chirp
-
-audio_rate = 4096
-audio_duration = 3.0
-audio_time = np.arange(0, audio_duration, 1 / audio_rate)
-audio_frequency = np.fft.rfftfreq(audio_time.size, 1 / audio_rate)
-
-audio_noise_shape = 1 + (450 / np.maximum(audio_frequency, 20)) ** 4
-audio_noise = np.fft.irfft(
-    np.fft.rfft(rng.normal(size=audio_time.size)) * np.sqrt(audio_noise_shape),
-    n=audio_time.size,
-)
-audio_signal = 0.8 * chirp(
-    audio_time,
-    f0=250,
-    f1=1200,
-    t1=audio_duration,
-    method="quadratic",
-)
-audio_data = audio_noise + audio_signal
-
-whitened_audio = np.fft.irfft(
-    np.fft.rfft(audio_data) / np.sqrt(audio_noise_shape), n=audio_time.size
+    ylabel="PSD [toy units$^2$/Hz]",
+    title="Noise variance depends on frequency",
 )
 
-
-def safe_audio(values):
-    values = values / np.max(np.abs(values))
-    return Audio(values, rate=audio_rate, normalize=False)
-
-
-print("Coloured data: the chirp is partly masked")
-display(safe_audio(audio_data))
-print("Whitened data: frequencies are placed on a comparable noise scale")
-display(safe_audio(whitened_audio))
-
-# %%
-from scipy.signal import spectrogram
-
-fig, axes = plt.subplots(
-    1,
-    3,
-    figsize=(13, 3.9),
-    sharey=True,
-    gridspec_kw={"width_ratios": [1, 3, 3], "wspace": 0.08},
-)
-f_top = 1600
-
-axes[0].loglog(np.sqrt(audio_noise_shape[1:]), audio_frequency[1:], color="C3")
-axes[0].invert_xaxis()
-axes[0].set(
-    ylim=(20, f_top),
-    xlabel="noise ASD",
-    ylabel="frequency [Hz]",
-    title="the weight",
-)
-
-for ax, series, title in zip(
-    axes[1:], [audio_data, whitened_audio], ["coloured data", "whitened data"]
-):
+for ax, series, title in [
+    (axes[1, 0], bridge_data, "Before PSD weighting"),
+    (axes[1, 1], whitened_data, "After whitening by $\sqrt{S_n(f)}$"),
+]:
     spec_f, spec_t, power = spectrogram(
-        series, fs=audio_rate, nperseg=256, noverlap=224
+        series,
+        fs=bridge_rate,
+        nperseg=256,
+        noverlap=224,
     )
-    band = (spec_f > 20) & (spec_f < f_top)
+    band = (spec_f >= 5) & (spec_f <= 220)
     decibels = 10 * np.log10(power[band] + 1e-20)
     ax.pcolormesh(
         spec_t,
@@ -780,12 +854,66 @@ for ax, series, title in zip(
         decibels,
         shading="auto",
         cmap="magma",
-        vmin=np.percentile(decibels, 5),
-        vmax=np.percentile(decibels, 99.7),
+        vmin=np.percentile(decibels, 10),
+        vmax=np.percentile(decibels, 99.5),
     )
-    ax.set(xlabel="time [s]", title=title)
-axes[1].set_yscale("log")
+    ax.set(xlabel="time [s]", ylabel="frequency [Hz]", title=title)
+
 plt.show()
+
+# %% [markdown]
+# ### Code studio: whiten one data vector
+#
+# Complete the one Fourier-domain operation below. Divide each Fourier
+# coefficient by the square root of its expected noise power, then run the
+# check.
+
+# %%
+student_whitened_frequency = None  # YOUR CODE HERE
+
+if student_whitened_frequency is None:
+    print("Your turn: whiten np.fft.rfft(bridge_data) using noise_psd_shape.")
+else:
+    expected = np.fft.rfft(bridge_data) / np.sqrt(noise_psd_shape)
+    np.testing.assert_allclose(student_whitened_frequency, expected)
+    student_whitened_time = np.fft.irfft(
+        student_whitened_frequency,
+        n=bridge_time.size,
+    )
+    print("check passed:", student_whitened_time.shape)
+
+# %% [markdown]
+# <details>
+# <summary>Show one possible solution</summary>
+#
+# ```python
+# student_whitened_frequency = (
+#     np.fft.rfft(bridge_data) / np.sqrt(noise_psd_shape)
+# )
+# ```
+#
+# </details>
+
+# %% [markdown]
+# Whitening does not manufacture a signal. It changes coordinates so that every
+# Fourier mode is measured in units of its expected noise:
+#
+# $$
+# \widetilde d_w(f)=\frac{\widetilde d(f)}{\sqrt{S_n(f)}}.
+# $$
+#
+# The bright track is now easier to see because the low-frequency noise wall no
+# longer dominates the scale. The LVK notebooks keep this logic but replace the
+# toy chirp and toy PSD with physical waveforms, detector data, and an
+# off-source PSD estimate.
+#
+# :::{admonition} Boundary
+# :class: warning
+#
+# This diagonal Fourier-bin likelihood assumes approximate stationarity and
+# well-behaved data. Gaps, glitches, strong lines, and time-varying noise create
+# correlations that a single diagonal PSD does not describe.
+# :::
 
 # %% [markdown]
 # :::{admonition} End of the live route
@@ -800,447 +928,10 @@ plt.show()
 # \longrightarrow \text{checks}.
 # $$
 #
-# The remaining sections explain how real analyses explore a posterior when a
-# grid is impossible. They are reference material for a second pass.
+# For a comparison of NUTS, Metropolis, nested sampling, and variational
+# inference, continue to the independently runnable
+# [sampler extension lab](01b_bayesian_samplers.ipynb).
 # :::
-
-# %% [markdown]
-# ## Read later: replacing the grid with samplers
-#
-# The live lesson used a grid because it makes the prior, likelihood, and
-# posterior visible. Real gravitational-wave problems have too many parameters
-# for a grid. The next two sections retain readable teaching implementations of
-# the two main alternatives: Metropolis--Hastings for posterior samples and
-# nested sampling for posterior samples plus evidence.
-
-# %% [markdown]
-# ## Sampler 1: Metropolis--Hastings
-#
-# - A grid with $n$ points per axis and $D$ parameters costs $n^D$ likelihood
-#   evaluations.
-#
-# $$
-# \text{cost}=n^D,\qquad D_{\rm BBH}\approx15,\ n=20
-# \ \Rightarrow\ 20^{15}\approx3\times10^{19}.
-# $$
-#
-# - At 1 ms per waveform that is about a **billion years**.
-# - The posterior occupies a vanishingly small fraction of that volume, so almost
-#   every grid point is wasted.
-# - Stochastic samplers spend their effort where the posterior has mass. The next
-#   three sections build the two that dominate gravitational-wave work:
-#   **MCMC** for parameters, **nested sampling** for evidence.
-
-# %%
-dimensions = np.arange(1, 16)
-grid_cost = 20.0**dimensions
-seconds_per_likelihood = 1e-3
-
-fig, ax = plt.subplots(figsize=(7.5, 3.3))
-ax.semilogy(dimensions, grid_cost * seconds_per_likelihood / (3600 * 24 * 365), "o-")
-ax.axhline(1, color="C3", ls="--", label="one year of computing")
-ax.set(
-    xlabel="number of parameters",
-    ylabel="grid cost [years]",
-    title="A 20-point-per-axis grid at 1 ms per likelihood",
-)
-ax.legend()
-plt.show()
-
-print(f"Two parameters: {20**2:,} evaluations")
-print(f"Fifteen parameters: {20**15:.2e} evaluations")
-
-# %% [markdown]
-# ### Metropolis-Hastings in twelve lines
-#
-# From the current point $\theta$, repeat:
-#
-# $$
-# \theta'=\theta+\mathcal N(0,\Sigma_{\rm prop}),\qquad
-# \alpha=\min\left[1,\;
-# \frac{\mathcal L(\theta')\,\pi(\theta')}{\mathcal L(\theta)\,\pi(\theta)}\right],
-# $$
-#
-# accept $\theta'$ with probability $\alpha$, otherwise **store $\theta$ again**.
-#
-# - Only the *ratio* is needed, so the evidence $\mathcal Z$ cancels. This is why
-#   MCMC works when the normalisation is unknown.
-# - Repeating a rejected point is not a bug: it is how the chain accumulates
-#   density where the posterior is large.
-# - The output is a set of **correlated** draws whose histogram converges to the
-#   posterior. Correlated is fine; it just costs effective samples (Section 5.3).
-# - Uphill moves are always accepted; downhill moves are accepted sometimes. That
-#   is what stops the chain collapsing onto the maximum-likelihood point.
-
-# %%
-PRIOR_BOX = np.array([[0.0, 1.5], [-5.0, 5.0]])  # rows: m, c
-
-
-def log_posterior(theta):
-    """Unnormalised log posterior: flat prior inside the box, zero outside."""
-    if np.any(theta < PRIOR_BOX[:, 0]) or np.any(theta > PRIOR_BOX[:, 1]):
-        return -np.inf
-    return log_likelihood(theta[0], theta[1])
-
-
-def metropolis(log_target, start, n_steps, step_size, rng):
-    """Random-walk Metropolis. Returns the chain and the acceptance fraction."""
-    chain = np.empty((n_steps, len(start)))
-    current = np.asarray(start, dtype=float)
-    current_logp = log_target(current)
-    n_accepted = 0
-    for step in range(n_steps):
-        proposal = current + rng.normal(0.0, step_size)
-        proposal_logp = log_target(proposal)
-        if np.log(rng.uniform()) < proposal_logp - current_logp:
-            current, current_logp = proposal, proposal_logp
-            n_accepted += 1
-        chain[step] = current
-    return chain, n_accepted / n_steps
-
-
-sampler_rng = np.random.default_rng(4)
-chain, acceptance = metropolis(
-    log_posterior,
-    start=[1.35, -4.0],  # deliberately a bad starting guess
-    n_steps=6000,
-    step_size=np.array([0.12, 0.7]),
-    rng=sampler_rng,
-)
-print(f"acceptance fraction: {acceptance:.2f}")
-print(f"chain shape: {chain.shape}")
-
-# %% [markdown]
-# ### Animation: watch the chain find the posterior
-#
-# Two distinct phases to look for:
-#
-# - **Burn-in** — a directed climb from the deliberately bad start in the corner,
-#   where the posterior is negligible. These samples describe where we started,
-#   not the posterior, so they are discarded.
-# - **Sampling** — the walker wanders up and down the degeneracy ridge. This is
-#   the part that is actually a draw from the posterior.
-#
-# The trace panel on the right is the standard way to spot the transition.
-
-# %%
-frame_steps = np.arange(20, 1400, 26)
-fig, (walk_ax, trace_ax) = plt.subplots(1, 2, figsize=(10, 3.6), dpi=72)
-walk_ax.contour(m_grid, c_grid, posterior.T, levels=6, cmap="magma")
-(path,) = walk_ax.plot([], [], lw=0.7, color="C0", alpha=0.8)
-(head,) = walk_ax.plot([], [], "o", color="C3", ms=7)
-walk_ax.plot(true_parameters["m"], true_parameters["c"], "c*", ms=12)
-walk_ax.set(xlim=(0, 1.5), ylim=(-5, 5), xlabel="slope m", ylabel="intercept c")
-(trace_line,) = trace_ax.plot([], [], lw=0.8, color="C0")
-trace_ax.axhline(true_parameters["m"], color="k", ls="--")
-trace_ax.set(xlim=(0, frame_steps[-1]), ylim=(0, 1.5), xlabel="step", ylabel="slope m")
-
-
-def animate_chain(i):
-    n = frame_steps[i]
-    path.set_data(chain[:n, 0], chain[:n, 1])
-    head.set_data([chain[n - 1, 0]], [chain[n - 1, 1]])
-    trace_line.set_data(np.arange(n), chain[:n, 0])
-    walk_ax.set_title(f"step {n}")
-    return path, head, trace_line
-
-
-chain_animation = FuncAnimation(
-    fig, animate_chain, frames=len(frame_steps), interval=80
-)
-plt.close(fig)
-show_animation(chain_animation)
-
-# %% [markdown]
-# ### The proposal scale controls everything
-#
-# A chain can be correct in principle and useless in practice:
-#
-# - **Steps too small** — almost everything is accepted, but the walker crawls
-#   and never crosses the posterior. Watch the printed mean below: it is badly
-#   wrong, from code that has no bug.
-# - **Steps too large** — almost every proposal lands somewhere absurd and is
-#   rejected, so the chain sits still.
-# - **Well tuned** — acceptance around 0.2-0.3 for random-walk Metropolis.
-#
-# Both failures look the same in the end: a chain that has not forgotten where it
-# started. `emcee`, `dynesty`, and `bilby` automate the tuning, but these failure
-# modes are exactly what their convergence diagnostics are looking for.
-
-# %%
-settings = [
-    ("too small", np.array([0.004, 0.02])),
-    ("well tuned", np.array([0.12, 0.7])),
-    ("too large", np.array([1.2, 7.0])),
-]
-
-fig, axes = plt.subplots(1, 3, figsize=(12, 3.2), sharey=True)
-for ax, (label, step_size) in zip(axes, settings):
-    trial_chain, trial_acceptance = metropolis(
-        log_posterior, [1.35, -4.0], 6000, step_size, np.random.default_rng(4)
-    )
-    ax.plot(trial_chain[:, 0], lw=0.6)
-    ax.axhline(true_parameters["m"], color="k", ls="--")
-    ax.set(
-        xlabel="step",
-        title=f"{label}\nacceptance {trial_acceptance:.2f}",
-    )
-    print(
-        f"{label:>10}: acceptance {trial_acceptance:.2f}, "
-        f"posterior mean m = {trial_chain[500:, 0].mean():.3f}"
-    )
-axes[0].set_ylabel("slope m")
-axes[0].set_ylim(0, 1.5)
-plt.show()
-
-# %% [markdown]
-# ### Diagnostics: burn-in and effective sample size
-#
-# Consecutive samples are correlated, so $N$ stored samples are worth fewer than
-# $N$ independent draws. With autocorrelation $\rho(k)$ at lag $k$,
-#
-# $$
-# N_{\rm eff}\simeq\frac{N}{1+2\sum_{k\ge1}\rho(k)},\qquad
-# \text{Monte Carlo error}\propto\frac{1}{\sqrt{N_{\rm eff}}}.
-# $$
-#
-# - $N_{\rm eff}$, **not** the raw chain length, sets the error on every
-#   posterior summary you quote.
-# - A million highly correlated samples can carry less information than a
-#   thousand independent ones.
-# - Thinning (keeping every $k$-th sample) saves storage. It does not improve
-#   $N_{\rm eff}$, so it never buys accuracy.
-# - Rule of thumb: report a number only if $N_{\rm eff}$ is in the hundreds.
-
-# %%
-burn_in = 500
-samples = chain[burn_in:]
-
-
-def autocorrelation(x):
-    """Normalised autocorrelation function of a 1D chain."""
-    x = x - x.mean()
-    acf = np.correlate(x, x, mode="full")[x.size - 1 :]
-    return acf / acf[0]
-
-
-def effective_sample_size(x):
-    acf = autocorrelation(x)
-    first_small = np.argmax(acf < 0.05)
-    cutoff = acf.size if first_small == 0 else first_small
-    return x.size / (1 + 2 * acf[1:cutoff].sum())
-
-
-fig, axes = plt.subplots(1, 2, figsize=(11, 3.3))
-axes[0].plot(chain[:, 0], lw=0.6)
-axes[0].axvspan(0, burn_in, color="C3", alpha=0.2, label="discarded burn-in")
-axes[0].axhline(true_parameters["m"], color="k", ls="--")
-axes[0].set(xlabel="step", ylabel="slope m", title="Trace")
-axes[0].legend()
-for index, name in enumerate(["m", "c"]):
-    axes[1].plot(autocorrelation(samples[:, index])[:200], label=name)
-axes[1].axhline(0, color="k", lw=0.8)
-axes[1].set(xlabel="lag [steps]", ylabel=r"$\rho$", title="Autocorrelation")
-axes[1].legend()
-plt.show()
-
-for index, name in enumerate(["m", "c"]):
-    print(
-        f"{name}: N = {samples.shape[0]}, "
-        f"N_eff = {effective_sample_size(samples[:, index]):.0f}"
-    )
-
-# %% [markdown]
-# ### The corner plot, and a check against the grid
-#
-# A corner plot is the standard way to display a multi-dimensional posterior: 1D
-# marginals on the diagonal, 2D marginals below. Because this problem is small
-# enough to solve both ways, we can overlay the exact grid marginals in orange.
-# Agreement is the check that the sampler is doing its job, and it is the only
-# reason to trust the sampler on problems where no grid is possible.
-
-# %% fqcp_figure="basics-corner-check"
-import subprocess
-import sys
-
-try:
-    import corner
-except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "corner"])
-    import corner
-
-corner_figure = corner.corner(
-    samples,
-    labels=["slope m", "intercept c"],
-    truths=[true_parameters["m"], true_parameters["c"]],
-    quantiles=[0.05, 0.5, 0.95],
-    show_titles=True,
-    title_fmt=".3f",
-)
-corner_axes = np.array(corner_figure.axes).reshape(2, 2)
-for axis, grid, marginal in [
-    (corner_axes[0, 0], m_grid, p_m),
-    (corner_axes[1, 1], c_grid, p_c),
-]:
-    # corner draws counts, not a density, so rescale the exact curve to match.
-    axis.plot(grid, marginal * axis.get_ylim()[1] / marginal.max(), color="C1", lw=2)
-corner_figure.suptitle("MCMC samples vs exact grid marginals (orange)", y=1.02)
-plt.show()
-
-print(f"grid    : m = {np.trapezoid(p_m * m_grid, m_grid):.4f}")
-print(f"sampler : m = {samples[:, 0].mean():.4f}")
-
-
-# %% [markdown]
-# <details>
-# <summary><i>Expected output &mdash; open this if your cell has not run yet</i></summary>
-#
-# <img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/basics-corner-check.png" alt="expected output: basics-corner-check" style="max-width:100%">
-#
-# </details>
-
-# %% [markdown]
-# ## Sampler 2: nested sampling and evidence
-#
-# MCMC gives parameters but not $\mathcal Z$. Nested sampling gives both, by
-# reordering the integral along **prior volume**. Let $X(\lambda)$ be the
-# fraction of the prior with $\mathcal L>\lambda$. Then a $D$-dimensional
-# integral becomes a one-dimensional one:
-#
-# $$
-# \mathcal Z=\int\mathcal L(\theta)\,\pi(\theta)\,d\theta
-# =\int_0^1\mathcal L(X)\,dX
-# \;\simeq\;\sum_i\mathcal L_i\,\Delta X_i .
-# $$
-#
-# The algorithm:
-#
-# 1. Draw $N_{\rm live}$ points from the prior.
-# 2. Delete the **worst** one and record its likelihood.
-# 3. Replace it by a new draw from the prior, restricted to
-#    $\mathcal L>\mathcal L_{\rm worst}$.
-# 4. Repeat. Each deletion shrinks the volume by a known factor,
-#    $X_i\approx e^{-i/N_{\rm live}}$.
-#
-# - The likelihood threshold only ever rises, so the live points contract onto
-#   the peak. The animation below shows exactly this.
-# - Step 3 is the hard part in real problems, and it is what separates
-#   `MultiNest` (ellipsoids) from `PolyChord` and `dynesty` (slice sampling).
-#   Ours evolves a copy of a surviving point with a short constrained MCMC.
-# - Posterior samples come out free: the deleted points weighted by
-#   $\mathcal L_i\Delta X_i$.
-# - This is why Bayesian model comparison is practical in GW astronomy at all.
-
-# %%
-def nested_sampling(
-    log_likelihood_fn, prior_box, n_live=250, n_iterations=1400, n_mcmc=25, rng=None
-):
-    """A minimal nested sampler with MCMC-based constrained replacement."""
-    low, high = prior_box[:, 0], prior_box[:, 1]
-    live = rng.uniform(low, high, size=(n_live, low.size))
-    live_logl = np.array([log_likelihood_fn(point) for point in live])
-
-    log_evidence = -np.inf
-    dead_logl, dead_logw, snapshots = [], [], []
-
-    for iteration in range(n_iterations):
-        worst = np.argmin(live_logl)
-        log_volume = -iteration / n_live
-        log_shell = log_volume + np.log1p(-np.exp(-1.0 / n_live))
-        log_evidence = np.logaddexp(log_evidence, live_logl[worst] + log_shell)
-        dead_logl.append(live_logl[worst])
-        dead_logw.append(log_shell)
-        if iteration % 50 == 0:
-            snapshots.append((live.copy(), log_volume, log_evidence))
-
-        # Replace the worst point by evolving a copy of a surviving one.
-        threshold = live_logl[worst]
-        point = live[rng.integers(n_live)].copy()
-        point_logl = log_likelihood_fn(point)
-        proposal_scale = live.std(axis=0)
-        for _ in range(n_mcmc):
-            trial = point + rng.normal(0.0, proposal_scale)
-            if np.all(trial > low) and np.all(trial < high):
-                trial_logl = log_likelihood_fn(trial)
-                if trial_logl > threshold:
-                    point, point_logl = trial, trial_logl
-        live[worst], live_logl[worst] = point, point_logl
-
-    # Add the remaining live points as a final block.
-    log_remaining = -n_iterations / n_live - np.log(n_live)
-    log_evidence = np.logaddexp(
-        log_evidence, np.logaddexp.reduce(live_logl) + log_remaining
-    )
-    return log_evidence, np.array(dead_logl), np.array(dead_logw), snapshots
-
-
-log_z_nested, dead_logl, dead_logw, snapshots = nested_sampling(
-    lambda point: log_likelihood(point[0], point[1]),
-    PRIOR_BOX,
-    rng=np.random.default_rng(7),
-)
-
-print(f"nested sampling log Z: {log_z_nested:.3f}")
-print(f"grid log Z           : {log_z_free_intercept:.3f}")
-print(f"difference           : {log_z_nested - log_z_free_intercept:+.3f}")
-
-# %% [markdown]
-# ### Animation: the live points contract onto the posterior
-#
-# Each frame shows the surviving live points. They begin spread over the whole
-# prior and are squeezed into the high-likelihood ridge as the likelihood
-# threshold rises. The right panel shows the integrand $\mathcal{L}(X)$ against
-# $\log X$: the evidence is the area under it, and the visible bump is the
-# region of prior volume that actually contributes.
-
-# %%
-fig, (live_ax, mass_ax) = plt.subplots(1, 2, figsize=(10, 3.6), dpi=72)
-live_ax.contour(m_grid, c_grid, posterior.T, levels=6, cmap="magma")
-(live_points,) = live_ax.plot([], [], ".", color="C0", ms=3)
-live_ax.set(xlim=(0, 1.5), ylim=(-5, 5), xlabel="slope m", ylabel="intercept c")
-
-log_volume_axis = -np.arange(dead_logl.size) / 250
-posterior_mass = np.exp(dead_logl + dead_logw - np.max(dead_logl + dead_logw))
-mass_ax.plot(log_volume_axis, posterior_mass, color="0.7")
-(mass_line,) = mass_ax.plot([], [], color="C3", lw=2)
-mass_ax.set(
-    xlabel=r"$\log X$ (log prior volume)",
-    ylabel=r"$\mathcal{L}\,\Delta X$ (normalised)",
-    title="Where the evidence comes from",
-)
-
-
-def animate_nested(i):
-    live, log_volume, running_log_evidence = snapshots[i]
-    live_points.set_data(live[:, 0], live[:, 1])
-    used = log_volume_axis >= log_volume
-    mass_line.set_data(log_volume_axis[used], posterior_mass[used])
-    live_ax.set_title(
-        f"log X = {log_volume:.1f}, running log Z = {running_log_evidence:.1f}"
-    )
-    return live_points, mass_line
-
-
-nested_animation = FuncAnimation(
-    fig, animate_nested, frames=len(snapshots), interval=200
-)
-plt.close(fig)
-show_animation(nested_animation)
-
-# %% [markdown]
-# ## Further sampler families
-#
-# You do not need their implementations for this course. The important
-# distinctions are:
-#
-# | Method | Main idea | Main caution |
-# | --- | --- | --- |
-# | Hamiltonian Monte Carlo / NUTS | gradients move efficiently through a correlated posterior | needs differentiable, well-scaled models |
-# | variational inference | optimise an approximate posterior family | can underestimate uncertainty if the family is too simple |
-# | simulation-based inference | learn inference from many simulations | must be validated against trusted analyses and simulations |
-#
-# Return to these methods after you are comfortable identifying the model,
-# prior, likelihood, posterior, and checks in a concrete analysis.
 
 # %% [markdown]
 # ## Reference: the parameter-estimation checklist

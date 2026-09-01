@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regenerate, execute, validate, and render all eight FQCP modules locally.
+# Regenerate, execute, validate, and render all FQCP notebooks locally.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -14,7 +14,7 @@ uv sync --locked
 
 echo "==> Regenerating notebooks"
 uv run --locked python scripts/build_lvk_blind_challenge_data.py
-uv run --locked python build_course.py
+bash scripts/build_notebooks.sh
 
 echo "==> Validating notebooks"
 uv run --locked python validate_course.py
@@ -34,7 +34,10 @@ uv run --locked python build_site.py
 
 # Outputs are for the site and the assets branch, never for a commit.
 echo "==> Re-stripping notebooks"
-uv run --locked python build_course.py
+bash scripts/build_notebooks.sh
+
+echo "==> Re-validating clean notebooks"
+uv run --locked python validate_course.py
 
 echo "==> Checking whitespace"
 git diff --check

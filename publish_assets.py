@@ -1,4 +1,4 @@
-"""Extract the reference figures named by build_course.py's `figure=` markers.
+"""Extract figures named by ``fqcp_figure`` metadata in notebook sources.
 
 The notebooks in git carry no outputs.  A marked code cell is followed by a
 collapsed "Expected output" block pointing at this script's output on the

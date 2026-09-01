@@ -28,10 +28,10 @@ jobs:
           python-version: "3.12"
 
       - name: Install validation dependencies
-        run: pip install nbformat "black>=25.1"
+        run: pip install nbformat "jupytext>=1.18,<2"
 
       # Checks the notebooks are valid, carry no outputs, use $$ delimiters, and
-      # still match build_course.py.  Takes seconds and needs none of the
+      # still match their Jupytext sources.  Takes seconds and needs none of the
       # scientific stack.
       - name: Validate notebooks
         run: python validate_course.py

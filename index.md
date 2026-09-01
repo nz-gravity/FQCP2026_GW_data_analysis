@@ -23,8 +23,8 @@ mistaken for. Keep it open in a second tab.
 | Questions and transitions | 5 min | Local GWOSC-style exercises and scientific boundaries |
 
 Each chapter contains more material than the live session covers. Advanced
-sampling, Fisher, and calibration material is marked as optional or extension
-content to read afterwards.
+sampling mechanics, Fisher, and calibration material are optional extensions
+to read afterwards.
 
 :::{admonition} One inference map for the whole course
 :class: important
@@ -49,12 +49,13 @@ visible course navigation.
 
 - The basics chapter begins with Gaussian linear regression, contrasts a
   posterior with a point estimate, demonstrates evidence, and then introduces
-  the stationary Gaussian Whittle model and PSD estimation. Its audio example
-  is an analogy rather than detector strain converted to sound.
-- The samplers in the basics chapter are teaching implementations: a
-  random-walk Metropolis sampler and a nested sampler with MCMC-based
-  constrained replacement. They are validated against the exact grid rather
-  than proposed as substitutes for `dynesty`, `emcee`, or `bilby`.
+  the stationary Gaussian Whittle model and PSD weighting as the same Gaussian
+  residual calculation in the Fourier basis. A short NumPyro run samples the
+  posterior already established by the transparent grid calculation.
+- The optional sampler lab contains teaching implementations of random-walk
+  Metropolis, nested sampling, NUTS, and Gaussian variational inference. They
+  are validated against the exact grid and expose mechanics and failure modes;
+  they are not substitutes for NumPyro, Stan, `dynesty`, `emcee`, or Bilby.
 - Fisher-matrix material is outside the live route. Its extensions state the
   limits clearly: exact for the linear model, but only a high-SNR, near-linear
   approximation for real signals.

@@ -34,6 +34,9 @@ htmlcov/
 # Jupyter
 .ipynb_checkpoints/
 
+# Version the repository-specific coding and notebook workflow instructions.
+!AGENTS.md
+
 # Editors and operating systems
 .DS_Store
 Thumbs.db

@@ -1,19 +1,18 @@
-"""Fail CI if a committed notebook is invalid, unexecuted, errored, or stale.
+"""Fail CI if a committed notebook is invalid, carries outputs, or is stale.
 
-"Stale" means the committed notebook no longer matches what ``build_course.py``
-generates.  The generator is the reviewable source, so a notebook edited by hand
-would otherwise be silently reverted the next time anyone runs the build.
+"Stale" means a committed notebook no longer matches its Jupytext source.
+Files in ``notebook_sources`` are authoritative; ``notebooks`` contains the
+generated, Colab-ready copies that are committed for students.
 """
 
 from pathlib import Path
-import shutil
-import subprocess
-import sys
-import tempfile
 
 import nbformat
 
-notebooks = sorted((Path(__file__).parent / "notebooks").glob("*.ipynb"))
+from scripts.build_notebooks import build_notebook, source_paths
+
+ROOT = Path(__file__).parent
+notebooks = sorted((ROOT / "notebooks").glob("*.ipynb"))
 if not notebooks:
     raise SystemExit("No notebooks found")
 
@@ -44,60 +43,57 @@ for path in notebooks:
             if control_characters:
                 raise SystemExit(
                     f"{path.name}: markdown cell {index} contains control characters; "
-                    "use a raw string for LaTeX in build_course.py"
+                    "fix the corresponding file in notebook_sources"
                 )
         if cell.cell_type != "code":
             continue
         if cell.get("outputs") or cell.execution_count is not None:
             raise SystemExit(
                 f"{path.name}: code cell {index} carries saved output; run "
-                "build_course.py and commit the stripped notebook (the site "
-                "build executes them)"
+                "scripts/build_notebooks.sh and commit the stripped notebook "
+                "(the site build executes them)"
             )
     print(f"validated {path.name}")
 
 
-def check_generator_is_in_sync():
-    """Regenerate the notebooks in a sandbox and compare cell sources."""
-    root = Path(__file__).parent
-    with tempfile.TemporaryDirectory() as sandbox_name:
-        sandbox = Path(sandbox_name)
-        shutil.copy(root / "build_course.py", sandbox / "build_course.py")
-        if (root / "assets").is_dir():
-            shutil.copytree(root / "assets", sandbox / "assets")
-        result = subprocess.run(
-            [sys.executable, "build_course.py"],
-            cwd=sandbox,
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode != 0:
-            raise SystemExit(
-                "build_course.py failed, so the notebooks cannot be verified:\n"
-                + result.stderr[-2000:]
-            )
-        for path in sorted((root / "notebooks").glob("*.ipynb")):
-            regenerated = sandbox / "notebooks" / path.name
-            if not regenerated.exists():
-                raise SystemExit(f"{path.name}: build_course.py no longer writes this notebook")
-            committed_cells = nbformat.read(path, as_version=4).cells
-            generated_cells = nbformat.read(regenerated, as_version=4).cells
-            if len(committed_cells) != len(generated_cells):
-                raise SystemExit(
-                    f"{path.name}: committed notebook has {len(committed_cells)} cells "
-                    f"but build_course.py generates {len(generated_cells)}; "
-                    "port the edit into build_course.py and rebuild"
+def check_sources_are_in_sync():
+    """Compare every committed notebook with its canonical Jupytext build."""
+    sources = source_paths()
+    source_stems = {path.stem for path in sources}
+    notebook_stems = {path.stem for path in notebooks}
+    if source_stems != notebook_stems:
+        missing_notebooks = sorted(source_stems - notebook_stems)
+        missing_sources = sorted(notebook_stems - source_stems)
+        details = []
+        if missing_notebooks:
+            details.append("missing notebooks: " + ", ".join(missing_notebooks))
+        if missing_sources:
+            details.append("missing Jupytext sources: " + ", ".join(missing_sources))
+        raise SystemExit("source/notebook set differs; " + "; ".join(details))
+
+    for source in sources:
+        path = ROOT / "notebooks" / f"{source.stem}.ipynb"
+        committed = nbformat.read(path, as_version=4)
+        generated = build_notebook(source)
+        if committed != generated:
+            if len(committed.cells) != len(generated.cells):
+                detail = (
+                    f"committed notebook has {len(committed.cells)} cells but "
+                    f"the source generates {len(generated.cells)}"
                 )
-            for index, (committed, generated) in enumerate(
-                zip(committed_cells, generated_cells)
-            ):
-                if committed.source != generated.source:
-                    raise SystemExit(
-                        f"{path.name}: cell {index} differs from build_course.py output. "
-                        "The notebook was edited by hand; port the edit into "
-                        "build_course.py and rebuild, or the change will be lost."
-                    )
-        print("verified notebooks match build_course.py")
+            else:
+                detail = "notebook metadata or cell content differs"
+                for index, (actual, expected) in enumerate(
+                    zip(committed.cells, generated.cells)
+                ):
+                    if actual != expected:
+                        detail = f"cell {index} differs"
+                        break
+            raise SystemExit(
+                f"{path.name}: {detail}; edit {source.relative_to(ROOT)} and run "
+                "scripts/build_notebooks.sh"
+            )
+    print("verified notebooks match Jupytext sources")
 
 
-check_generator_is_in_sync()
+check_sources_are_in_sync()
