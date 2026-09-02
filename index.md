@@ -5,6 +5,18 @@
 Learn Bayesian inference through gravitational-wave examples from LVK and
 LISA. Each notebook runs independently in Google Colab.
 
+:::{admonition} Using AI tools
+:class: note
+
+Feel free to use AI tools while working through the exercises. They are most
+helpful when you ask a small, specific question about a concept, an error, or a
+few lines of code, rather than asking for a complete solution.
+
+Type or adapt the suggested code in the notebook yourself, run it, and make
+sure you understand and agree with what it does. You should be able to explain
+your code and interpret its results.
+:::
+
 :::{admonition} One inference map for the whole course
 :class: important
 

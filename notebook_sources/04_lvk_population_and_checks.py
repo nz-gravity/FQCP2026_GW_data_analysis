@@ -396,4 +396,4 @@ print("check passed: the error is systematic, not scatter")
 
 # %% [markdown]
 # <!-- colab-badge-next -->
-# Next: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/09_lvk_blind_data_challenge.ipynb)
+# Next: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/04b_lvk_blind_data_challenge.ipynb)

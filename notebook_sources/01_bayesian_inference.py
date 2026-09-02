@@ -1074,7 +1074,7 @@ print(
 # - [Bilby's linear-regression example](https://bilby-dev.github.io/bilby/basics-of-parameter-estimation.html)
 #   is a useful comparison after doing the grid calculation by hand: identify
 #   which objects in Bilby correspond to each row of the checklist above.
-# - The short [Hubble-law prior-sensitivity lab](01c_hubble_prior_sensitivity.ipynb)
+# - The short [Hubble-law prior-sensitivity lab](01d_hubble_prior_sensitivity.ipynb)
 #   repeats the grid calculation outside GW astronomy and shows why priors matter
 #   more when the data are weak.
 # - [Gelman et al., *Bayesian Workflow*](https://arxiv.org/abs/2011.01808)

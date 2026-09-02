@@ -963,4 +963,4 @@ show_animation(vi_animation)
 
 # %% [markdown]
 # <!-- colab-badge-next -->
-# Next: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/01d_sampler_diagnostics.ipynb)
+# Next: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/01c_sampler_diagnostics.ipynb)

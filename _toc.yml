@@ -8,14 +8,14 @@ parts:
     chapters:
       - file: notebooks/01_bayesian_inference
       - file: notebooks/01b_bayesian_samplers
-      - file: notebooks/01d_sampler_diagnostics
-      - file: notebooks/01c_hubble_prior_sensitivity
+      - file: notebooks/01c_sampler_diagnostics
+      - file: notebooks/01d_hubble_prior_sensitivity
   - caption: Part 2 — LVK
     chapters:
       - file: notebooks/02_lvk_signals_injections
       - file: notebooks/03_lvk_gw150914_bilby
       - file: notebooks/04_lvk_population_and_checks
-      - file: notebooks/09_lvk_blind_data_challenge
+      - file: notebooks/04b_lvk_blind_data_challenge
   - caption: Part 3 — LISA
     chapters:
       - file: notebooks/05_lisa_signals_response_codes

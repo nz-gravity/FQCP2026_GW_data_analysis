@@ -15,7 +15,7 @@
 
 # %% [markdown]
 # <!-- colab-badge-top -->
-# [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/09_lvk_blind_data_challenge_answer.ipynb)
+# [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/04b_lvk_blind_data_challenge_answer.ipynb)
 
 # %% [markdown]
 # # Instructor answer: blind LVK data challenge
@@ -337,6 +337,7 @@ plt.show()
 # %%
 SNR_THRESHOLD = 6.0
 COINCIDENCE_WINDOW = 0.020
+DETECTOR_DELAYS = {"H1": 0.004, "L1": -0.006}
 peak_tables = {}
 coincident_candidates = []
 for bank_name in banks:
@@ -358,7 +359,9 @@ for bank_name in banks:
         separations = np.abs(time[peak_tables[bank_name]["L1"]] - time[h1_peak])
         if len(separations) and separations.min() <= COINCIDENCE_WINDOW:
             l1_peak = peak_tables[bank_name]["L1"][np.argmin(separations)]
-            geocent_guess = 0.5 * (time[h1_peak] + time[l1_peak])
+            h1_geocent_time = time[h1_peak] - DETECTOR_DELAYS["H1"]
+            l1_geocent_time = time[l1_peak] - DETECTOR_DELAYS["L1"]
+            geocent_guess = 0.5 * (h1_geocent_time + l1_geocent_time)
             coincident_candidates.append((bank_name, geocent_guess, h1_peak, l1_peak))
 
 print("\nCoincident candidates")
@@ -481,8 +484,8 @@ plt.show()
 
 # %% fqcp_figure="lvk-challenge-priors"
 KNOWN_RESPONSE = {
-    "H1": dict(gain=1.0 + 0.0j, delay=0.004),
-    "L1": dict(gain=0.82 * np.exp(0.35j), delay=-0.006),
+    "H1": dict(gain=1.0 + 0.0j, delay=DETECTOR_DELAYS["H1"]),
+    "L1": dict(gain=0.82 * np.exp(0.35j), delay=DETECTOR_DELAYS["L1"]),
 }
 candidate_specs = [
     dict(
