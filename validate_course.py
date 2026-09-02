@@ -35,6 +35,15 @@ for path in notebooks:
                 raise SystemExit(
                     f"{path.name}: markdown cell {index} has an unmatched $$ delimiter"
                 )
+            display_delimiter_lines = [
+                line for line in cell.source.splitlines() if "$$" in line
+            ]
+            if any(line.strip() != "$$" for line in display_delimiter_lines):
+                raise SystemExit(
+                    f"{path.name}: markdown cell {index} has display math with "
+                    "$$ sharing a line with content or blockquote markup; put each "
+                    "$$ delimiter on its own unquoted line for reliable Colab rendering"
+                )
             # The notebooks are opened in Colab as often as on the site, and
             # Colab renders none of MyST's directive syntax -- it prints the
             # marker lines verbatim. Callouts are blockquotes; tabs are

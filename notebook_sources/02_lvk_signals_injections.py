@@ -26,9 +26,16 @@
 #
 # Follow a compact-binary signal from source parameters through a detector network, injection, matched filtering, and a manual likelihood.
 #
-# > **💡 Live route**
+# > **Live route**
 # >
 # > Follow the source -> detector -> search -> inference path. Stop after the one-parameter network posterior; degeneracies and localisation are read-later extensions.
+
+# %% [markdown]
+# **Animation guide.** The four animations have separate jobs: chirp-mass error
+# accumulates phase, orbital motion produces a chirp, a matched filter finds the
+# correct time shift, and a moving sky position changes the detector-network
+# response. The first and third are quantitative within this setup; the orbital
+# cartoon is labelled as intuition rather than a waveform model.
 
 # %% [markdown]
 # ### Three questions that must stay separate
@@ -849,7 +856,7 @@ print("Bilby likelihood agrees with the manual network calculation.")
 print("Prior:", bilby_priors["chirp_mass"])
 
 # %% [markdown]
-# > **📌 End of the live route**
+# > **End of the live route**
 # >
 # > You have followed one coherent chain: a physical waveform was projected into
 # > detectors, found with a matched filter, and used in a network likelihood. The
@@ -1232,6 +1239,17 @@ print("which is why a single-detector alert has a nearly all-sky map.")
 # <img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/lvk-sky-localisation.png" alt="expected output: lvk-sky-localisation" style="max-width:100%">
 #
 # </details>
+
+# %% [markdown]
+# ## Read or try next
+#
+# - The [GWOSC Open Data Workshop](https://learn.gwosc.org/courses/odw2025)
+#   continues from strain conditioning to matched filtering and a data challenge.
+# - [Ripple documentation](https://ripplegw.readthedocs.io/) describes the
+#   differentiable waveform implementation used for the quantitative signals here.
+# - [Bilby's compact-binary tutorial](https://bilby-dev.github.io/bilby/compact-binary-coalescence-parameter-estimation.html)
+#   shows how detector data, waveform generation, priors, and the likelihood are
+#   assembled in a production-facing interface.
 
 # %% [markdown]
 # <!-- colab-badge-next -->

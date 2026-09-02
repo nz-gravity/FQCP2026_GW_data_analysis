@@ -26,12 +26,18 @@
 #
 # Understand a global fit as communicating conditional analyses through a shared residual, then implement exact and Metropolis-within-Gibbs blocks.
 #
-# > **💡 Live route**
+# > **Live route**
 # >
 # > Run only the fixed-shape residual-handoff demonstration and its local exercise. The search -> seed -> cycle pipeline is a read-later extension.
 #
 #
 # **Boundary:** The examples use fixed source counts or BIC enumeration and simplified responses. They are not production trans-dimensional LISA inference.
+
+# %% [markdown]
+# **Animation guide.** Follow the active source block, the conditional draw, and
+# the residual passed to the next block. The moving point alone is not the
+# lesson: the changing residual is how information and modelling error travel
+# around a global fit.
 
 # %%
 import os, sys, subprocess, importlib.util
@@ -458,7 +464,7 @@ reverse_order = [2, 1, 0]
 #
 
 # %% [markdown]
-# > **📌 End of the live route**
+# > **End of the live route**
 # >
 # > The essential global-fit idea is residual communication: every source block
 # > sees the data after subtracting the current models for all other blocks. A
@@ -927,7 +933,7 @@ fig.tight_layout()
 plt.show()
 
 # %% [markdown]
-# > **⚠️ Residuals carry the history of a global fit**
+# > **Residuals carry the history of a global fit**
 # >
 # > After subtracting one imperfect source, its remaining error is no longer
 # > labelled “source 1”: it is structure in the residual. The next source block or
@@ -1006,6 +1012,16 @@ plt.show()
 print(
     "Preferred subset:", labels[int(np.argmin(delta))], "(the injected subset is 111)"
 )
+
+# %% [markdown]
+# ## Read or try next
+#
+# - [GLASS](https://arxiv.org/abs/2301.03673) is a full global-analysis example
+#   in which source and noise blocks communicate through a common residual.
+# - [Katz et al. (2025)](https://doi.org/10.1103/PhysRevD.111.024060) describes
+#   the GPU-accelerated Erebor pipeline represented by the wheel above.
+# - The [LISA Data Challenge](https://lisa-ldc.lal.in2p3.fr/) supplies the mixed
+#   datasets needed to test catalogue search, subtraction, and residual checks.
 
 # %% [markdown]
 # <!-- colab-badge-next -->

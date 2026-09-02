@@ -25,11 +25,18 @@
 # scientific ingredients first; this lab changes only the numerical method used
 # to explore the same two-parameter posterior.
 #
-# > **📌 Main message**
+# > **Main message**
 # >
 # > A sampler does not define the posterior and cannot repair a wrong signal,
 # > noise model, likelihood, or prior. It is a numerical engine for exploring the
 # > posterior those choices define.
+
+# %% [markdown]
+# **Animation guide.** Each animation answers a different numerical question:
+# Section 2 shows a random walk mixing along a correlated ridge; Section 3 shows
+# nested sampling trading prior volume for likelihood; Section 5 shows one NUTS
+# trajectory; Section 6 shows where a variational family stops short. Do not
+# read smooth motion as evidence of convergence--use the diagnostics beside it.
 
 # %% [markdown]
 # ## Which tool answers which question?
@@ -942,5 +949,18 @@ show_animation(vi_animation)
 #   posterior-only models, but it should not hide the primer's Bayesian logic.
 
 # %% [markdown]
+# ## Read or try next
+#
+# - [NumPyro's MCMC reference](https://num.pyro.ai/en/stable/mcmc.html) documents
+#   NUTS, warm-up, multiple chains, and the diagnostics used by the real library.
+# - [Dynesty's getting-started guide](https://dynesty.readthedocs.io/en/stable/quickstart.html)
+#   is the shortest path from the teaching nested sampler here to a maintained
+#   implementation.
+# - [Blei, Kucukelbir & McAuliffe (2017)](https://arxiv.org/abs/1601.00670)
+#   explains the optimisation view of variational inference and its limitations.
+# - The next notebook turns the phrase “check convergence” into a concrete
+#   workflow for $\widehat R$, ESS, MCSE, NUTS warnings, and predictive checks.
+
+# %% [markdown]
 # <!-- colab-badge-next -->
-# Next: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/02_lvk_signals_injections.ipynb)
+# Next: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/01d_sampler_diagnostics.ipynb)

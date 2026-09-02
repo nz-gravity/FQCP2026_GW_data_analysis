@@ -76,7 +76,7 @@
 # fit to the glitch is telling you, and at whether your analysis had any way of
 # knowing it was wrong. Notebook 01 spent an hour on exactly this failure.
 #
-# > **⚠️ Boundary**
+# > **Boundary**
 # >
 # > A controlled classroom challenge: Gaussian line-free noise, Newtonian inspiral
 # > teaching signals, a fixed detector response, no calibration uncertainty. Do
@@ -290,6 +290,19 @@ print("           inspiral_duration, to_frequency_domain")
 #
 # And one question worth answering for yourself: which of your conclusions
 # would survive if the noise were not Gaussian?
+
+# %% [markdown]
+# ## Resources, if you get stuck
+#
+# Use these for methods, not for the hidden answer:
+#
+# - The [GWOSC Open Data Workshop](https://learn.gwosc.org/courses/odw2025)
+#   covers conditioning, matched filtering, detector characterisation, and a
+#   separate public data challenge.
+# - [Bilby's compact-binary tutorial](https://bilby-dev.github.io/bilby/compact-binary-coalescence-parameter-estimation.html)
+#   shows what a fuller signal model and likelihood would add to this two-parameter fit.
+# - The course [reading map](03_literature.md) points to search pipelines,
+#   BayesWave/BayesLine, and public catalogues without revealing this fixture.
 
 # %% [markdown]
 # <!-- colab-badge-next -->

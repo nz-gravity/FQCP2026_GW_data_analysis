@@ -26,7 +26,7 @@
 #
 # Build Bayesian parameter estimation from a signal and noise model, without hiding any step behind Bilby.
 #
-# > **💡 Live route**
+# > **Live route**
 # >
 # > Follow Sections 1--4 in order: model, prior, likelihood, posterior checks.
 # > Section 5 is the exercise set you run yourself; Section 6 carries the same
@@ -50,6 +50,30 @@
 # | likelihood $\mathcal L(d\mid\theta)$ | how well would each proposed value explain the observed data? |
 # | posterior $p(\theta\mid d)$ | what values remain plausible after combining prior and likelihood? |
 # | evidence $\mathcal Z$ | what normalises the posterior, and how well did the complete model predict the data? |
+#
+# The same calculation in a less abstract setting:
+#
+# ![The xkcd Seashell comic writes Bayes' theorem for the probability of being near the ocean after picking up a seashell.](https://imgs.xkcd.com/comics/seashell.png)
+#
+# *Figure: Randall Munroe, [“Seashell,” xkcd 1236](https://xkcd.com/1236/),
+# used under the [CC BY-NC 2.5 licence](https://xkcd.com/license.html).*
+#
+# Here is one numerical version of the story. The numbers are classroom choices,
+# not values stated in the comic.
+#
+# | Bayes term | Seashell question | Illustrative value |
+# | --- | --- | ---: |
+# | hypothesis | am I near the ocean? | — |
+# | data | I picked up a seashell | — |
+# | prior | how often am I near the ocean before noticing the shell? | $P(O)=0.05$ |
+# | likelihood | if I am near the ocean, how often do I pick up a shell? | $P(S\mid O)=0.70$ |
+# | alternative likelihood | if I am not near the ocean, how often do I pick one up? | $P(S\mid \neg O)=0.001$ |
+# | evidence | how often do I pick up a shell anywhere? | $P(S)=0.70(0.05)+0.001(0.95)=0.03595$ |
+# | posterior | after picking one up, how plausible is “near the ocean”? | $P(O\mid S)=0.70(0.05)/0.03595\approx0.97$ |
+#
+# The small prior matters, but the shell is about 700 times more likely near the
+# ocean than away from it. That likelihood ratio is strong enough to move 5%
+# prior probability to about 97% posterior probability.
 #
 # For parameter estimation the reusable calculation is
 # $\text{posterior}\propto\text{likelihood}\times\text{prior}$. We compute every
@@ -116,7 +140,9 @@ print("Running in Colab:", IN_COLAB)
 #
 # We *choose* to fit a straight line with independent Gaussian noise,
 #
-# $$d_i=m t_i+c+n_i,\qquad n_i\sim\mathcal N(0,\sigma^2).$$
+# $$
+# d_i=m t_i+c+n_i,\qquad n_i\sim\mathcal N(0,\sigma^2).
+# $$
 #
 # That choice **is** the model. Every number below is conditional on it.
 #
@@ -191,13 +217,18 @@ plt.show()
 #
 # Because
 #
-# $$ n_i = d_i - (m t_i + c)$$, 
+# $$
+# n_i = d_i - (m t_i + c),
+# $$
 #
 # we can write the likelihood as 
 #
-# $$ \log\mathcal L(d\mid m,c) = \mathcal N(d\mid mt+c,\sigma^2)$$
+# $$
+# \log\mathcal L(d\mid m,c) = \log\mathcal N(d\mid mt+c,\sigma^2),
+# $$
 #
-# $$\implies 
+# $$
+# \implies
 # \log\mathcal L(d\mid m,c)=-\frac12\sum_i\left[
 # \frac{(d_i-mt_i-c)^2}{\sigma^2}+\log(2\pi\sigma^2)\right].
 # $$
@@ -391,7 +422,7 @@ print(
 # MorphZ.
 
 # %% [markdown]
-# > **⚠️ Live demonstration, not a convergence claim**
+# > **Live demonstration, not a convergence claim**
 # >
 # > This short single-chain run is enough to connect code with a sampled
 # > posterior because the exact grid is available as a check. Real parameter
@@ -463,6 +494,24 @@ plt.show()
 # because prior volume that fits badly drags the average down. That is the
 # Bayesian Occam factor, and why a Bayes factor is meaningless without its
 # priors.
+#
+# ![The xkcd Frequentists versus Bayesians comic shows two statisticians interpreting an alarming detector result.](https://imgs.xkcd.com/comics/frequentists_vs_bayesians.png)
+#
+# *Figure: Randall Munroe, [“Frequentists vs. Bayesians,” xkcd 1132](https://xkcd.com/1132/),
+# used under the [CC BY-NC 2.5 licence](https://xkcd.com/license.html).*
+#
+# The joke is about **base-rate neglect**. A rare false alarm is not, by itself,
+# the probability that the claim is false. Posterior model odds combine the
+# Bayes factor with the prior odds:
+#
+# $$
+# \frac{P(M_1\mid d)}{P(M_0\mid d)}
+# =\mathcal B_{10}\frac{P(M_1)}{P(M_0)}.
+# $$
+#
+# This is not a rule that frequentist analyses must ignore context. It is a
+# memorable warning not to confuse a tail probability under $M_0$ with a
+# probability assigned to $M_0$ after seeing the data.
 #
 # **Predict before running:** the straight line is not the shape that made these
 # data. Do you expect $\log\mathcal B_{10}$ to come out near zero, mildly
@@ -537,7 +586,7 @@ print(f"exact grid log Z: {log_z_line:.2f}")
 print(f"difference:       {morphz_log_z.mean() - log_z_line:+.2f}")
 
 # %% [markdown]
-# > **⚠️ Read that number carefully**
+# > **Read that number carefully**
 # >
 # > A log Bayes factor of several hundred is about as decisive as this statistic
 # > gets. In a gravitational-wave search it would be reported as an unambiguous
@@ -645,7 +694,9 @@ plt.show()
 #
 # The reveal: the CSV came from an **exponential rise**,
 #
-# $$h(t)=A\left(e^{t/\tau}-1\right),\qquad A=1,\quad \tau=3,$$
+# $$
+# h(t)=A\left(e^{t/\tau}-1\right),\qquad A=1,\quad \tau=3,
+# $$
 #
 # with exactly the white $\sigma=3$ noise we assumed. The noise model was right
 # all along; the *signal* model was the wrong shape.
@@ -732,7 +783,9 @@ plt.show()
 # Section 4 showed the line failing its posterior predictive check. Fit an
 # exponential instead,
 #
-# $$h(t)=A\left(e^{t/\tau}-1\right),$$
+# $$
+# h(t)=A\left(e^{t/\tau}-1\right),
+# $$
 #
 # over $A\in[0,4]$ and $\tau\in[1,10]$. Report $\log\mathcal Z$ and the log Bayes
 # factor against the line, then run `posterior_predictive` on it and compare the
@@ -961,27 +1014,27 @@ print(
 # toy chirp and toy PSD with physical waveforms, detector data, and an
 # off-source PSD estimate.
 #
-# > **⚠️ Boundary**
+# > **Boundary**
 # >
 # > This diagonal Fourier-bin likelihood assumes approximate stationarity and
 # > well-behaved data. Gaps, glitches, strong lines, and time-varying noise create
 # > correlations that a single diagonal PSD does not describe.
 
 # %% [markdown]
-# > **📌 End of the live route**
-# >
-# > You now have the complete inference chain used later in the course:
-# >
-# > $$
-# > \text{data} + \text{signal model} + \text{noise model}
-# > \longrightarrow \text{likelihood}
-# > \longrightarrow \text{posterior}
-# > \longrightarrow \text{checks}.
-# > $$
-# >
-# > For a comparison of NUTS, Metropolis, nested sampling, and variational
-# > inference, continue to the independently runnable
-# > [sampler extension lab](01b_bayesian_samplers.ipynb).
+# **End of the live route**
+#
+# You now have the complete inference chain used later in the course:
+#
+# $$
+# \text{data} + \text{signal model} + \text{noise model}
+# \longrightarrow \text{likelihood}
+# \longrightarrow \text{posterior}
+# \longrightarrow \text{checks}.
+# $$
+#
+# For a comparison of NUTS, Metropolis, nested sampling, and variational
+# inference, continue to the independently runnable
+# [sampler extension lab](01b_bayesian_samplers.ipynb).
 
 # %% [markdown]
 # ## Reference: the parameter-estimation checklist
@@ -1012,6 +1065,24 @@ print(
 #   actually recover from data. The LVK notebook computes both.
 # - *Credible interval* (Bayesian, probability over parameters) is not a
 #   *confidence interval* (frequentist, coverage over repeated experiments).
+
+# %% [markdown]
+# ## Read or try next
+#
+# - [Thrane & Talbot, *An introduction to Bayesian inference in gravitational-wave astronomy*](https://arxiv.org/abs/1809.02293)
+#   develops the same likelihood--prior--posterior structure for real GW analyses.
+# - [Bilby's linear-regression example](https://bilby-dev.github.io/bilby/basics-of-parameter-estimation.html)
+#   is a useful comparison after doing the grid calculation by hand: identify
+#   which objects in Bilby correspond to each row of the checklist above.
+# - The short [Hubble-law prior-sensitivity lab](01c_hubble_prior_sensitivity.ipynb)
+#   repeats the grid calculation outside GW astronomy and shows why priors matter
+#   more when the data are weak.
+# - [Gelman et al., *Bayesian Workflow*](https://arxiv.org/abs/2011.01808)
+#   connects model building, computation, predictive checks, and model revision.
+# - [Betancourt, *Towards a Principled Bayesian Workflow*](https://betanalpha.github.io/assets/case_studies/principled_bayesian_workflow.html)
+#   is a deeper case study of computational faithfulness and model adequacy.
+# - The course [reading map](03_literature.md) separates introductory statistics,
+#   detector noise, waveform modelling, and production parameter estimation.
 
 # %% [markdown]
 # <!-- colab-badge-next -->

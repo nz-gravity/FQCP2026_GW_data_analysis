@@ -26,7 +26,7 @@
 #
 # Analyse public H1/L1 data around GW150914 with Bilby's standard compact-binary likelihood.
 #
-# > **💡 Live route**
+# > **Live route**
 # >
 # > Build the data and PSD, inspect which parameters are sampled or fixed, then construct the likelihood. The final Dynesty cell is optional live and can take 10--30 minutes in Colab.
 #
@@ -36,8 +36,9 @@
 # %% [markdown]
 # ## Source and attribution
 #
-# This notebook directly adapts **GWOSC Open Data Workshop Tutorial 5.2,
-# “Parameter estimation for compact object mergers.”** It preserves the
+# This notebook directly adapts the GWOSC Open Data Workshop notebook
+# [*Parameter estimation for compact object mergers*](https://github.com/gw-odw/odw-2023/blob/main/Tutorials/Day_3/Tuto_3.2_Parameter_estimation_for_compact_object_mergers.ipynb).
+# It preserves the
 # recognisable GWOSC sequence:
 #
 # $$
@@ -835,6 +836,17 @@ for label, values in [
 # and only one of them is about convergence.
 #
 # </details>
+
+# %% [markdown]
+# ## Read or try next
+#
+# - The [current GWOSC workshop course](https://learn.gwosc.org/courses/odw2025)
+#   supplies the wider open-data workflow and newer exercises.
+# - [Bilby's compact-binary tutorial](https://bilby-dev.github.io/bilby/compact-binary-coalescence-parameter-estimation.html)
+#   is the maintained reference for the likelihood and marginalisation options.
+# - The [GWOSC event portal](https://gwosc.org/eventapi/) links strain products,
+#   catalogue metadata, and released posterior samples. Compare products only
+#   after checking which catalogue release and waveform model produced them.
 
 # %% [markdown]
 # <!-- colab-badge-next -->

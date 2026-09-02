@@ -26,7 +26,7 @@
 #
 # Make one log-likelihood call one hundred times cheaper without changing the answer, and measure the error you accept in exchange.
 #
-# > **💡 Live route**
+# > **Live route**
 # >
 # > Sections 1--4: the cost of an exact call, heterodyning, relative binning, and the accuracy check that decides whether either is safe. Sections 5--7 are extension material.
 #
@@ -748,6 +748,18 @@ results_by_tolerance = {}
 # coverage tests and by importance-reweighting against the true likelihood.
 # `DINGO` is the reference implementation.
 #
+# ![The xkcd Machine Learning comic depicts data entering a large, opaque pile of linear algebra and answers emerging from the other side.](https://imgs.xkcd.com/comics/machine_learning.png)
+#
+# *Figure: Randall Munroe, [“Machine Learning,” xkcd 1838](https://xkcd.com/1838/),
+# used under the [CC BY-NC 2.5 licence](https://xkcd.com/license.html). See also
+# the community [panel-by-panel discussion](https://www.explainxkcd.com/wiki/index.php/1838:_Machine_Learning).*
+#
+# The useful warning for simulation-based inference is not “machine learning is
+# unknowable.” It is that plausible-looking answers are not a validation test.
+# Coverage on simulated populations, checks under distribution shift, and exact
+# likelihood reweighting where available are what turn a fast surrogate into a
+# scientific inference tool.
+#
 # **Gradient-based sampling.** Hamiltonian Monte Carlo and NUTS scale far better
 # with parameter dimension than random-walk or ensemble methods, which matters
 # for the 15+ dimensions of a precessing signal with calibration marginalisation.
@@ -784,9 +796,15 @@ results_by_tolerance = {}
 #   likelihood at a few thousand final samples and reweighting turns the whole
 #   approximation into an exact result with a computable efficiency.
 #
-# **Further reading.** Zackay, Dai & Venumadhav, arXiv:1806.08792 (relative
-# binning); Cornish, Phys. Rev. D 104, 104054 (heterodyned likelihood); Field
-# et al., Phys. Rev. X 4, 031006 (surrogate models); Canizares et al.,
-# Phys. Rev. Lett. 114, 071104 (reduced-order quadrature); Dax et al.,
-# Phys. Rev. Lett. 127, 241103 (neural posterior estimation); Wong, Isi &
-# Edwards, arXiv:2302.05333 (gradient-based sampling).
+#
+# ## Read or try next
+#
+# - [Zackay, Dai & Venumadhav](https://arxiv.org/abs/1806.08792) introduce
+#   relative binning; [Bilby's implementation](https://bilby-dev.github.io/bilby/api/bilby.gw.likelihood.relative.RelativeBinningGravitationalWaveTransient.html)
+#   shows the fiducial-point and marginalisation bookkeeping needed in practice.
+# - [Cornish (2021)](https://doi.org/10.1103/PhysRevD.104.104054) develops the
+#   heterodyned likelihood; [Canizares et al. (2015)](https://arxiv.org/abs/1404.6284)
+#   develop reduced-order quadrature.
+# - [DINGO](https://arxiv.org/abs/2106.12594) and
+#   [gradient-based GW sampling](https://arxiv.org/abs/2302.05333) pursue the two
+#   alternatives sketched in Section 7: amortise inference or differentiate it.

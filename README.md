@@ -13,8 +13,9 @@ first page of the book.
 
 ## Course structure
 
-The core material is organised as four conceptual parts and nine independently
-runnable modules, with optional sampler and LVK blind-data supplements. The split follows the teaching progression of the local
+The core material is organised as four conceptual parts, with independently
+runnable sampler, sampler-diagnostics, prior-sensitivity, and LVK blind-data
+extensions. The split follows the teaching progression of the local
 `nz_bilby_cbc_workshop_2024`, `lisa_analysis_workshop`, and GWOSC parameter-
 estimation tutorials without implying that every module fits into the live
 two-hour session.
@@ -23,6 +24,8 @@ two-hour session.
 | --- | --- | --- |
 | 1 | **`01_bayesian_inference.ipynb`** | Bilby-free model, prior, likelihood, grid and NumPyro posteriors, checks, and Whittle bridge. Fits a line to non-linear data on purpose. |
 | 1 extension | **`01b_bayesian_samplers.ipynb`** | Metropolis, nested sampling, NUTS, and VI code and animations |
+| 1 extension | **`01d_sampler_diagnostics.ipynb`** | Multi-chain convergence, sampler-specific warnings, and the boundary between convergence and PSIS-LOO |
+| 1 extension | **`01c_hubble_prior_sensitivity.ipynb`** | Small synthetic Hubble-law inference showing when prior sensitivity matters |
 | 2A | **`02_lvk_signals_injections.ipynb`** | CBC signals, detector response, injections, matched filtering, and a manual likelihood |
 | 2B | **`03_lvk_gw150914_bilby.ipynb`** | Direct adaptation of the GWOSC GW150914 Bilby workflow |
 | 2C | **`04_lvk_population_and_checks.ipynb`** | Population inference, selection effects, and event-level PE checks |
@@ -42,9 +45,9 @@ noise and an explicitly toy Newtonian inspiral; the PE fixes response, mass
 ratio, amplitude/distance, and phase, and samples only chirp mass and
 coalescence time.
 
-Each notebook deliberately contains more than fits the live session. Advanced
-sampling mechanics, Fisher, and calibration material are optional extensions
-to read afterwards.
+Each notebook deliberately contains more than fits the live session. Sampler
+mechanics and diagnostics, the small Hubble-law prior-sensitivity lab, Fisher
+material, and calibration exercises are optional extensions to use afterwards.
 
 ## How the algorithms are taught
 
@@ -117,8 +120,10 @@ several minutes.
 
 `.github/workflows/pages.yml` validates notebooks on every push and pull
 request: it checks that they are valid, carry no saved outputs, use `$$` math
-delimiters, and still match their Jupytext sources. It does not execute or
-deploy them.
+delimiters on their own unquoted lines, and still match their Jupytext sources.
+Keeping display delimiters separate from equations and blockquotes avoids a
+known portability trap between JupyterBook and Colab. It does not execute or
+deploy the notebooks.
 
 The site itself is built and force-pushed to the `gh-pages` branch by
 `bash scripts/prepush_course.sh --publish`, which also publishes the reference

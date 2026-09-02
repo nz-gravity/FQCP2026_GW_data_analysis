@@ -26,12 +26,17 @@
 #
 # Estimate a smooth PSD with a cubic P-spline inside a Whittle likelihood and see how the roughness penalty changes the answer.
 #
-# > **💡 Live route**
+# > **Live route**
 # >
 # > Fit the simulated spectrum, inspect a whitened-power diagnostic, then change the smoothing strength in the question cell.
 #
 #
 # **Boundary:** The coefficient band uses a local Laplace approximation. A production Bayesian P-spline analysis must sample the full posterior and validate coverage, convergence, line treatment, and foreground identifiability.
+
+# %% [markdown]
+# **Animation guide.** In the spline animation, hold the basis functions fixed
+# and watch only their weights. Their sum is the fitted log PSD; the roughness
+# penalty acts on neighbouring weights, not directly on the noisy periodogram.
 
 # %%
 import numpy as np
@@ -234,6 +239,16 @@ fits_by_penalty = {}
 # additional structure: response-informed shapes, multiple TDI channels,
 # time dependence, informative regularisation, resolved-source information, or
 # other data. A visually good total-PSD fit alone is not component recovery.
+
+# %% [markdown]
+# ## Read or try next
+#
+# - [Aimen et al. (2026)](https://doi.org/10.1103/dcb6-1jsl) develops the
+#   Bayesian LISA P-spline model beyond this local MAP/Laplace demonstration.
+# - [Maturana-Russel & Meyer (2019)](https://arxiv.org/abs/1905.01832) explains
+#   Bayesian spectral estimation with P-splines and data-informed knot placement.
+# - [BayesLine](https://arxiv.org/abs/1410.3852) is a useful contrast: a
+#   trans-dimensional spline for broadband detector noise plus explicit line models.
 
 # %% [markdown]
 # <!-- colab-badge-next -->

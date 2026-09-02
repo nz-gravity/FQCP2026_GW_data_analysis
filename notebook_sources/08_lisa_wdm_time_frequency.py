@@ -26,12 +26,18 @@
 #
 # Use a Wilson--Daubechies--Meyer (WDM) time-frequency representation to see where gaps and changing noise enter an analysis.
 #
-# > **💡 Live route**
+# > **Live route**
 # >
 # > Run the gap and non-stationarity laboratory, then complete its local question. The masked WDM global-fit counterpart is a read-later extension.
 #
 #
 # **Boundary:** The diagonal WDM likelihood is exact only under its covariance assumptions. Gaps and non-stationarity can correlate pixels.
+
+# %% [markdown]
+# **Animation guide.** The extension repeats the global-fit residual handoff in
+# WDM pixels. Watch the gap stay local while source-model error moves between
+# blocks. That distinction is the reason WDM helps with missing data without
+# making overlapping sources independent.
 
 # %%
 import os, sys, subprocess, importlib.util
@@ -483,7 +489,7 @@ print(f"injected NOISE_GROWTH               : {NOISE_GROWTH:.3f}")
 #
 
 # %% [markdown]
-# > **📌 End of the live route**
+# > **End of the live route**
 # >
 # > WDM does not make missing data harmless. It makes the affected time region
 # > visible and allows unaffected pixels to remain usable. The analysis must still
@@ -966,7 +972,7 @@ plt.close(fig)
 show_animation(wdm_gibbs_animation)
 
 # %% [markdown]
-# > **⚠️ What WDM changes—and what it does not**
+# > **What WDM changes—and what it does not**
 # >
 # > - The gap is localised, so most WDM pixels remain usable rather than every
 # > Fourier bin being contaminated by a mission-long window.
@@ -996,6 +1002,16 @@ reverse_order = [2, 1, 0]
 #
 # </details>
 #
+
+# %% [markdown]
+# ## Read or try next
+#
+# - The [`wdm-transform` package](https://pypi.org/project/wdm-transform/) is the
+#   maintained implementation used here; its release page links source and docs.
+# - [Vajpeyi et al. (2026)](https://arxiv.org/abs/2606.20269) derives the
+#   transform explicitly and checks controlled frequency/WDM likelihood equivalence.
+# - The [LISA Data Challenge](https://lisa-ldc.lal.in2p3.fr/) is the natural next
+#   step for testing gaps and non-stationarity against more realistic source mixtures.
 
 # %% [markdown]
 # <!-- colab-badge-next -->

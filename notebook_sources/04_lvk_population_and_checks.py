@@ -26,7 +26,7 @@
 #
 # Turn event-level information into a population statement and see why the detected catalogue is not the underlying population.
 #
-# > **💡 Live route**
+# > **Live route**
 # >
 # > Run the selection-bias picture and complete its question. Stop at the end-of-live-route marker; posterior-sample reweighting is an extension.
 #
@@ -172,7 +172,7 @@ print(f"Selection-aware MAP: {mean_grid[np.argmax(corrected)]:.2f}")
 #
 
 # %% [markdown]
-# > **📌 End of the live route**
+# > **End of the live route**
 # >
 # > Selection effects alone can move a population result even when every detected
 # > event is measured perfectly. The extension below adds the next complication:
@@ -193,24 +193,22 @@ print(f"Selection-aware MAP: {mean_grid[np.argmax(corrected)]:.2f}")
 # \frac{p(\theta_{is}\mid\Lambda)}{\pi_{\rm PE}(\theta_{is})}.
 # $$
 #
-# The division by $\pi_{\rm PE}$ is the part that gets forgotten. Posterior
-# samples were drawn under **the prior the PE run used**, not under a flat prior.
-# If you average $p(\theta\mid\Lambda)$ over them without dividing that prior out,
-# the population silently inherits the shape of the PE prior.
+# The division by $\pi_{\rm PE}$ is easy to miss. Posterior samples were drawn
+# under **the prior used by the event-level PE run**, not under a flat prior. If
+# that prior is not divided out, its shape is counted again as population
+# information.
 #
-# A second factor changes too. Detection depended on the *true* mass, so
-# $p_{\rm det}$ belongs inside the per-event integral:
+# Selection remains a separate catalogue-level correction,
 #
 # $$
-# \frac{1}{S}\sum_s
-# \frac{p(\theta_{is}\mid\Lambda)\,p_{\rm det}(\theta_{is})}{\pi_{\rm PE}(\theta_{is})}
-# \Bigg/ \alpha(\Lambda).
+# \alpha(\Lambda)=\int p_{\rm det}(\theta)\,p(\theta\mid\Lambda)\,d\theta,
 # $$
 #
-# In Section 1 the masses were exact, so $p_{\rm det}(m_i)$ was a constant that
-# cancelled out of the hyper-posterior. The moment the masses became uncertain it
-# stopped cancelling. Nothing warns you about this: the code from Section 1 keeps
-# running perfectly well and returns a slightly wrong answer.
+# and the catalogue likelihood contains $\alpha(\Lambda)^{-N}$. For the usual
+# likelihood of already detected events, do **not** multiply each posterior
+# sample by $p_{\rm det}(\theta)$ as well: that would count the detection process
+# twice. The search injections used to estimate $\alpha$ must, however, represent
+# the population and the complete search pipeline being analysed.
 #
 # Below, the PE runs used $\pi_{\rm PE}(m)\propto m^4$. A rising prior like this
 # is an ordinary choice — priors flat in distance-cubed or in detector-frame
@@ -259,10 +257,6 @@ def hyper_posterior(divide_pe_prior, samples=None, grid=None):
         population_density = norm.pdf(samples, mean, population_width)
         if divide_pe_prior:
             population_density = population_density / pe_prior(samples)
-        # Detection depended on the true mass, which is now uncertain, so the
-        # selection function sits inside the per-event integral as well.  In
-        # Section 1 the masses were exact and this factor cancelled.
-        population_density = population_density * detection_probability(samples)
         alpha = np.trapezoid(
             norm.pdf(integration_grid, mean, population_width)
             * detection_probability(integration_grid),
@@ -388,6 +382,17 @@ print("check passed: the error is systematic, not scatter")
 #
 # The last one is the difference between "the data prefer this population" and
 # "this population model, fitted to these data, prefers these hyperparameters".
+
+# %% [markdown]
+# ## Read or try next
+#
+# - [Thrane & Talbot (2019)](https://arxiv.org/abs/1809.02293) derives
+#   hierarchical likelihoods and selection effects from the event-level likelihood.
+# - The [GWTC-3 population analysis](https://arxiv.org/abs/2111.03634) is a
+#   concrete example of mass, spin, redshift, rate, and model-systematics inference.
+# - [GWPopulation](https://colmtalbot.github.io/gwpopulation/) provides the
+#   maintained model and hyper-likelihood machinery. Before using it, be able to
+#   point to the event-prior division and selection factor in this notebook.
 
 # %% [markdown]
 # <!-- colab-badge-next -->

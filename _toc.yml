@@ -8,6 +8,8 @@ parts:
     chapters:
       - file: notebooks/01_bayesian_inference
       - file: notebooks/01b_bayesian_samplers
+      - file: notebooks/01d_sampler_diagnostics
+      - file: notebooks/01c_hubble_prior_sensitivity
   - caption: Part 2 — LVK
     chapters:
       - file: notebooks/02_lvk_signals_injections

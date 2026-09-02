@@ -26,9 +26,15 @@
 #
 # Connect LISA's source zoo to its moving constellation, delayed links, TDI variables, sensitivity, and likelihood interfaces.
 #
-# > **💡 Live route**
+# > **Live route**
 # >
 # > Follow source zoo -> moving response -> sensitivity -> likelihood. The exact link-delay and XYZ/AET construction is a read-later extension.
+
+# %% [markdown]
+# **Animation guide.** The orbit animation keeps one binary fixed and moves the
+# constellation. Read its three panels together: geometry changes the arm
+# projection, the response envelope, and the Doppler phase. The triangle is
+# enlarged for visibility; the response calculation uses the physical orbit.
 
 # %%
 import os, sys, subprocess, importlib.util
@@ -106,14 +112,16 @@ def show_animation(animation):
 # Unlike a static right-angle detector, LISA is a heliocentric triangle that cartwheels as it orbits. Six delayed one-way laser links are combined into time-delay interferometry (TDI) variables. Orbital modulation helps localisation, while finite arms create a frequency-dependent response.
 
 # %% [markdown]
-# > **📌 What is the LISA data object?**
-# >
-# > $$\text{inter-spacecraft phase measurements}
-# > \longrightarrow \text{delayed TDI combinations}
-# > \longrightarrow (A,E,T)\ \text{channels}
-# > \longrightarrow \text{response + PSD}
-# > \longrightarrow \text{likelihood}.$$
-# >
+# **What is the LISA data object?**
+#
+# $$
+# \text{inter-spacecraft phase measurements}
+# \longrightarrow \text{delayed TDI combinations}
+# \longrightarrow (A,E,T)\ \text{channels}
+# \longrightarrow \text{response + PSD}
+# \longrightarrow \text{likelihood}.
+# $$
+#
 # > TDI is not a cosmetic re-labelling of a strain time series: delayed link
 # > measurements cancel laser frequency noise and define the channels whose
 # > response and noise enter inference. In the simple likelihood below we use A and
@@ -555,7 +563,7 @@ print(f"one frequency bin      : {1 / t_obs:.3e} Hz")
 print(f"plotted likelihood span: {offsets[-1] - offsets[0]:.3e} Hz")
 
 # %% [markdown]
-# > **📌 End of the live route**
+# > **End of the live route**
 # >
 # > The beginner-level chain is now complete: LISA's motion changes the response,
 # > the sensitivity supplies the noise weighting, and the same inner-product
@@ -943,7 +951,7 @@ for label, channel in zip(("A", "E", "T"), (A, E, T)):
 print(f"T/A RMS ratio: {np.std(T)/np.std(A):.3e}")
 
 # %% [markdown]
-# > **⚠️ TDI generation boundary**
+# > **TDI generation boundary**
 # >
 # > This transparent laboratory uses GW-only links and first-generation Michelson
 # > TDI. It demonstrates the orbit, link, retarded-delay, XYZ, and AET data objects.
@@ -1135,6 +1143,17 @@ print(
     "log-likelihood drop for an offset template:",
     f"{latw_offset_log_likelihood - latw_best_log_likelihood:.2f}",
 )
+
+# %% [markdown]
+# ## Read or try next
+#
+# - ESA's [LISA in a nutshell](https://www.cosmos.esa.int/web/lisa/home) gives
+#   the mission-scale picture; its [short LISA video collection](https://www.esa.int/esatv/Missions/LISA)
+#   is useful before the orbit-response animation.
+# - The [LISA Data Challenge](https://lisa-ldc.lal.in2p3.fr/) provides mixed
+#   source-plus-noise datasets rather than isolated teaching signals.
+# - [LISA Analysis Tools](https://mikekatz04.github.io/LISAanalysistools/)
+#   documents the sensitivity and analysis-container interfaces used below.
 
 # %% [markdown]
 # <!-- colab-badge-next -->

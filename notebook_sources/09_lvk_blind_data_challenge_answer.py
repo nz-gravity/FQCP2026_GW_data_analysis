@@ -27,7 +27,7 @@
 #
 # Worked instructor analysis of the blind H1/L1 challenge.
 #
-# > **💡 Live route**
+# > **Live route**
 # >
 # > Run the search and coincidence sections first; unblind only in the last section.
 #
