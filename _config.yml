@@ -34,11 +34,18 @@ html:
   use_issues_button: false
   use_repository_button: true
   home_page_in_sidebar: true
-  comments:
-    utterances:
-      repo: "nz-gravity/FQCP2026_GW_data_analysis"
-      issue-term: "url"
-      theme: "github-light"
+  # jupyter-book's built-in `comments.utterances` config is broken on modern
+  # Sphinx: sphinx-comments 0.0.3 looks for `div.section` elements, which
+  # Sphinx stopped emitting (it now uses `<section>`), so the widget silently
+  # fails to attach. Injecting the script via extra_footer avoids that package.
+  extra_footer: |
+    <script src="https://utteranc.es/client.js"
+            repo="nz-gravity/FQCP2026_GW_data_analysis"
+            issue-term="url"
+            theme="github-light"
+            crossorigin="anonymous"
+            async>
+    </script>
 
 exclude_patterns:
   - _build/**
