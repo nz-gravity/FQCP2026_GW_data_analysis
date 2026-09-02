@@ -13,27 +13,22 @@
 # ---
 
 # %% [markdown]
+# <!-- colab-badge-top -->
+# [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/06_lisa_global_fit_gibbs.ipynb)
+
+# %% [markdown]
 # # Part 3B: LISA global fitting and Gibbs sampling
 #
 # **FQCP 2026 · Bayesian parameter estimation for gravitational-wave sources**
 #
-# > Google Colab worksheet. No prior Bayesian statistics or gravitational-wave
-# > experience is assumed — see the
-# > [glossary](https://nz-gravity.github.io/FQCP2026_GW_data_analysis/glossary.html)
-# > whenever a term is new. Run from top to bottom. In the JupyterBook, **Live
-# > route** cards identify the material for the session; **Extension** sections
-# > may be skipped live.
-
 # %% [markdown]
 # ## Goal and route
 #
 # Understand a global fit as communicating conditional analyses through a shared residual, then implement exact and Metropolis-within-Gibbs blocks.
 #
-# :::{admonition} Live route
-# :class: tip
-#
-# Run only the fixed-shape residual-handoff demonstration and its local exercise. The search -> seed -> cycle pipeline is a read-later extension.
-# :::
+# > **💡 Live route**
+# >
+# > Run only the fixed-shape residual-handoff demonstration and its local exercise. The search -> seed -> cycle pipeline is a read-later extension.
 #
 #
 # **Boundary:** The examples use fixed source counts or BIC enumeration and simplified responses. They are not production trans-dimensional LISA inference.
@@ -447,50 +442,33 @@ show_animation(gibbs_block_animation)
 # ### Question
 #
 # Reverse the order of the one-pass source subtraction. Compare the final residual norm with the blocked chain. Why can one-pass subtraction depend on ordering?
-#
-# Write your answer in the cell immediately below. The starter runs safely before
-# you edit it, so the complete notebook remains reproducible.
 
 # %%
-# Your code here
 reverse_order = [2, 1, 0]
-print("Exercise ready:", "repeat the one-pass updates in reverse_order")
+# Your code here: repeat the one-pass subtraction in reverse_order, then compare
+# its final residual norm with the forward pass and with the blocked chain.
 
 # %% [markdown]
 # <details>
 # <summary>Hint</summary>
 #
 # Each early subtraction is conditional on an incomplete residual. Its error is inherited by later blocks and is never revisited.
+#
 # </details>
 #
-# <details>
-# <summary>Solution and check</summary>
-#
-# ```python
-# reverse_residual = data.copy()
-# reverse_amplitudes = np.zeros(3)
-# for source_index in reverse_order:
-#     template_i = templates[source_index]
-#     reverse_amplitudes[source_index] = global_inner(template_i, reverse_residual) / global_inner(template_i, template_i)
-#     reverse_residual -= reverse_amplitudes[source_index] * template_i
-# print("reverse one-pass residual norm:", global_inner(reverse_residual, reverse_residual))
-# ```
-# </details>
 
 # %% [markdown]
-# :::{admonition} End of the live route
-# :class: important
-#
-# The essential global-fit idea is residual communication: every source block
-# sees the data after subtracting the current models for all other blocks. A
-# one-pass subtraction freezes early mistakes; repeated conditional updates can
-# revisit them.
-#
-# The extension below adds source searches, nonlinear parameters, a noise block,
-# Fisher-scaled proposals, and a fixed-count catalogue comparison. Those are
-# important research ideas, but not prerequisites for understanding the shared
-# residual.
-# :::
+# > **📌 End of the live route**
+# >
+# > The essential global-fit idea is residual communication: every source block
+# > sees the data after subtracting the current models for all other blocks. A
+# > one-pass subtraction freezes early mistakes; repeated conditional updates can
+# > revisit them.
+# >
+# > The extension below adds source searches, nonlinear parameters, a noise block,
+# > Fisher-scaled proposals, and a fixed-count catalogue comparison. Those are
+# > important research ideas, but not prerequisites for understanding the shared
+# > residual.
 
 # %% [markdown]
 # ## Extension: search, seed, and cycle a miniature catalogue
@@ -949,15 +927,13 @@ fig.tight_layout()
 plt.show()
 
 # %% [markdown]
-# :::{admonition} Residuals carry the history of a global fit
-# :class: warning
-#
-# After subtracting one imperfect source, its remaining error is no longer
-# labelled “source 1”: it is structure in the residual. The next source block or
-# the noise block can absorb it, biasing their inferences. That is why global
-# methods repeatedly update shared residuals (or sample all blocks jointly), and
-# why “the residual looks quiet” is a necessary but not sufficient check.
-# :::
+# > **⚠️ Residuals carry the history of a global fit**
+# >
+# > After subtracting one imperfect source, its remaining error is no longer
+# > labelled “source 1”: it is structure in the residual. The next source block or
+# > the noise block can absorb it, biasing their inferences. That is why global
+# > methods repeatedly update shared residuals (or sample all blocks jointly), and
+# > why “the residual looks quiet” is a necessary but not sufficient check.
 
 # %% [markdown]
 # **Look at the GB2 trace before trusting any number.** The
@@ -1030,3 +1006,7 @@ plt.show()
 print(
     "Preferred subset:", labels[int(np.argmin(delta))], "(the injected subset is 111)"
 )
+
+# %% [markdown]
+# <!-- colab-badge-next -->
+# Next: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/07_lisa_pspline_psd.ipynb)

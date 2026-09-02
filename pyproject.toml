@@ -23,6 +23,7 @@ dependencies = [
   # LISA notebooks run there and CI can build the site again.
   "lisaanalysistools==1.2.8",
   "matplotlib>=3.8",
+  "morphz==0.4.1",
   "nbclient>=0.10",
   "numpy>=2.0,<2.4",
   "numpyro==0.21.0",

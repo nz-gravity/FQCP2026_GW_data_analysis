@@ -13,27 +13,22 @@
 # ---
 
 # %% [markdown]
+# <!-- colab-badge-top -->
+# [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/08_lisa_wdm_time_frequency.ipynb)
+
+# %% [markdown]
 # # Part 3D: LISA WDM time-frequency analysis
 #
 # **FQCP 2026 · Bayesian parameter estimation for gravitational-wave sources**
 #
-# > Google Colab worksheet. No prior Bayesian statistics or gravitational-wave
-# > experience is assumed — see the
-# > [glossary](https://nz-gravity.github.io/FQCP2026_GW_data_analysis/glossary.html)
-# > whenever a term is new. Run from top to bottom. In the JupyterBook, **Live
-# > route** cards identify the material for the session; **Extension** sections
-# > may be skipped live.
-
 # %% [markdown]
 # ## Goal and route
 #
 # Use a Wilson--Daubechies--Meyer (WDM) time-frequency representation to see where gaps and changing noise enter an analysis.
 #
-# :::{admonition} Live route
-# :class: tip
-#
-# Run the gap and non-stationarity laboratory, then complete its local question. The masked WDM global-fit counterpart is a read-later extension.
-# :::
+# > **💡 Live route**
+# >
+# > Run the gap and non-stationarity laboratory, then complete its local question. The masked WDM global-fit counterpart is a read-later extension.
 #
 #
 # **Boundary:** The diagonal WDM likelihood is exact only under its covariance assumptions. Gaps and non-stationarity can correlate pixels.
@@ -461,44 +456,39 @@ print(f"injected NOISE_GROWTH               : {NOISE_GROWTH:.3f}")
 # %% [markdown]
 # ### Question
 #
-# Calculate the fraction of unavailable time samples and the fraction of WDM time columns directly covering the gap. Why can the Fourier-domain effect still spread across many frequency bins?
+# A gap removes a small, contiguous stretch of time. Quantify how local it stays
+# in each representation.
 #
-# Write your answer in the cell immediately below. The starter runs safely before
-# you edit it, so the complete notebook remains reproducible.
+# 1. What fraction of time samples is unavailable?
+# 2. What fraction of WDM time columns sits directly over the gap?
+# 3. Now estimate the Fourier-domain footprint: window the data with `available`
+#    and compare the periodogram with the ungapped one. Over how many frequency
+#    bins is the difference visible?
+#
+# Two of those three numbers are small and one is not. Explain the odd one out.
 
 # %%
-missing_sample_fraction = 1.0 - available.mean()
-gap_columns = (pixel_time >= GAP_DAYS[0]) & (pixel_time <= GAP_DAYS[1])
-missing_column_fraction = gap_columns.mean()
-print("missing time samples:", missing_sample_fraction)
-print("WDM columns over the gap:", missing_column_fraction)
-# Write one sentence comparing localisation in time and frequency.
+# Your code here. `available`, `pixel_time`, and `GAP_DAYS` are defined above.
 
 # %% [markdown]
 # <details>
 # <summary>Hint</summary>
 #
-# Multiplication by a gap window in time becomes a convolution in frequency. WDM pixels retain time location, although edge pixels can still be contaminated and correlated.
+# Multiplication by a gap window in time is a *convolution* in frequency, and
+# the window has sharp edges. WDM pixels keep their time location, so only the
+# columns over the gap are destroyed — though edge pixels are contaminated and
+# correlated with their neighbours.
+#
 # </details>
 #
-# <details>
-# <summary>Solution and check</summary>
-#
-# ```python
-# print("The gap is local in time/WDM columns but its sharp edges leak")
-# print("power broadly across Fourier frequency bins.")
-# ```
-# </details>
 
 # %% [markdown]
-# :::{admonition} End of the live route
-# :class: important
-#
-# WDM does not make missing data harmless. It makes the affected time region
-# visible and allows unaffected pixels to remain usable. The analysis must still
-# define a mask or model for gap-edge pixels and propagate that decision into the
-# likelihood.
-# :::
+# > **📌 End of the live route**
+# >
+# > WDM does not make missing data harmless. It makes the affected time region
+# > visible and allows unaffected pixels to remain usable. The analysis must still
+# > define a mask or model for gap-edge pixels and propagate that decision into the
+# > likelihood.
 
 # %% [markdown]
 # ## Extension: the global-fit residual in WDM pixels
@@ -976,59 +966,37 @@ plt.close(fig)
 show_animation(wdm_gibbs_animation)
 
 # %% [markdown]
-# :::{admonition} What WDM changes—and what it does not
-# :class: warning
-#
-# - The gap is localised, so most WDM pixels remain usable rather than every
-#   Fourier bin being contaminated by a mission-long window.
-# - The likelihood, source blocks, and noise block all use exactly the same mask.
-# - Source coupling remains: one-pass subtraction is still order-dependent, and
-#   an imperfect source model still leaves structure for later blocks to absorb.
-# - Masking whole columns discards more than the literal missing samples. Gap-edge
-#   pixels can remain correlated. The 0.75-day guard is a visible conservative
-#   teaching choice, not a calibrated production rule, so this diagonal
-#   likelihood is not a complete gap-marginalised analysis.
-# :::
+# > **⚠️ What WDM changes—and what it does not**
+# >
+# > - The gap is localised, so most WDM pixels remain usable rather than every
+# > Fourier bin being contaminated by a mission-long window.
+# > - The likelihood, source blocks, and noise block all use exactly the same mask.
+# > - Source coupling remains: one-pass subtraction is still order-dependent, and
+# > an imperfect source model still leaves structure for later blocks to absorb.
+# > - Masking whole columns discards more than the literal missing samples. Gap-edge
+# > pixels can remain correlated. The 0.75-day guard is a visible conservative
+# > teaching choice, not a calibrated production rule, so this diagonal
+# > likelihood is not a complete gap-marginalised analysis.
 
 # %% [markdown]
 # ### Question
 #
 # Reverse the one-pass source order and compare its masked residual norm with the forward pass and the joint fit. Why does WDM gap localisation not remove order dependence between overlapping sources?
-#
-# Write your answer in the cell immediately below. The starter runs safely before
-# you edit it, so the complete notebook remains reproducible.
 
 # %%
 reverse_order = [2, 1, 0]
-# Your code here: repeat the one-pass updates in reverse_order.
-print("Exercise ready:", reverse_order)
+# Your code here: repeat the one-pass updates in reverse_order, then compare the
+# masked residual norms of the forward pass, the reverse pass, and the joint fit.
 
 # %% [markdown]
 # <details>
 # <summary>Hint</summary>
 #
 # Each source is fitted to a residual containing the current errors from the other sources. WDM localises the gap, not source-model error.
+#
 # </details>
 #
-# <details>
-# <summary>Solution and check</summary>
-#
-# ```python
-# reverse_residual = wdm_global_data.copy()
-# reverse_amplitudes = np.zeros(3)
-# for source_index in reverse_order:
-#     template = wdm_global_templates[source_index]
-#     reverse_amplitudes[source_index] = (
-#         wdm_global_inner(template, reverse_residual)
-#         / wdm_global_inner(template, template)
-#     )
-#     reverse_residual -= reverse_amplitudes[source_index] * template
-#
-# joint_residual = wdm_global_data - np.sum(
-#     wdm_global_joint[:, None, None] * wdm_global_templates, axis=0
-# )
-# print("forward one-pass norm:", wdm_global_inner(wdm_one_pass_residual, wdm_one_pass_residual))
-# print("reverse one-pass norm:", wdm_global_inner(reverse_residual, reverse_residual))
-# print("joint-fit norm:", wdm_global_inner(joint_residual, joint_residual))
-# ```
-# </details>
+
+# %% [markdown]
+# <!-- colab-badge-next -->
+# Next: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/10_fast_likelihoods.ipynb)

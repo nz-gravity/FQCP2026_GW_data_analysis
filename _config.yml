@@ -37,6 +37,8 @@ html:
   comments:
     utterances:
       repo: "nz-gravity/FQCP2026_GW_data_analysis"
+      issue-term: "url"
+      theme: "github-light"
 
 exclude_patterns:
   - _build/**

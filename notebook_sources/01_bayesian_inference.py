@@ -13,36 +13,30 @@
 # ---
 
 # %% [markdown]
+# <!-- colab-badge-top -->
+# [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/01_bayesian_inference.ipynb)
+
+# %% [markdown]
 # # Part 1: Bayesian inference from first principles
 #
 # **FQCP 2026 · Bayesian parameter estimation for gravitational-wave sources**
 #
-# > Google Colab worksheet. No prior Bayesian statistics or gravitational-wave
-# > experience is assumed — see the
-# > [glossary](https://nz-gravity.github.io/FQCP2026_GW_data_analysis/glossary.html)
-# > whenever a term is new. Run from top to bottom. In the JupyterBook, **Live
-# > route** cards identify the material for the session; **Extension** sections
-# > may be skipped live.
-
 # %% [markdown]
 # ## Goal and route
 #
 # Build Bayesian parameter estimation from a signal and noise model, without hiding any step behind Bilby.
 #
-# :::{admonition} Live route
-# :class: tip
-#
-# Follow Sections 1--4 in order: model, prior, likelihood, posterior checks.
-# Section 5 is the exercise set you run yourself; Section 6 carries the same
-# likelihood into the frequency domain. Stop at the end-of-live-route marker.
-# :::
+# > **💡 Live route**
+# >
+# > Follow Sections 1--4 in order: model, prior, likelihood, posterior checks.
+# > Section 5 is the exercise set you run yourself; Section 6 carries the same
+# > likelihood into the frequency domain. Stop at the end-of-live-route marker.
 
 # %% [markdown]
 # ## The four pieces of Bayes' theorem
 #
-# Bayesian inference updates uncertainty. It combines what the model allowed
-# before seeing these data with how well each allowed parameter value explains
-# the data:
+# Bayesian inference combines what the model allowed before these data with how
+# well each allowed value explains them:
 #
 # $$
 # p(\theta\mid d,M)=
@@ -57,22 +51,20 @@
 # | posterior $p(\theta\mid d)$ | what values remain plausible after combining prior and likelihood? |
 # | evidence $\mathcal Z$ | what normalises the posterior, and how well did the complete model predict the data? |
 #
-# For parameter estimation, the reusable calculation is
-#
-# $$
-# \text{posterior}\propto\text{likelihood}\times\text{prior}.
-# $$
-#
-# We will calculate every part on a two-parameter grid before introducing any
-# sampling algorithm. A posterior is a distribution, not just the location of
-# the best-fitting line.
+# For parameter estimation the reusable calculation is
+# $\text{posterior}\propto\text{likelihood}\times\text{prior}$. We compute every
+# part on a two-parameter grid before introducing any sampler — a posterior is a
+# distribution, not the location of the best-fitting line.
 
 # %%
 import importlib.util
+import io
 import os
 import subprocess
 import sys
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from urllib.request import urlretrieve
 import numpy as np
 import matplotlib.pyplot as plt
@@ -80,13 +72,24 @@ from IPython.display import HTML, display
 from matplotlib.animation import FuncAnimation
 
 IN_COLAB = "COLAB_RELEASE_TAG" in os.environ
-if importlib.util.find_spec("numpyro") is None:
+missing = [name for name in ("numpyro", "morphZ") if importlib.util.find_spec(name) is None]
+if missing:
     if IN_COLAB:
         subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", "-q", "numpyro==0.21.0"]
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "-q",
+                "numpyro==0.21.0",
+                "morphz==0.4.1",
+            ]
         )
     else:
-        raise ImportError("Install numpyro==0.21.0, or run this notebook in Colab.")
+        raise ImportError(
+            "Install numpyro==0.21.0 and morphz==0.4.1, or run this notebook in Colab."
+        )
 
 rng = np.random.default_rng(20260817)
 plt.style.use("seaborn-v0_8-whitegrid")
@@ -105,20 +108,15 @@ print("Running in Colab:", IN_COLAB)
 # %% [markdown]
 # ## 1. A dataset, and a model we *choose*
 #
-# Here is a dataset, loaded from a CSV. Nobody will tell you where it came
-# from: no injected curve is drawn on top of it, no true parameters are printed,
-# and the code that generated it is not in this notebook. That is deliberate.
-# This notebook is about what you can and cannot conclude when the truth is not
-# supplied — which is every real analysis.
+# A dataset, loaded from a CSV. No injected curve, no true parameters, and the
+# code that generated it is not in this notebook — deliberately. This is about
+# what you can conclude when the truth is not supplied, which is every real
+# analysis. You are given one thing: the noise level $\sigma=3$, as an
+# instrument would quote it.
 #
-# The one thing you are given is the noise level, $\sigma=3$, as an instrument
-# would quote it.
-#
-# What we choose to do is fit it with a straight line and independent Gaussian
-# noise of known width,
+# We *choose* to fit a straight line with independent Gaussian noise,
 #
 # $$d_i=m t_i+c+n_i,\qquad n_i\sim\mathcal N(0,\sigma^2).$$
-# 
 #
 # That choice **is** the model. Every number below is conditional on it.
 #
@@ -316,6 +314,7 @@ from jax import random as jax_random
 import numpyro
 import numpyro.distributions as dist
 from numpyro.infer import MCMC, NUTS
+from morphZ import evidence
 
 
 def numpyro_line_model(time, observed=None):
@@ -387,41 +386,18 @@ print(
 )
 
 # %% [markdown]
-# :::{admonition} Grid or sampler? Use whichever you like
-# :class: tip
-#
-# For the rest of this notebook the two tools are interchangeable for
-# **posteriors**, and Section 5 accepts either. They are not interchangeable for
-# **evidence**:
-#
-# | | posterior | evidence $\mathcal Z$ |
-# | --- | --- | --- |
-# | `fit_on_grid` | yes | yes |
-# | `run_nuts` | yes | **no** |
-#
-# MCMC explores where the posterior is large; it never measures the volume under
-# it, so it cannot give you $\mathcal Z$. That is not a limitation of NUTS in
-# particular — it is true of Metropolis, HMC, and every other plain MCMC method.
-# Getting an evidence out of a sampler needs a different algorithm, which is why
-# the gravitational-wave community runs nested sampling (`dynesty`, `nessai`) or
-# thermodynamic integration whenever a Bayes factor is wanted. The
-# [sampler extension lab](01b_bayesian_samplers.ipynb) builds one.
-#
-# The grid only works here because there are two parameters. At the fifteen
-# parameters of a real CBC analysis it is hopeless: a grid of 100 points per
-# dimension is $10^{30}$ likelihood evaluations.
-# :::
+# Use either method for the posterior in Section 5. NUTS itself returns draws,
+# not an evidence; below we will estimate the evidence from those draws with
+# MorphZ.
 
 # %% [markdown]
-# :::{admonition} Live demonstration, not a convergence claim
-# :class: warning
-#
-# This short single-chain run is enough to connect code with a sampled
-# posterior because the exact grid is available as a check. Real parameter
-# estimation uses multiple chains or independent runs and checks divergences,
-# effective sample size, convergence, and missed modes. The
-# [sampler extension lab](01b_bayesian_samplers.ipynb) develops those ideas.
-# :::
+# > **⚠️ Live demonstration, not a convergence claim**
+# >
+# > This short single-chain run is enough to connect code with a sampled
+# > posterior because the exact grid is available as a check. Real parameter
+# > estimation uses multiple chains or independent runs and checks divergences,
+# > effective sample size, convergence, and missed modes. The
+# > [sampler extension lab](01b_bayesian_samplers.ipynb) develops those ideas.
 
 # %% [markdown]
 # <details>
@@ -476,18 +452,17 @@ plt.show()
 # \mathcal Z_M=\int \mathcal L(d\mid\theta,M)\,\pi(\theta\mid M)\,d\theta.
 # $$
 #
-# This is the gravitational-wave detection question in miniature. Compare two
-# models of the same data:
+# This is the gravitational-wave detection question in miniature:
 #
-# - $M_1$, **signal present**: the straight line, with $m$ and $c$ free over the
-#   prior rectangle;
-# - $M_0$, **noise only**: $h=0$, no free parameters at all, so
+# - $M_1$, **signal present**: the line, with $m$ and $c$ free over the prior
+#   rectangle;
+# - $M_0$, **noise only**: $h=0$, no free parameters, so
 #   $\mathcal Z_0=\mathcal L(d\mid h=0)$ with nothing to integrate.
 #
-# $M_1$ does not win merely because it can fit better. It pays for its two free
-# parameters: prior volume that fits badly drags the average down. That is the
-# Bayesian Occam factor, and it is why a Bayes factor must always be quoted
-# together with the priors that produced it.
+# $M_1$ does not win merely by fitting better — it pays for its two parameters,
+# because prior volume that fits badly drags the average down. That is the
+# Bayesian Occam factor, and why a Bayes factor is meaningless without its
+# priors.
 #
 # **Predict before running:** the straight line is not the shape that made these
 # data. Do you expect $\log\mathcal B_{10}$ to come out near zero, mildly
@@ -501,19 +476,78 @@ print(f"log Z (noise, M0): {log_z_noise:9.2f}")
 print(f"log Bayes factor, line over noise: {log_bayes_factor:.1f}")
 
 # %% [markdown]
-# :::{admonition} Read that number carefully
-# :class: warning
+# ### Estimate $\log\mathcal Z$ from the NUTS draws
 #
-# A log Bayes factor of several hundred is about as decisive as this statistic
-# gets. In a gravitational-wave search it would be reported as an unambiguous
-# detection.
-#
-# It says the data contain **something other than noise**. It does not say the
-# something is a straight line. $M_0$ is a very weak opponent: almost any smooth
-# curve through these points beats "nothing at all" by a similar margin. A Bayes
-# factor is a *comparison*, never a verdict on a single model, and the margin
-# tells you how bad the alternative was as much as how good the winner is.
-# :::
+# [MorphZ](https://el-mz.github.io/MorphZ/_auto/examples/numpyro_morphz_lnz.html)
+# fits an approximation to the sampled posterior and uses it for bridge
+# sampling. It is a post-processing evidence estimator: NUTS still did not
+# compute $\mathcal Z$ itself. Here the grid gives us an exact two-dimensional
+# answer to check against.
+
+# %%
+nuts_samples = np.column_stack([nuts_draws["m"], nuts_draws["c"]])
+
+
+def line_log_posterior(sample):
+    """Normalised log prior plus log likelihood for MorphZ."""
+    m, c = sample
+    if not (-2.0 <= m <= 6.0 and -15.0 <= c <= 15.0):
+        return -np.inf
+    residual = data - signal_model(time, m, c)
+    log_likelihood = -0.5 * np.sum(
+        (residual / sigma) ** 2 + np.log(2 * np.pi * sigma**2)
+    )
+    log_prior = -np.log(8.0 * 30.0)
+    return float(log_likelihood + log_prior)
+
+
+nuts_log_posterior = np.array([line_log_posterior(sample) for sample in nuts_samples])
+np.random.seed(2026)
+with TemporaryDirectory(prefix="fqcp_morphz_") as morphz_output:
+    with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+        morphz_runs = np.asarray(
+            evidence(
+                post_samples=nuts_samples,
+                log_posterior_values=nuts_log_posterior,
+                log_posterior_function=line_log_posterior,
+                n_resamples=1000,
+                thin=1,
+                kde_fraction=0.6,
+                bridge_start_fraction=0.5,
+                max_iter=2000,
+                tol=1e-4,
+                morph_type="2_group",
+                kde_bw="silverman",
+                param_names=["m", "c"],
+                output_path=morphz_output,
+                n_estimations=3,
+                verbose=False,
+                plot=False,
+                show_progress=False,
+            )
+        )
+
+morphz_log_z = morphz_runs[:, 0]
+morphz_error = morphz_runs[:, 1]
+print(
+    f"MorphZ log Z: {morphz_log_z.mean():.2f} "
+    f"+/- {morphz_error.mean():.2f} (reported bridge error)"
+)
+print(f"exact grid log Z: {log_z_line:.2f}")
+print(f"difference:       {morphz_log_z.mean() - log_z_line:+.2f}")
+
+# %% [markdown]
+# > **⚠️ Read that number carefully**
+# >
+# > A log Bayes factor of several hundred is about as decisive as this statistic
+# > gets. In a gravitational-wave search it would be reported as an unambiguous
+# > detection.
+# >
+# > It says the data contain **something other than noise**. It does not say the
+# > something is a straight line. $M_0$ is a very weak opponent: almost any smooth
+# > curve through these points beats "nothing at all" by a similar margin. A Bayes
+# > factor is a *comparison*, never a verdict on a single model, and the margin
+# > tells you how bad the alternative was as much as how good the winner is.
 
 
 # %% [markdown]
@@ -596,57 +630,45 @@ plt.show()
 #
 # Look at the residual panel before reading the number.
 #
-# The left panel is unremarkable: the posterior is tight, the predictive band
-# covers the points, nothing looks absurd. The right panel is not scatter. It is
-# a slow arc — high, then low, then high — because a straight line cannot bend
-# the way these data bend, so every posterior draw is wrong in the same direction
-# at the same times.
+# The left panel is unremarkable. The right panel is not scatter: it is a slow
+# arc, because a straight line cannot bend the way these data bend, so every
+# posterior draw is wrong in the same direction at the same times.
 #
-# The $p$-value is $0.000$: not one dataset replicated from the line's own
-# posterior is as badly fitted as the real data. The line is not merely
-# imperfect, it is **excluded** — by the same data that just handed it a log
-# Bayes factor of several hundred over noise.
+# The $p$-value is $0.000$. Not one dataset replicated from the line's own
+# posterior fits as badly as the real data, so the line is not merely imperfect
+# — it is **excluded**, by the same data that just handed it a log Bayes factor
+# of several hundred over noise.
 #
-# **The posterior could never have told you this.** A posterior reports the best
-# available parameters of whatever model it was handed. It has no way to say
-# "none of these". Only a check that compares *predicted data* with *observed
-# data* can.
+# **No posterior could have told you this.** A posterior reports the best
+# parameters of whatever model it was handed; it has no way to say "none of
+# these". Only comparing *predicted data* with *observed data* can.
 #
-# So here is the reveal. The CSV was generated from an **exponential rise**,
+# The reveal: the CSV came from an **exponential rise**,
 #
 # $$h(t)=A\left(e^{t/\tau}-1\right),\qquad A=1,\quad \tau=3,$$
 #
-# with exactly the white $\sigma=3$ noise the notebook assumed. The noise model
-# was right all along. The *signal* model was the wrong shape, and we have spent
-# the whole notebook fitting a line to it — confidently, with tight error bars
-# and a decisive Bayes factor over noise.
+# with exactly the white $\sigma=3$ noise we assumed. The noise model was right
+# all along; the *signal* model was the wrong shape.
 #
-# Two things generalise to every later chapter:
+# Two things generalise:
 #
-# - **Loud is not the same as right.** A signal-versus-noise Bayes factor is the
-#   beginning of an argument, not the end of one. This is why gravitational-wave
-#   analyses ship residual tests and waveform-systematics studies alongside their
-#   posteriors.
-# - **A passing check is not proof either.** A non-extreme $p$-value means only
-#   that this particular statistic found nothing wrong. These $p$-values are also
-#   not uniformly distributed under the true model — the data were used both to
-#   fit and to test, which makes them conservative.
+# - **Loud is not right.** A signal-versus-noise Bayes factor begins an
+#   argument, it does not end one. Hence residual tests and waveform-systematics
+#   studies alongside every published posterior.
+# - **A passing check is not proof.** A non-extreme $p$-value means only that
+#   this statistic found nothing wrong — and these $p$-values are conservative,
+#   since the data were used both to fit and to test.
 
 # %% [markdown]
 # ## 5. Your turn: four experiments
 #
-# Everything above used one dataset, one amount of data, one assumed noise level,
-# and one signal model. The four experiments below change exactly one of those at
-# a time. Each is a few lines on top of `fit_on_grid`, `run_nuts`, `interval`,
-# and `posterior_predictive`, which are already defined above.
+# Each experiment below changes exactly one thing: the amount of data, the
+# assumed noise, or the signal model. All of them build on `fit_on_grid`,
+# `run_nuts`, `interval`, and `posterior_predictive`, already defined above.
 #
-# **Grid or sampler — your choice.** Exercises 1 and 2 only need a posterior, so
-# use whichever tool you prefer; comparing the two is itself worthwhile.
-# Exercises 3 and 4 need an evidence, and `run_nuts` cannot give you one, so use
-# `fit_on_grid` there (or write your own nested sampler, which is what
-# [the sampler lab](01b_bayesian_samplers.ipynb) does).
-#
-# Any new model you write must use `jnp` rather than `np` so that it works with
+# **Grid or sampler, your choice** for exercises 1 and 2 — comparing them is
+# worthwhile in itself. Exercises 3 and 4 need an evidence, so reach for
+# `fit_on_grid`. Write any new model with `jnp`, not `np`, so it works with
 # both tools:
 #
 # ```python
@@ -654,8 +676,7 @@ plt.show()
 #     return first * jnp.exp(time / second)
 # ```
 #
-# Work in pairs. Worked solutions are in the companion notebook
-# `01_bayesian_inference_answers.ipynb` — try each one before opening it.
+# Work in pairs.
 #
 # ### Exercise 1 — does more data help?
 #
@@ -681,6 +702,7 @@ plt.show()
 #
 # For the grid, marginalise with `np.trapezoid(density, c_grid, axis=1)` and
 # summarise with `interval`. For the sampler, `np.quantile(draws["a"], [0.05, 0.95])`.
+#
 # </details>
 #
 # ### Exercise 2 — what if the assumed noise is wrong?
@@ -702,6 +724,7 @@ plt.show()
 #
 # This is why the gravitational-wave chapters spend so long on PSD estimation:
 # the PSD *is* the assumed noise, and getting it wrong does exactly this.
+#
 # </details>
 #
 # ### Exercise 3 — try a different signal model
@@ -729,6 +752,7 @@ plt.show()
 # then call
 # `fit_on_grid(exponential_model, data, np.linspace(0, 4, 141), np.linspace(1, 10, 161))`.
 # The prior-volume term is `np.log(volume_line / volume_exponential)`.
+#
 # </details>
 #
 # ### Exercise 4 — a model that is wrong in a different way
@@ -751,6 +775,7 @@ plt.show()
 # def sine_model(time, amplitude, frequency):
 #     return amplitude * jnp.sin(2 * np.pi * frequency * time)
 # ```
+#
 # </details>
 
 # %% [markdown]
@@ -936,31 +961,27 @@ print(
 # toy chirp and toy PSD with physical waveforms, detector data, and an
 # off-source PSD estimate.
 #
-# :::{admonition} Boundary
-# :class: warning
-#
-# This diagonal Fourier-bin likelihood assumes approximate stationarity and
-# well-behaved data. Gaps, glitches, strong lines, and time-varying noise create
-# correlations that a single diagonal PSD does not describe.
-# :::
+# > **⚠️ Boundary**
+# >
+# > This diagonal Fourier-bin likelihood assumes approximate stationarity and
+# > well-behaved data. Gaps, glitches, strong lines, and time-varying noise create
+# > correlations that a single diagonal PSD does not describe.
 
 # %% [markdown]
-# :::{admonition} End of the live route
-# :class: important
-#
-# You now have the complete inference chain used later in the course:
-#
-# $$
-# \text{data} + \text{signal model} + \text{noise model}
-# \longrightarrow \text{likelihood}
-# \longrightarrow \text{posterior}
-# \longrightarrow \text{checks}.
-# $$
-#
-# For a comparison of NUTS, Metropolis, nested sampling, and variational
-# inference, continue to the independently runnable
-# [sampler extension lab](01b_bayesian_samplers.ipynb).
-# :::
+# > **📌 End of the live route**
+# >
+# > You now have the complete inference chain used later in the course:
+# >
+# > $$
+# > \text{data} + \text{signal model} + \text{noise model}
+# > \longrightarrow \text{likelihood}
+# > \longrightarrow \text{posterior}
+# > \longrightarrow \text{checks}.
+# > $$
+# >
+# > For a comparison of NUTS, Metropolis, nested sampling, and variational
+# > inference, continue to the independently runnable
+# > [sampler extension lab](01b_bayesian_samplers.ipynb).
 
 # %% [markdown]
 # ## Reference: the parameter-estimation checklist
@@ -991,3 +1012,7 @@ print(
 #   actually recover from data. The LVK notebook computes both.
 # - *Credible interval* (Bayesian, probability over parameters) is not a
 #   *confidence interval* (frequentist, coverage over repeated experiments).
+
+# %% [markdown]
+# <!-- colab-badge-next -->
+# Next: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/01b_bayesian_samplers.ipynb)

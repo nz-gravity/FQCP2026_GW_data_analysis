@@ -35,6 +35,17 @@ for path in notebooks:
                 raise SystemExit(
                     f"{path.name}: markdown cell {index} has an unmatched $$ delimiter"
                 )
+            # The notebooks are opened in Colab as often as on the site, and
+            # Colab renders none of MyST's directive syntax -- it prints the
+            # marker lines verbatim. Callouts are blockquotes; tabs are
+            # headings. Keep index.md and glossary.md free to use MyST.
+            for directive in (":::", "{tab-set}", "{tab-item}", "{admonition}"):
+                if directive in cell.source:
+                    raise SystemExit(
+                        f"{path.name}: markdown cell {index} uses MyST-only "
+                        f"syntax ({directive}); it renders as literal text in "
+                        "Colab. Use a blockquote callout or a heading instead"
+                    )
             control_characters = [
                 character
                 for character in cell.source

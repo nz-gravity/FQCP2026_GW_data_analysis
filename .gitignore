@@ -3,6 +3,9 @@ _site/
 _build/
 .DS_Store
 notebooks/gw150914_short
+# 134 MB GWTC-2.1 release; scripts/build_gwtc_reference.py curates it
+# into the small committed CSV in assets/.
+notebooks/gw150914_cache/IGWN-GWTC2p1-*.h5
 
 # Python bytecode and build products
 __pycache__/

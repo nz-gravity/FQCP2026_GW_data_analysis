@@ -13,27 +13,22 @@
 # ---
 
 # %% [markdown]
+# <!-- colab-badge-top -->
+# [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/04_lvk_population_and_checks.ipynb)
+
+# %% [markdown]
 # # Part 2C: LVK populations and PE checks
 #
 # **FQCP 2026 · Bayesian parameter estimation for gravitational-wave sources**
 #
-# > Google Colab worksheet. No prior Bayesian statistics or gravitational-wave
-# > experience is assumed — see the
-# > [glossary](https://nz-gravity.github.io/FQCP2026_GW_data_analysis/glossary.html)
-# > whenever a term is new. Run from top to bottom. In the JupyterBook, **Live
-# > route** cards identify the material for the session; **Extension** sections
-# > may be skipped live.
-
 # %% [markdown]
 # ## Goal and route
 #
 # Turn event-level information into a population statement and see why the detected catalogue is not the underlying population.
 #
-# :::{admonition} Live route
-# :class: tip
-#
-# Run the selection-bias picture and complete its question. Stop at the end-of-live-route marker; posterior-sample reweighting is an extension.
-# :::
+# > **💡 Live route**
+# >
+# > Run the selection-bias picture and complete its question. Stop at the end-of-live-route marker; posterior-sample reweighting is an extension.
 #
 #
 # **Boundary:** The toy treats event masses as exactly measured. Production population inference reweights uncertain event posterior samples and estimates selection with injection campaigns.
@@ -152,42 +147,36 @@ print(f"Selection-aware MAP: {mean_grid[np.argmax(corrected)]:.2f}")
 # %% [markdown]
 # ### Question
 #
-# Use the printed MAP values to calculate how far the naive estimate and the selection-aware estimate are from the injected population mean. Which analysis answers the astrophysical question?
+# Measure how far each estimate sits from the injected population mean, and say
+# which of the two answers the astrophysical question.
 #
-# Write your answer in the cell immediately below. The starter runs safely before
-# you edit it, so the complete notebook remains reproducible.
+# 1. Compute the absolute error of the naive MAP and of the selection-aware MAP.
+# 2. The naive estimate is not merely noisy, it is biased in a predictable
+#    direction. Which direction, and why that one?
+# 3. Both analyses are internally consistent and neither is a coding mistake.
+#    What exactly is the naive posterior a correct answer *to*?
 
 # %%
-naive_error = abs(mean_grid[np.argmax(naive)] - population_mean)
-corrected_error = abs(mean_grid[np.argmax(corrected)] - population_mean)
-print("naive absolute error:", naive_error)
-print("selection-aware absolute error:", corrected_error)
-# Write one sentence interpreting the comparison.
+# Your code here. `mean_grid`, `naive`, `corrected`, and `population_mean` are
+# all defined above.
 
 # %% [markdown]
 # <details>
 # <summary>Hint</summary>
 #
-# The detected catalogue is not a random draw from the underlying population. The relevant curve accounts for the mass-dependent probability of entering the catalogue.
+# The detected catalogue is not a random draw from the underlying population.
+# Heavier systems are louder, so they enter the catalogue more often — compare
+# `detected.mean()` with `population_mean` before you look at either posterior.
+#
 # </details>
 #
-# <details>
-# <summary>Solution and check</summary>
-#
-# ```python
-# print("The selection-aware analysis answers the population question;")
-# print("the naive analysis describes the detected catalogue instead.")
-# ```
-# </details>
 
 # %% [markdown]
-# :::{admonition} End of the live route
-# :class: important
-#
-# Selection effects alone can move a population result even when every detected
-# event is measured perfectly. The extension below adds the next complication:
-# real events are posterior distributions rather than exact masses.
-# :::
+# > **📌 End of the live route**
+# >
+# > Selection effects alone can move a population result even when every detected
+# > event is measured perfectly. The extension below adds the next complication:
+# > real events are posterior distributions rather than exact masses.
 
 # %% [markdown]
 # ## Extension: events are posteriors, not numbers
@@ -399,3 +388,7 @@ print("check passed: the error is systematic, not scatter")
 #
 # The last one is the difference between "the data prefer this population" and
 # "this population model, fitted to these data, prefers these hyperparameters".
+
+# %% [markdown]
+# <!-- colab-badge-next -->
+# Next: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/09_lvk_blind_data_challenge.ipynb)

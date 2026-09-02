@@ -13,27 +13,22 @@
 # ---
 
 # %% [markdown]
+# <!-- colab-badge-top -->
+# [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/03_lvk_gw150914_bilby.ipynb)
+
+# %% [markdown]
 # # Part 2B: GW150914 with Bilby
 #
 # **FQCP 2026 · Bayesian parameter estimation for gravitational-wave sources**
 #
-# > Google Colab worksheet. No prior Bayesian statistics or gravitational-wave
-# > experience is assumed — see the
-# > [glossary](https://nz-gravity.github.io/FQCP2026_GW_data_analysis/glossary.html)
-# > whenever a term is new. Run from top to bottom. In the JupyterBook, **Live
-# > route** cards identify the material for the session; **Extension** sections
-# > may be skipped live.
-
 # %% [markdown]
 # ## Goal and route
 #
 # Analyse public H1/L1 data around GW150914 with Bilby's standard compact-binary likelihood.
 #
-# :::{admonition} Live route
-# :class: tip
-#
-# Build the data and PSD, inspect which parameters are sampled or fixed, then construct the likelihood. The final Dynesty cell is optional live and can take 10--30 minutes in Colab.
-# :::
+# > **💡 Live route**
+# >
+# > Build the data and PSD, inspect which parameters are sampled or fixed, then construct the likelihood. The final Dynesty cell is optional live and can take 10--30 minutes in Colab.
 #
 #
 # **Boundary:** This is a restricted non-spinning analysis with several extrinsic parameters fixed and fast workshop sampler settings. It is not the published LVK production analysis.
@@ -75,6 +70,9 @@ if any(importlib.util.find_spec(package) is None for package in needed):
         )
     else:
         raise ImportError("Install bilby, gwpy, and lalsuite, or run in Colab.")
+
+from pathlib import Path
+from urllib.request import urlretrieve
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -323,24 +321,20 @@ plt.show()
 # four-second Tukey-windowed periodograms, 50% overlap, and a median average. This
 # is deliberately off source: the event should not define its own noise weighting.
 #
-# This common off-source construction is usually called a **median-Welch PSD**:
+# This off-source construction is a **median-Welch PSD**, and each word earns
+# its place:
 #
-# 1. **Why Welch?** A single periodogram is an extremely noisy estimate: at each
-#    frequency its scatter is comparable to its mean. Split a long record into
-#    short, windowed stretches; Fourier transform each; then combine their
-#    periodograms. We trade frequency resolution for much lower estimator
-#    variance.
-# 2. **Why a median rather than an arithmetic mean?** For perfectly stationary
-#    Gaussian noise the mean is efficient. Real interferometer data contain
-#    short glitches, and one loud stretch can pull a mean far upward. The median
-#    is robust to a minority of contaminated stretches. The implementation
-#    applies the appropriate median-bias correction; the median is not taken as
-#    an already unbiased PSD by itself.
-# 3. **Why overlap?** A Tukey or Hann window downweights samples near each
-#    stretch's edges. Sliding the next stretch by half a window reuses those
-#    samples near another window's centre and supplies more periodograms from a
-#    fixed off-source record. Adjacent estimates are correlated, so 50% overlap
-#    improves stability but does **not** double the independent information.
+# 1. **Welch.** One periodogram is a terrible estimate — its scatter at each
+#    frequency is comparable to its mean. Averaging many short windowed
+#    stretches trades frequency resolution for far lower variance.
+# 2. **Median.** The mean is efficient for stationary Gaussian noise, but one
+#    glitchy stretch drags it upward. The median survives a contaminated
+#    minority. (`scipy` applies the median-bias correction; the raw median is
+#    not an unbiased PSD.)
+# 3. **Overlap.** Windows downweight their own edges, so sliding by half a
+#    window reuses those samples near the next window's centre. Adjacent
+#    estimates are correlated, so this improves stability but does **not**
+#    double the independent information.
 #
 # Keep the four timescales distinct:
 #
@@ -553,33 +547,20 @@ plt.show()
 # ### Question
 #
 # Why should the PSD normally be estimated away from the signal? Compute the ratio of the H1 ASD near 100 Hz to its median between 80 and 120 Hz as a quick local sanity check.
-#
-# Write your answer in the cell immediately below. The starter runs safely before
-# you edit it, so the complete notebook remains reproducible.
 
 # %%
-# Your code here
 h1 = interferometers[0]
-print("Exercise ready:", "select the 80--120 Hz bins and compare ASD values")
+# Your code here: mask to the 80-120 Hz band, then compare the ASD at 100 Hz
+# with the median of the band.
 
 # %% [markdown]
 # <details>
 # <summary>Hint</summary>
 #
 # Use `h1.frequency_array` and `h1.amplitude_spectral_density_array`; apply the interferometer's frequency mask as well.
+#
 # </details>
 #
-# <details>
-# <summary>Solution and check</summary>
-#
-# ```python
-# mask = h1.strain_data.frequency_mask & (h1.frequency_array >= 80) & (h1.frequency_array <= 120)
-# band_frequency = h1.frequency_array[mask]
-# band_asd = h1.amplitude_spectral_density_array[mask]
-# near_100 = np.argmin(np.abs(band_frequency - 100))
-# print(band_asd[near_100] / np.median(band_asd))
-# ```
-# </details>
 
 # %% [markdown]
 # ## 3. Define the restricted prior
@@ -700,31 +681,161 @@ plt.show()
 # </details>
 
 # %% [markdown]
+# ## Compare with the published posterior
+#
+# We have a posterior for GW150914. So does the LVK, from an analysis that took
+# rather longer than four minutes. Both are public, so the comparison is
+# available to anyone — and it is the only honest way to find out whether the
+# run above meant anything.
+#
+# The reference is the **GWTC-2.1** data release,
+# [doi:10.5281/zenodo.6513631](https://doi.org/10.5281/zenodo.6513631), released
+# under CC BY 4.0. Inside it, the analysis labelled `C01:Mixed` holds the
+# catalogue's fiducial samples for this event, pooled over two waveform families
+# (IMRPhenomXPHM and SEOBNRv4PHM).
+#
+# ### Getting it yourself
+#
+# The full file for this one event is **134 MB**, which is not a thing to
+# download in a workshop room. So the cell below reads a small CSV of the columns
+# we need. This is how you would pull the real thing later:
+#
+# ```python
+# from urllib.request import urlretrieve
+# import h5py
+#
+# url = (
+#     "https://zenodo.org/api/records/6513631/files/"
+#     "IGWN-GWTC2p1-v2-GW150914_095045_PEDataRelease_mixed_cosmo.h5/content"
+# )
+# urlretrieve(url, "GW150914_gwtc2p1.h5")
+#
+# with h5py.File("GW150914_gwtc2p1.h5", "r") as source:
+#     published = source["C01:Mixed/posterior_samples"][()]
+# print(published.dtype.names)  # 59 parameters
+# ```
+#
+# Every event in the catalogue is there under its own filename, and `pesummary`
+# will read these files for you if you would rather not touch h5py.
+
+# %% fqcp_figure="lvk-gwosc-published-overlay"
+published_candidates = [
+    Path("assets/gw150914_gwtc2p1_posterior.csv"),
+    Path("../assets/gw150914_gwtc2p1_posterior.csv"),
+]
+published_path = next(
+    (path for path in published_candidates if path.exists()), published_candidates[0]
+)
+published_url = (
+    "https://raw.githubusercontent.com/nz-gravity/"
+    "FQCP2026_GW_data_analysis/main/assets/gw150914_gwtc2p1_posterior.csv"
+)
+if not published_path.exists():
+    published_path.parent.mkdir(parents=True, exist_ok=True)
+    urlretrieve(published_url, published_path)
+
+published = np.genfromtxt(published_path, delimiter=",", names=True)
+chirp_mass_samples = result_short.posterior["chirp_mass"].to_numpy()
+mass_ratio_samples = result_short.posterior["mass_ratio"].to_numpy()
+
+fig, (ax, bx) = plt.subplots(1, 2, figsize=(11, 3.8))
+bins = np.linspace(28.0, 34.0, 60)
+ax.hist(
+    published["chirp_mass"],
+    bins=bins,
+    density=True,
+    alpha=0.45,
+    label="GWTC-2.1 (C01:Mixed)",
+)
+ax.hist(
+    chirp_mass_samples,
+    bins=bins,
+    density=True,
+    histtype="step",
+    lw=2,
+    color="C3",
+    label="this notebook",
+)
+for edge in (prior["chirp_mass"].minimum, prior["chirp_mass"].maximum):
+    ax.axvline(edge, color="k", ls=":", lw=1.5)
+ax.set(
+    xlabel=r"detector-frame chirp mass $\mathcal{M}$ [$M_\odot$]",
+    ylabel="posterior density",
+    title="Dotted lines are our prior edges",
+)
+ax.legend(fontsize=8)
+
+bx.scatter(
+    published["chirp_mass"],
+    published["mass_ratio"],
+    s=4,
+    alpha=0.18,
+    label="GWTC-2.1",
+)
+bx.scatter(
+    chirp_mass_samples, mass_ratio_samples, s=6, alpha=0.5, color="C3", label="ours"
+)
+bx.set(
+    xlabel=r"$\mathcal{M}$ [$M_\odot$]",
+    ylabel="mass ratio $q$",
+    title="The same two parameters",
+)
+bx.legend(fontsize=8)
+plt.tight_layout()
+plt.show()
+
+for label, values in [
+    ("GWTC-2.1", published["chirp_mass"]),
+    ("this notebook", chirp_mass_samples),
+]:
+    low, median, high = np.quantile(values, [0.05, 0.5, 0.95])
+    print(f"{label:15s} Mc = {median:.2f} [{low:.2f}, {high:.2f}] Msun  (90%)")
+
+# %% [markdown]
+# <details>
+# <summary><i>Expected output &mdash; open this if your cell has not run yet</i></summary>
+#
+# <img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/lvk-gwosc-published-overlay.png" alt="expected output: lvk-gwosc-published-overlay" style="max-width:100%">
+#
+# </details>
+
+# %% [markdown]
 # ### Question
 #
-# Report the median and symmetric 90% credible interval for detector-frame chirp mass. Then state one reason it should not match every published GW150914 posterior exactly.
+# Look at the overlay, then answer three things.
 #
-# Write your answer in the cell immediately below. The starter runs safely before
-# you edit it, so the complete notebook remains reproducible.
+# 1. **Do the two posteriors agree?** Quote the median and 90% interval for
+#    each. Say what "agree" should even mean here — overlapping intervals,
+#    consistent medians, or matching widths? They are not the same test.
+# 2. **Why, or why not?** Our run and the published one differ in many ways at
+#    once. List every difference you can identify, then say which of them you
+#    think actually moved the answer. One of them is visible directly in the
+#    left-hand panel.
+# 3. **What would you change?** You have four minutes of compute. Spend it: name
+#    the single change most likely to bring our posterior closer to the
+#    published one, and say how you would know whether it worked.
 
 # %%
-# Your code here
-chirp_mass_samples = result_short.posterior["chirp_mass"].to_numpy()
-print("Exercise ready:", "calculate the 5th, 50th, and 95th percentiles")
+# Your code here.
 
 # %% [markdown]
 # <details>
 # <summary>Hint</summary>
 #
-# Use `np.quantile(chirp_mass_samples, [0.05, 0.5, 0.95])`. The waveform, fixed spins/extrinsic parameters, calibration treatment, PSD, priors, and sampler settings all define the comparison.
-# </details>
+# For (1): `np.quantile(..., [0.05, 0.5, 0.95])` on both, and compare the widths
+# as well as the centres.
 #
-# <details>
-# <summary>Solution and check</summary>
+# For (2): work through the analysis from the top. Waveform model, spins,
+# extrinsic parameters, PSD estimate, calibration, sampler settings, priors.
+# Then look again at where the dotted prior edges fall relative to the grey
+# histogram.
 #
-# ```python
-# low, median, high = np.quantile(chirp_mass_samples, [0.05, 0.5, 0.95])
-# print(f"Mc_det = {median:.2f} [{low:.2f}, {high:.2f}] Msun")
-# print("This restricted non-spinning workshop model is not the published full analysis.")
-# ```
+# For (3): whatever you identified in (2) as the binding constraint. Note that
+# "run the sampler longer" and "let the model move" are different kinds of fix,
+# and only one of them is about convergence.
+#
 # </details>
+
+# %% [markdown]
+# <!-- colab-badge-next -->
+# Next: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/04_lvk_population_and_checks.ipynb)

@@ -14,27 +14,22 @@
 # ---
 
 # %% [markdown]
+# <!-- colab-badge-top -->
+# [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/09_lvk_blind_data_challenge_answer.ipynb)
+
+# %% [markdown]
 # # Instructor answer: blind LVK data challenge
 #
 # **FQCP 2026 · Bayesian parameter estimation for gravitational-wave sources**
 #
-# > Google Colab worksheet. No prior Bayesian statistics or gravitational-wave
-# > experience is assumed — see the
-# > [glossary](https://nz-gravity.github.io/FQCP2026_GW_data_analysis/glossary.html)
-# > whenever a term is new. Run from top to bottom. In the JupyterBook, **Live
-# > route** cards identify the material for the session; **Extension** sections
-# > may be skipped live.
-
 # %% [markdown]
 # ## Goal and route
 #
 # Worked instructor analysis of the blind H1/L1 challenge.
 #
-# :::{admonition} Live route
-# :class: tip
-#
-# Run the search and coincidence sections first; unblind only in the last section.
-# :::
+# > **💡 Live route**
+# >
+# > Run the search and coincidence sections first; unblind only in the last section.
 #
 #
 # **Boundary:** The search statistic is illustrative and uncalibrated. The PE uses a restricted Newtonian-inspiral, fixed-response and fixed-mass-ratio model. Only chirp mass and coalescence time are sampled with fast workshop Dynesty settings.

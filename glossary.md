@@ -1,25 +1,6 @@
-# Glossary and prerequisites
+# Glossary
 
-This course assumes no previous Bayesian statistics and no previous
-gravitational-wave analysis. It does assume you can read a `for` loop and a
-NumPy array. Everything else is built up in the notebooks.
-
-Come back to this page whenever a term stops meaning anything. Each entry says
-what the thing *is*, and — more usefully — what it is **not**, because most of
-the confusion in this field lives in that second column.
-
-## What you actually need before starting
-
-| You need | You do **not** need |
-| --- | --- |
-| Python: variables, functions, `for` loops, slicing a NumPy array | Object-oriented Python, decorators, type hints |
-| Calculus: what an integral means, roughly | Being able to do integrals by hand — the notebooks do them numerically |
-| The idea of a probability distribution and a mean | Any measure theory, or a previous statistics course |
-| Complex numbers: $e^{i\theta}$, magnitude, conjugate | Contour integration or complex analysis |
-| A general idea that gravitational waves are ripples in spacetime | General relativity, post-Newtonian theory, numerical relativity |
-
-If a formula looks intimidating, read the sentence under it first. Every
-equation in this course is followed by prose that says what it does.
+Short definitions for terms used in the notebooks.
 
 ## Bayesian inference
 

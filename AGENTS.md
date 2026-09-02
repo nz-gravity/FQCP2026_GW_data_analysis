@@ -37,8 +37,19 @@
   Dynesty -> posterior flow. Clearly label its restricted non-spinning model
   and fast workshop sampler settings.
 - Use the GWOSC exercise pattern throughout: a markdown question or short
-  task, followed immediately by a student code cell. Put hints and a
-  collapsible solution/check directly underneath.
+  task, followed immediately by a student code cell. Keep the collapsible
+  **hint** directly underneath, next to the question where it is cheap to
+  reach. Solutions do not live in the lab notebook: a one-click solution gets
+  read before the student has felt the problem. Each lab's solutions go in
+  `notebook_sources/appendix/<stem>_answers.py`, which the build prefixes with
+  the lab's own cells, so solutions are runnable and never duplicate lab text.
+  Those notebooks are **instructor material**: mark them `orphan: true` and
+  never link to them from a lab notebook, `_toc.yml`, or `index.md`. The
+  instructor shows them; students do not find them.
+- A self-check must not contain the answer. Check a property, a limiting case,
+  or an independent implementation; never recompute the expression the student
+  was asked to write. A starter cell carries scaffolding only -- never the
+  answer, and never a `print` that merely restates the instructions.
 - Explain equations and scientific assumptions before code. Use scannable
   bullets, prediction prompts, automatic checks, and hidden answers.
 - Preserve explicit teaching boundaries: profiling is not marginalisation;

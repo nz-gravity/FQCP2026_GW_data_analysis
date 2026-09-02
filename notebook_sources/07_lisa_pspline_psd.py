@@ -13,27 +13,22 @@
 # ---
 
 # %% [markdown]
+# <!-- colab-badge-top -->
+# [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/07_lisa_pspline_psd.ipynb)
+
+# %% [markdown]
 # # Part 3C: LISA PSD estimation with P-splines
 #
 # **FQCP 2026 · Bayesian parameter estimation for gravitational-wave sources**
 #
-# > Google Colab worksheet. No prior Bayesian statistics or gravitational-wave
-# > experience is assumed — see the
-# > [glossary](https://nz-gravity.github.io/FQCP2026_GW_data_analysis/glossary.html)
-# > whenever a term is new. Run from top to bottom. In the JupyterBook, **Live
-# > route** cards identify the material for the session; **Extension** sections
-# > may be skipped live.
-
 # %% [markdown]
 # ## Goal and route
 #
 # Estimate a smooth PSD with a cubic P-spline inside a Whittle likelihood and see how the roughness penalty changes the answer.
 #
-# :::{admonition} Live route
-# :class: tip
-#
-# Fit the simulated spectrum, inspect a whitened-power diagnostic, then change the smoothing strength in the question cell.
-# :::
+# > **💡 Live route**
+# >
+# > Fit the simulated spectrum, inspect a whitened-power diagnostic, then change the smoothing strength in the question cell.
 #
 #
 # **Boundary:** The coefficient band uses a local Laplace approximation. A production Bayesian P-spline analysis must sample the full posterior and validate coverage, convergence, line treatment, and foreground identifiability.
@@ -215,36 +210,21 @@ print("mean whitened power:", whitened_power.mean())
 # ### Question
 #
 # Refit with penalties 2, 80, and 5000. Which fit follows periodogram spikes, and which erases the broad bump near 3 mHz?
-#
-# Write your answer in the cell immediately below. The starter runs safely before
-# you edit it, so the complete notebook remains reproducible.
 
 # %%
-# Your code here
 penalties = [2.0, 80.0, 5000.0]
 fits_by_penalty = {}
-print("Exercise ready:", "minimise pspline_objective for each penalty")
+# Your code here: fit each penalty, then plot the three estimates together with
+# the injected PSD on the same log-log axes.
 
 # %% [markdown]
 # <details>
 # <summary>Hint</summary>
 #
 # Pass the penalty explicitly and warm-start each fit from `fit.x`. Plot the resulting PSDs against the injected PSD.
+#
 # </details>
 #
-# <details>
-# <summary>Solution and check</summary>
-#
-# ```python
-# for penalty in penalties:
-#     result = minimize(lambda beta: pspline_objective(beta, penalty), fit.x, method="L-BFGS-B")
-#     fits_by_penalty[penalty] = np.exp(basis @ result.x)
-# for penalty, estimate in fits_by_penalty.items():
-#     plt.loglog(frequency, estimate, label=f"lambda={penalty:g}")
-# plt.loglog(frequency, true_psd, "k--", label="truth")
-# plt.legend(); plt.show()
-# ```
-# </details>
 
 # %% [markdown]
 # ## Instrument noise and foregrounds
@@ -254,3 +234,7 @@ print("Exercise ready:", "minimise pspline_objective for each penalty")
 # additional structure: response-informed shapes, multiple TDI channels,
 # time dependence, informative regularisation, resolved-source information, or
 # other data. A visually good total-PSD fit alone is not component recovery.
+
+# %% [markdown]
+# <!-- colab-badge-next -->
+# Next: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/08_lisa_wdm_time_frequency.ipynb)

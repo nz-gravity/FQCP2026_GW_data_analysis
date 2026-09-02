@@ -13,27 +13,22 @@
 # ---
 
 # %% [markdown]
+# <!-- colab-badge-top -->
+# [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/05_lisa_signals_response_codes.ipynb)
+
+# %% [markdown]
 # # Part 3A: LISA signals, response, and analysis codes
 #
 # **FQCP 2026 · Bayesian parameter estimation for gravitational-wave sources**
 #
-# > Google Colab worksheet. No prior Bayesian statistics or gravitational-wave
-# > experience is assumed — see the
-# > [glossary](https://nz-gravity.github.io/FQCP2026_GW_data_analysis/glossary.html)
-# > whenever a term is new. Run from top to bottom. In the JupyterBook, **Live
-# > route** cards identify the material for the session; **Extension** sections
-# > may be skipped live.
-
 # %% [markdown]
 # ## Goal and route
 #
 # Connect LISA's source zoo to its moving constellation, delayed links, TDI variables, sensitivity, and likelihood interfaces.
 #
-# :::{admonition} Live route
-# :class: tip
-#
-# Follow source zoo -> moving response -> sensitivity -> likelihood. The exact link-delay and XYZ/AET construction is a read-later extension.
-# :::
+# > **💡 Live route**
+# >
+# > Follow source zoo -> moving response -> sensitivity -> likelihood. The exact link-delay and XYZ/AET construction is a read-later extension.
 
 # %%
 import os, sys, subprocess, importlib.util
@@ -111,21 +106,19 @@ def show_animation(animation):
 # Unlike a static right-angle detector, LISA is a heliocentric triangle that cartwheels as it orbits. Six delayed one-way laser links are combined into time-delay interferometry (TDI) variables. Orbital modulation helps localisation, while finite arms create a frequency-dependent response.
 
 # %% [markdown]
-# :::{admonition} What is the LISA data object?
-# :class: important
-#
-# $$\text{inter-spacecraft phase measurements}
-# \longrightarrow \text{delayed TDI combinations}
-# \longrightarrow (A,E,T)\ \text{channels}
-# \longrightarrow \text{response + PSD}
-# \longrightarrow \text{likelihood}.$$
-#
-# TDI is not a cosmetic re-labelling of a strain time series: delayed link
-# measurements cancel laser frequency noise and define the channels whose
-# response and noise enter inference. In the simple likelihood below we use A and
-# E as independent channels; this is an analysis approximation to state and
-# check, not a property of every possible data product.
-# :::
+# > **📌 What is the LISA data object?**
+# >
+# > $$\text{inter-spacecraft phase measurements}
+# > \longrightarrow \text{delayed TDI combinations}
+# > \longrightarrow (A,E,T)\ \text{channels}
+# > \longrightarrow \text{response + PSD}
+# > \longrightarrow \text{likelihood}.$$
+# >
+# > TDI is not a cosmetic re-labelling of a strain time series: delayed link
+# > measurements cancel laser frequency noise and define the channels whose
+# > response and noise enter inference. In the simple likelihood below we use A and
+# > E as independent channels; this is an analysis approximation to state and
+# > check, not a property of every possible data product.
 
 # %% [markdown]
 # ### Why LISA parameter estimation is unusually coupled
@@ -486,18 +479,6 @@ else:
 
 
 # %% [markdown]
-# <details>
-# <summary>Show one possible solution</summary>
-#
-# ```python
-# def student_lisa_log_likelihood(model, observed=template):
-#     residual = observed - model
-#     return -0.5 * inner(residual, residual)
-# ```
-#
-# </details>
-
-# %% [markdown]
 # ### Manual one-parameter likelihood
 #
 # Perturb the source frequency, regenerate the moving-constellation response, and
@@ -574,15 +555,13 @@ print(f"one frequency bin      : {1 / t_obs:.3e} Hz")
 print(f"plotted likelihood span: {offsets[-1] - offsets[0]:.3e} Hz")
 
 # %% [markdown]
-# :::{admonition} End of the live route
-# :class: important
-#
-# The beginner-level chain is now complete: LISA's motion changes the response,
-# the sensitivity supplies the noise weighting, and the same inner-product
-# likelihood used for LVK data compares model and observation. The sections
-# below expose how link measurements become TDI channels and how local Fisher
-# forecasts approximate uncertainty.
-# :::
+# > **📌 End of the live route**
+# >
+# > The beginner-level chain is now complete: LISA's motion changes the response,
+# > the sensitivity supplies the noise weighting, and the same inner-product
+# > likelihood used for LVK data compares model and observation. The sections
+# > below expose how link measurements become TDI channels and how local Fisher
+# > forecasts approximate uncertainty.
 
 # %% [markdown]
 # ## Analysis-code map
@@ -964,44 +943,38 @@ for label, channel in zip(("A", "E", "T"), (A, E, T)):
 print(f"T/A RMS ratio: {np.std(T)/np.std(A):.3e}")
 
 # %% [markdown]
-# :::{admonition} TDI generation boundary
-# :class: warning
-#
-# This transparent laboratory uses GW-only links and first-generation Michelson
-# TDI. It demonstrates the orbit, link, retarded-delay, XYZ, and AET data objects.
-# It does **not** demonstrate laser-noise cancellation for a flexing constellation:
-# time-dependent delay operators do not commute, and production breathing-arm
-# data require the correctly ordered second-generation TDI combinations.
-# :::
+# > **⚠️ TDI generation boundary**
+# >
+# > This transparent laboratory uses GW-only links and first-generation Michelson
+# > TDI. It demonstrates the orbit, link, retarded-delay, XYZ, and AET data objects.
+# > It does **not** demonstrate laser-noise cancellation for a flexing constellation:
+# > time-dependent delay operators do not commute, and production breathing-arm
+# > data require the correctly ordered second-generation TDI combinations.
 
 # %% [markdown]
 # ### Question
 #
-# Set `USE_BREATHING_ORBITS = True`, rerun the orbit-to-TDI chain, and compare the RMS of T against A. Why is T an approximate rather than universal null channel?
+# Equal-arm orbits make T an exact null. Real LISA arms breathe, so it is not.
 #
-# Write your answer in the cell immediately below. The starter runs safely before
-# you edit it, so the complete notebook remains reproducible.
+# Change `USE_BREATHING_ORBITS` to `True` at the **top** of Section 1a — where
+# the orbits are built, not here — and rerun this notebook from that cell down.
+# Then compare `np.std(T)` with `np.std(A)` before and after.
+#
+# - By what factor does T grow once the arms are unequal?
+# - Is T still useful as a noise diagnostic at that level?
+# - At which frequencies would you expect the cancellation to fail first?
 
 # %%
-# Change the switch near the orbit construction, then rerun Sections 1a--1f.
-USE_BREATHING_ORBITS = True
-print("Exercise ready:", "report the recomputed T/A RMS ratio")
+# Your code here: report the T/A RMS ratio for both orbit models.
 
 # %% [markdown]
 # <details>
 # <summary>Hint</summary>
 #
 # The cancellation depends on frequency, arm equality, response details, and which physical contribution is being considered.
+#
 # </details>
 #
-# <details>
-# <summary>Solution and check</summary>
-#
-# ```python
-# print("T/A RMS ratio:", np.std(T) / np.std(A))
-# print("Interpret this for the simulated link model only, not as a universal null.")
-# ```
-# </details>
 
 # %% [markdown]
 # ## Extension: Fisher forecasts for LISA
@@ -1162,3 +1135,7 @@ print(
     "log-likelihood drop for an offset template:",
     f"{latw_offset_log_likelihood - latw_best_log_likelihood:.2f}",
 )
+
+# %% [markdown]
+# <!-- colab-badge-next -->
+# Next: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/06_lisa_global_fit_gibbs.ipynb)

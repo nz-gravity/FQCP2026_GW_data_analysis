@@ -13,6 +13,10 @@
 # ---
 
 # %% [markdown]
+# <!-- colab-badge-top -->
+# [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/01b_bayesian_samplers.ipynb)
+
+# %% [markdown]
 # # Extension lab: how Bayesian samplers explore a posterior
 #
 # **FQCP 2026 · Optional sampler laboratory**
@@ -21,13 +25,11 @@
 # scientific ingredients first; this lab changes only the numerical method used
 # to explore the same two-parameter posterior.
 #
-# :::{admonition} Main message
-# :class: important
-#
-# A sampler does not define the posterior and cannot repair a wrong signal,
-# noise model, likelihood, or prior. It is a numerical engine for exploring the
-# posterior those choices define.
-# :::
+# > **📌 Main message**
+# >
+# > A sampler does not define the posterior and cannot repair a wrong signal,
+# > noise model, likelihood, or prior. It is a numerical engine for exploring the
+# > posterior those choices define.
 
 # %% [markdown]
 # ## Which tool answers which question?
@@ -939,3 +941,6 @@ show_animation(vi_animation)
 #   useful; NumPyro is a sensible practical choice for differentiable
 #   posterior-only models, but it should not hide the primer's Bayesian logic.
 
+# %% [markdown]
+# <!-- colab-badge-next -->
+# Next: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/02_lvk_signals_injections.ipynb)

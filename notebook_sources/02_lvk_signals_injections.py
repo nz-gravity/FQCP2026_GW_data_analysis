@@ -13,31 +13,25 @@
 # ---
 
 # %% [markdown]
+# <!-- colab-badge-top -->
+# [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/02_lvk_signals_injections.ipynb)
+
+# %% [markdown]
 # # Part 2A: LVK signals, injections, and matched filtering
 #
 # **FQCP 2026 · Bayesian parameter estimation for gravitational-wave sources**
 #
-# > Google Colab worksheet. No prior Bayesian statistics or gravitational-wave
-# > experience is assumed — see the
-# > [glossary](https://nz-gravity.github.io/FQCP2026_GW_data_analysis/glossary.html)
-# > whenever a term is new. Run from top to bottom. In the JupyterBook, **Live
-# > route** cards identify the material for the session; **Extension** sections
-# > may be skipped live.
-
 # %% [markdown]
 # ## Goal and route
 #
 # Follow a compact-binary signal from source parameters through a detector network, injection, matched filtering, and a manual likelihood.
 #
-# :::{admonition} Live route
-# :class: tip
-#
-# Follow the source -> detector -> search -> inference path. Stop after the one-parameter network posterior; degeneracies and localisation are read-later extensions.
-# :::
+# > **💡 Live route**
+# >
+# > Follow the source -> detector -> search -> inference path. Stop after the one-parameter network posterior; degeneracies and localisation are read-later extensions.
 
 # %% [markdown]
-# :::{admonition} Three questions that must stay separate
-# :class: important
+# ### Three questions that must stay separate
 #
 # | Stage | Question | Output |
 # | --- | --- | --- |
@@ -45,10 +39,16 @@
 # | parameter estimation | which source parameters remain plausible? | posterior and credible intervals |
 # | population inference | what population produced many detected events? | selection-aware population model |
 #
-# This notebook moves from the first question to the second. Module 04 asks the
-# third. A large matched-filter SNR is not itself a parameter posterior or an
-# astrophysical detection probability.
-# :::
+# This notebook moves from the first question to the second; module 04 asks the
+# third. **A large matched-filter SNR is not a parameter posterior, and not an
+# astrophysical detection probability.**
+
+# %% [markdown]
+# Green is nature's forward problem; blue is ours. Reading the blue arrow right
+# to left gives the rest of this course: detect a signal, work out what sang it,
+# then ask what the whole chorus looks like.
+#
+# <img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/gw_inverse_problem.png" alt="Populations of black holes emit gravitational waves that reach Earth; we invert that chain by detecting, identifying, and then characterising the population" style="max-width:100%">
 
 # %%
 import os, sys, subprocess, importlib.util
@@ -118,21 +118,66 @@ def tidy_log_frequency(axis, ticks=(20, 50, 100, 200, 500)):
 # %% [markdown]
 # ## 1. CBC parameters
 #
-# | Group | Examples | Main effect |
-# | --- | --- | --- |
-# | masses | $m_1,m_2$ or chirp mass $\mathcal M$ and $q=m_2/m_1$ | phase and merger frequency |
-# | spins | magnitudes and orientations | phase, precession, merger |
-# | matter/orbit | tides, eccentricity | extra phase and harmonics |
-# | location | right ascension, declination, distance | detector response and amplitude |
-# | orientation | inclination $\iota$, polarisation $\psi$, phase | relative polarisation content |
-# | time | geocentric coalescence time | detector arrival times |
+# A binary black hole needs **15 parameters**; a binary neutron star needs more.
+# Every one of them is something a sampler has to explore, so the count is a cost.
+# Splitting them into *intrinsic* (what the source is) and *extrinsic* (where it
+# is and how it is oriented) is useful bookkeeping — but note that they stay
+# correlated in the posterior regardless.
 #
 # $$
 # \mathcal M=\frac{(m_1m_2)^{3/5}}{(m_1+m_2)^{1/5}},\qquad
 # m_{\rm detector}=(1+z)m_{\rm source}.
 # $$
 #
-# Intrinsic/extrinsic is useful bookkeeping, but parameters remain correlated in the posterior.
+# #### Intrinsic — what the source *is*
+#
+# These set the phase evolution.
+#
+# - **Mass — 2D.** Usually uniform in two mass parameters. Component masses
+#   $(m_1,m_2)$ are widely used; chirp mass and mass ratio are a more convenient
+#   basis, because $\mathcal M$ is what the inspiral phase actually measures.
+#   Normally quoted in the **detector frame**, redshifted relative to the true
+#   source-frame mass.
+# - **Dimensionless spin — 6D.** Three components each. Analyses pick one of:
+#   - *fully precessing* — uniform in magnitude, isotropic in orientation
+#     (see the animation below);
+#   - *aligned spin only* — planar components set to zero, same prior on the
+#     aligned component;
+#   - *zero spin* — a much smaller space to sample, and what this notebook and
+#     module 03 use.
+# - **Orbital eccentricity — 1D/2D.** Eccentricity and argument of periastron.
+#   Usually ignored, because most sources circularise long before they reach the
+#   band.
+# - **Matter effects (neutron stars) — 2D or more.** Two tidal deformabilities
+#   $\Lambda_i$, or a variable number of equation-of-state parameters — zero of
+#   them if the equation of state is held fixed.
+#
+# #### Extrinsic — where it is, and how it is oriented
+#
+# These set what the detectors actually see.
+#
+# - **Location — 3D.** Right ascension, declination, luminosity distance.
+#   Usually isotropic over the sky, with a distance prior uniform in volume
+#   (which should include cosmological effects). A known host galaxy replaces
+#   this with something far tighter — as for GW170817.
+# - **Orientation — 4D.** Three Euler angles (phase, inclination, polarisation),
+#   assumed isotropically distributed.
+# - **Merger time — 1D.** Uniform over the expected uncertainty in the trigger
+#   time, typically $\sim 0.1$ s.
+#
+# ### What precession looks like
+#
+# When the spins are not aligned with the orbital angular momentum, the orbital
+# plane itself precesses. The waveform amplitude and phase are then modulated on
+# the precession timescale — which is why "fully precessing" costs six spin
+# parameters instead of one, and why it is the first thing dropped when a fast
+# answer is needed.
+#
+# <img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/precessing_binary.gif" alt="A precessing binary black hole: the orbital plane tumbles, modulating the emitted h+ and hx" style="max-width:70%">
+#
+# *Numerical-relativity surrogate `NRSur7dq2`, with the remnant from
+# `surfinBH7dq2`. Top: the orbital plane and spin vectors. Bottom: the two
+# polarisations the detector would see.*
 
 # %%
 sample_rate, duration, f_min = 1024, 4, 20.0
@@ -622,22 +667,6 @@ else:
     assert abs(best_offset) <= 0.5
     print(f"check passed; best template offset = {best_offset:+.1f} solar masses")
 
-# %% [markdown]
-# <details>
-# <summary>Show one possible solution</summary>
-#
-# ```python
-# def student_template_bank_scan(offsets):
-#     peaks = []
-#     for offset in offsets:
-#         trial = polarizations(theta_true.at[0].set(float(theta_true[0]) + offset))
-#         snr_series, _ = matched_filter(h1, trial)
-#         peaks.append(snr_series.max())
-#     return np.asarray(peaks)
-# ```
-#
-# </details>
-
 # %%
 mismatch_offsets = np.linspace(-4, 4, 25)
 recovered_peaks = []
@@ -658,34 +687,34 @@ ax.legend()
 plt.show()
 
 # %% [markdown]
-# ### Question
+# ### Question: how densely must a bank be packed?
 #
-# Make the template-bank offsets coarser and rerun the scan. What is the largest spacing that still places a template close to the recovered peak?
+# A search bank is built so that it loses no more than a few percent of SNR
+# *anywhere*, including at the worst point between two neighbouring templates.
+# The scan above measured exactly that loss curve, so you can now size a bank
+# from it. Use `mismatch_offsets` and `recovered_peaks`.
 #
-# Write your answer in the cell immediately below. The starter runs safely before
-# you edit it, so the complete notebook remains reproducible.
+# 1. How wide is the peak at 97% of the maximum recovered SNR?
+# 2. A bank whose spacing equals that full width puts its worst case exactly
+#    halfway between templates. What spacing is that, and how many templates
+#    would it take to cover $\mathcal M\in[20,40]\,M_\odot$?
+# 3. Real banks tile several parameters at once, and the count multiplies with
+#    each one. What does that imply about the cost of a search?
 
 # %%
-# Your code here
-coarse_offsets = np.linspace(-4, 4, 9)
-print("Exercise ready:", "call student_template_bank_scan and inspect the peak")
+# Your code here. `mismatch_offsets` and `recovered_peaks` come from the scan
+# above; no new waveform calls are needed.
 
 # %% [markdown]
 # <details>
 # <summary>Hint</summary>
 #
-# The relevant comparison is the grid spacing against the width of the matched-filter peak, not simply the number of templates.
+# The quantity that sets the spacing is the width of the matched-filter peak,
+# not the number of templates you happened to try. Find the offsets whose
+# recovered SNR is still within 3% of the maximum.
+#
 # </details>
 #
-# <details>
-# <summary>Solution and check</summary>
-#
-# ```python
-# coarse_snr = student_template_bank_scan(coarse_offsets)
-# best_offset = coarse_offsets[np.argmax(coarse_snr)]
-# print("best coarse-grid offset:", best_offset)
-# ```
-# </details>
 
 # %% [markdown]
 # ## 4. Inject and infer manually
@@ -820,14 +849,12 @@ print("Bilby likelihood agrees with the manual network calculation.")
 print("Prior:", bilby_priors["chirp_mass"])
 
 # %% [markdown]
-# :::{admonition} End of the live route
-# :class: important
-#
-# You have followed one coherent chain: a physical waveform was projected into
-# detectors, found with a matched filter, and used in a network likelihood. The
-# sections below show two important complications but are not required for a
-# first pass.
-# :::
+# > **📌 End of the live route**
+# >
+# > You have followed one coherent chain: a physical waveform was projected into
+# > detectors, found with a matched filter, and used in a network likelihood. The
+# > sections below show two important complications but are not required for a
+# > first pass.
 
 # %% [markdown]
 # ## Read later: degeneracies and sky localisation
@@ -1205,3 +1232,7 @@ print("which is why a single-detector alert has a nearly all-sky map.")
 # <img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/lvk-sky-localisation.png" alt="expected output: lvk-sky-localisation" style="max-width:100%">
 #
 # </details>
+
+# %% [markdown]
+# <!-- colab-badge-next -->
+# Next: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/03_lvk_gw150914_bilby.ipynb)

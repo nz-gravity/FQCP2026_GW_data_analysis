@@ -13,27 +13,22 @@
 # ---
 
 # %% [markdown]
+# <!-- colab-badge-top -->
+# [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/10_fast_likelihoods.ipynb)
+
+# %% [markdown]
 # # Part 4: Fast likelihoods
 #
 # **FQCP 2026 · Bayesian parameter estimation for gravitational-wave sources**
 #
-# > Google Colab worksheet. No prior Bayesian statistics or gravitational-wave
-# > experience is assumed — see the
-# > [glossary](https://nz-gravity.github.io/FQCP2026_GW_data_analysis/glossary.html)
-# > whenever a term is new. Run from top to bottom. In the JupyterBook, **Live
-# > route** cards identify the material for the session; **Extension** sections
-# > may be skipped live.
-
 # %% [markdown]
 # ## Goal and route
 #
 # Make one log-likelihood call one hundred times cheaper without changing the answer, and measure the error you accept in exchange.
 #
-# :::{admonition} Live route
-# :class: tip
-#
-# Sections 1--4: the cost of an exact call, heterodyning, relative binning, and the accuracy check that decides whether either is safe. Sections 5--7 are extension material.
-# :::
+# > **💡 Live route**
+# >
+# > Sections 1--4: the cost of an exact call, heterodyning, relative binning, and the accuracy check that decides whether either is safe. Sections 5--7 are extension material.
 #
 #
 # **Boundary:** The waveform here is a leading-order stationary-phase inspiral with an analytic toy PSD, which keeps every step readable. Production implementations (`bilby.gw.likelihood.RelativeBinningGravitationalWaveLikelihood`, `ROQGravitationalWaveTransientLikelihood`) carry the same algebra plus the bookkeeping this notebook omits.
@@ -725,14 +720,12 @@ print(
 # and the worst $|\Delta\ln\mathcal{L}|$ over the chirp-mass scan of Section 4.
 #
 # Where does the error cross the 0.1 threshold, and how many bins does that buy
-# you? Write your answer in the cell immediately below. The starter runs safely
-# before you edit it, so the complete notebook remains reproducible.
+# you?
 
 # %%
-# Your code here
 tolerances = [0.3, 0.1, 0.03, 0.01]
 results_by_tolerance = {}
-print("Exercise ready:", "rebuild the summary data for each tolerance")
+# Your code here: for each tolerance record (number of bins, worst |dlnL|).
 
 # %% [markdown]
 # <details>
@@ -741,48 +734,9 @@ print("Exercise ready:", "rebuild the summary data for each tolerance")
 # Everything downstream of `edges` has to be rebuilt: `start_index`, `offset`,
 # and all four summary arrays. Wrap that in a function that returns a fresh
 # `binned_log_likelihood`, then reuse `scan_likelihood` and `exact_scan`.
+#
 # </details>
 #
-# <details>
-# <summary>Solution and check</summary>
-#
-# ```python
-# def build_binned_likelihood(tolerance):
-#     local_edges = bin_edges(tolerance)
-#     index = np.searchsorted(frequency, local_edges)
-#     index[-1] = frequency.size
-#     local_offset = frequency - np.repeat(
-#         0.5 * (local_edges[1:] + local_edges[:-1]), np.diff(index)
-#     )
-#     total = lambda values: np.add.reduceat(values, index[:-1])
-#     a0 = total(weight * data * reference_waveform.conj())
-#     a1 = total(weight * data * reference_waveform.conj() * local_offset)
-#     b0 = total(weight * np.abs(reference_waveform) ** 2)
-#     b1 = total(weight * np.abs(reference_waveform) ** 2 * local_offset)
-#
-#     def likelihood(parameters):
-#         ratio = waveform(local_edges, **parameters) / waveform(local_edges, **reference)
-#         r0 = 0.5 * (ratio[1:] + ratio[:-1])
-#         r1 = (ratio[1:] - ratio[:-1]) / np.diff(local_edges)
-#         return (
-#             np.sum(a0 * r0.conj() + a1 * r1.conj()).real
-#             - 0.5 * np.sum(b0 * np.abs(r0) ** 2 + 2 * b1 * (r0 * r1.conj()).real)
-#         )
-#
-#     return local_edges.size - 1, likelihood
-#
-# for tolerance in tolerances:
-#     n_bins, likelihood = build_binned_likelihood(tolerance)
-#     worst = np.abs(scan_likelihood(likelihood) - exact_scan).max()
-#     results_by_tolerance[tolerance] = (n_bins, worst)
-#     print(f"tolerance {tolerance:>5}: {n_bins:>4} bins, worst dlnL = {worst:.2e}")
-# ```
-#
-# The error scales roughly as the square of the tolerance, because the neglected
-# term is the quadratic one plotted in Section 3. Tightening the tolerance
-# tenfold costs ten times as many bins and buys a hundredfold accuracy, so the
-# crossing point is worth locating rather than guessing.
-# </details>
 
 # %% [markdown]
 # ## 7. Other directions, in one paragraph each
