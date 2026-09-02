@@ -47,11 +47,17 @@ visible course navigation.
 
 ## Scientific boundaries
 
-- The basics chapter begins with Gaussian linear regression, contrasts a
-  posterior with a point estimate, demonstrates evidence, and then introduces
-  the stationary Gaussian Whittle model and PSD weighting as the same Gaussian
-  residual calculation in the Fourier basis. A short NumPyro run samples the
-  posterior already established by the transparent grid calculation.
+- The basics chapter fits a straight line to data that a straight line did not
+  generate, and does not say so until the posterior predictive check fails. The
+  point is that the posterior, its width, and a decisive log Bayes factor
+  against noise-only are all silent about the model being wrong. A short NumPyro
+  run samples the posterior already established by the transparent grid
+  calculation, and the chapter closes on the Whittle model and PSD weighting as
+  the same Gaussian residual calculation in the Fourier basis.
+- Its four closing experiments — more data, a wrong assumed noise level, and two
+  rival signal models — are left as exercises. Worked solutions live in
+  `notebooks/01_bayesian_inference_answers.ipynb`, which is a directly
+  addressable page kept out of the visible navigation.
 - The optional sampler lab contains teaching implementations of random-walk
   Metropolis, nested sampling, NUTS, and Gaussian variational inference. They
   are validated against the exact grid and expose mechanics and failure modes;

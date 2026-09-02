@@ -7,12 +7,23 @@ import nbformat
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_DIR = ROOT / "notebook_sources"
+APPENDIX_DIR = SOURCE_DIR / "appendix"
 NOTEBOOK_DIR = ROOT / "notebooks"
 
 
 def build_notebook(source: Path):
-    """Return the canonical ``.ipynb`` representation of one text notebook."""
+    """Return the canonical ``.ipynb`` representation of one text notebook.
+
+    An appendix source (``notebook_sources/appendix/<stem>_answers.py``) is
+    prefixed with the lab notebook it answers, so solutions never duplicate the
+    lab text.
+    """
     notebook = jupytext.read(source)
+    if source.parent == APPENDIX_DIR:
+        base = SOURCE_DIR / f"{source.stem.removesuffix('_answers')}.py"
+        if not base.exists():
+            raise SystemExit(f"{source.name}: no lab notebook {base.name} to extend")
+        notebook.cells = jupytext.read(base).cells + notebook.cells
     notebook.metadata.pop("jupytext", None)
     notebook.metadata["colab"] = {
         "name": f"{source.stem}.ipynb",
@@ -40,7 +51,7 @@ def source_paths():
     sources = sorted(SOURCE_DIR.glob("*.py"))
     if not sources:
         raise SystemExit(f"No Jupytext sources found in {SOURCE_DIR.relative_to(ROOT)}")
-    return sources
+    return sources + sorted(APPENDIX_DIR.glob("*.py"))
 
 
 def main():

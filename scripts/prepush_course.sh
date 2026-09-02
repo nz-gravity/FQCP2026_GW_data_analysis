@@ -14,6 +14,7 @@ uv sync --locked
 
 echo "==> Regenerating notebooks"
 uv run --locked python scripts/build_lvk_blind_challenge_data.py
+uv run --locked python scripts/build_basics_data.py
 bash scripts/build_notebooks.sh
 
 echo "==> Validating notebooks"

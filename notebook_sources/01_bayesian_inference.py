@@ -32,7 +32,9 @@
 # :::{admonition} Live route
 # :class: tip
 #
-# Follow Sections 1--5 in order: model, prior, likelihood, posterior checks, then the gravitational-wave noise model. Stop at the clear end-of-live-route marker.
+# Follow Sections 1--4 in order: model, prior, likelihood, posterior checks.
+# Section 5 is the exercise set you run yourself; Section 6 carries the same
+# likelihood into the frequency domain. Stop at the end-of-live-route marker.
 # :::
 
 # %% [markdown]
@@ -70,6 +72,8 @@ import importlib.util
 import os
 import subprocess
 import sys
+from pathlib import Path
+from urllib.request import urlretrieve
 import numpy as np
 import matplotlib.pyplot as plt
 from IPython.display import HTML, display
@@ -99,37 +103,69 @@ def show_animation(animation):
 print("Running in Colab:", IN_COLAB)
 
 # %% [markdown]
-# ## 1. Data and a signal model
+# ## 1. A dataset, and a model we *choose*
 #
-# Assume $d_i=m t_i+c+n_i$ and independent Gaussian noise $n_i\sim\mathcal N(0,\sigma^2)$. Every likelihood statement is conditional on assumptions like these.
-
-# %% [markdown]
-# **Predict before running:** If the same noisy data admit several plausible
-# lines, what information is missing from a best-fit line alone? Keep that answer
-# in mind when the posterior appears below.
+# Here is a dataset, loaded from a CSV. Nobody will tell you where it came
+# from: no injected curve is drawn on top of it, no true parameters are printed,
+# and the code that generated it is not in this notebook. That is deliberate.
+# This notebook is about what you can and cannot conclude when the truth is not
+# supplied — which is every real analysis.
+#
+# The one thing you are given is the noise level, $\sigma=3$, as an instrument
+# would quote it.
+#
+# What we choose to do is fit it with a straight line and independent Gaussian
+# noise of known width,
+#
+# $$d_i=m t_i+c+n_i,\qquad n_i\sim\mathcal N(0,\sigma^2).$$
+# 
+#
+# That choice **is** the model. Every number below is conditional on it.
+#
+# **Predict before running:** if the straight line is the wrong *shape*, which of
+# the things we are about to compute — the posterior, the evidence, the Bayes
+# factor against noise, the posterior predictive check — would notice? Write down
+# your guess now; Section 4 settles it.
 
 # %%
-true_parameters = {"m": 0.5, "c": 0.2}
-sigma = 3.0
-time = np.linspace(0, 10, 100)
+# 100 observations from an instrument. The code that produced them is not in
+# this notebook, and you are not meant to go looking for it: everything you are
+# allowed to know is on this screen.
+local_candidates = [
+    Path("assets/basics_mystery_data.csv"),
+    Path("../assets/basics_mystery_data.csv"),
+]
+DATA_PATH = next(
+    (path for path in local_candidates if path.exists()), local_candidates[0]
+)
+DATA_URL = (
+    "https://raw.githubusercontent.com/nz-gravity/"
+    "FQCP2026_GW_data_analysis/main/assets/basics_mystery_data.csv"
+)
+if not DATA_PATH.exists():
+    DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
+    urlretrieve(DATA_URL, DATA_PATH)
+
+time, data = np.loadtxt(DATA_PATH, delimiter=",", skiprows=1, unpack=True)
+sigma = 3.0  # quoted by the instrument team; treat it as known and exact
 
 
 def signal_model(time, m, c):
+    """The model *we* fit: a straight line."""
     return m * time + c
 
 
-data = signal_model(time, **true_parameters) + rng.normal(0, sigma, time.size)
+print(f"{time.size} observations, t in [{time.min():.0f}, {time.max():.0f}]")
 fig, ax = plt.subplots(figsize=(8, 3.3))
-ax.plot(time, data, "o", ms=3, label="data")
-ax.plot(time, signal_model(time, **true_parameters), lw=2, label="injected signal")
-ax.set(xlabel="time", ylabel="observation", title="Data = signal + noise")
+ax.plot(time, data, "o", ms=3, color="k", label="data")
+ax.set(xlabel="time", ylabel="observation", title="One dataset, no truth supplied")
 ax.legend()
 plt.show()
 
 # %% [markdown]
 # ## 2. Priors and prior predictive checks
 #
-# Take $m\sim\mathrm{Uniform}(0,1.5)$ and $c\sim\mathrm{Uniform}(-5,5)$. A prior is part of the model, not an afterthought. Drawing curves from it checks whether the model can plausibly describe the data before inference.
+# Take $m\sim\mathrm{Uniform}(-2,6)$ and $c\sim\mathrm{Uniform}(-15,15)$. A prior is part of the model, not an afterthought. Drawing curves from it checks whether the model can plausibly describe the data before inference.
 
 # %% [markdown]
 # **Predict before running:** Which is the more serious warning sign: a prior
@@ -138,8 +174,8 @@ plt.show()
 
 # %%
 n_prior = 2500
-prior_m = rng.uniform(0, 1.5, n_prior)
-prior_c = rng.uniform(-5, 5, n_prior)
+prior_m = rng.uniform(-2, 6, n_prior)
+prior_c = rng.uniform(-15, 15, n_prior)
 fig, axes = plt.subplots(1, 2, figsize=(10, 3.4))
 axes[0].hist(prior_m, bins=30, density=True, histtype="step", label="m")
 axes[0].hist(prior_c, bins=30, density=True, histtype="step", label="c")
@@ -155,7 +191,15 @@ plt.show()
 # %% [markdown]
 # ## 3. Gaussian likelihood
 #
-# $$
+# Because
+#
+# $$ n_i = d_i - (m t_i + c)$$, 
+#
+# we can write the likelihood as 
+#
+# $$ \log\mathcal L(d\mid m,c) = \mathcal N(d\mid mt+c,\sigma^2)$$
+#
+# $$\implies 
 # \log\mathcal L(d\mid m,c)=-\frac12\sum_i\left[
 # \frac{(d_i-mt_i-c)^2}{\sigma^2}+\log(2\pi\sigma^2)\right].
 # $$
@@ -163,73 +207,90 @@ plt.show()
 # Changing the assumed noise scale changes the width of the posterior. If the noise model is wrong, a mathematically correct sampler still gives a misleading answer.
 
 # %% [markdown]
-# ### Code studio: write the Gaussian log likelihood
+# ### Tool 1: the posterior on a grid
 #
-# Take 5 minutes in pairs. Translate the equation above into NumPy.
+# With only two parameters we can simply evaluate the likelihood everywhere and
+# look at it. `fit_on_grid` does that for **any** two-parameter model: it
+# returns the normalised posterior on the rectangle and the log evidence of that
+# model with a flat prior over it.
 #
-# - Compute the residual with `signal_model`.
-# - Return one scalar log likelihood.
-# - Keep the normalisation term: it matters when noise models are compared.
-# - Run the self-check. A correct function reports `check passed`.
-#
-# The cell is deliberately safe to run before you fill it in.
-
-# %%
-def student_log_likelihood(m, c):
-    # YOUR CODE HERE
-    return None
-
-
-student_value = student_log_likelihood(true_parameters["m"], true_parameters["c"])
-if student_value is None:
-    print("Your turn: replace the placeholder in student_log_likelihood.")
-else:
-    residual = data - signal_model(time, true_parameters["m"], true_parameters["c"])
-    expected = -0.5 * np.sum((residual / sigma) ** 2 + np.log(2 * np.pi * sigma**2))
-    np.testing.assert_allclose(student_value, expected)
-    print("check passed")
-
-
-# %% [markdown]
-# <details>
-# <summary>Show one possible solution</summary>
-#
-# ```python
-# def student_log_likelihood(m, c):
-#     residual = data - signal_model(time, m, c)
-#     return -0.5 * np.sum(
-#         (residual / sigma) ** 2 + np.log(2 * np.pi * sigma**2)
-#     )
-# ```
-#
-# </details>
+# You will reuse it in Section 5 with other models, other amounts of data, and
+# other assumed noise levels, so read the signature now. One convention matters:
+# write your models with `jnp` (a drop-in replacement for `np`) and the same
+# model function will also work in the sampler below.
 
 # %% fqcp_figure="basics-grid-posterior"
-def log_likelihood(m, c):
-    residual = data - signal_model(time, m, c)
-    return -0.5 * np.sum((residual / sigma) ** 2 + np.log(2 * np.pi * sigma**2))
+import jax
+import jax.numpy as jnp
+
+jax.config.update("jax_enable_x64", True)  # evidences are differences of big numbers
 
 
-m_grid = np.linspace(0, 1.5, 141)
-c_grid = np.linspace(-5, 5, 161)
-M, C = np.meshgrid(m_grid, c_grid, indexing="ij")
-logL = np.array([[log_likelihood(m, c) for c in c_grid] for m in m_grid])
-log_prior = np.zeros_like(logL)  # constant inside this finite grid
-log_posterior = logL + log_prior
-posterior = np.exp(log_posterior - log_posterior.max())
-posterior /= np.trapezoid(np.trapezoid(posterior, c_grid, axis=1), m_grid)
+def log_trapezoid_exp(log_values, grid, axis=-1):
+    """Stable log of the trapezoidal integral of exp(log_values)."""
+    reference = np.max(log_values)
+    integral = np.trapezoid(np.exp(log_values - reference), grid, axis=axis)
+    return reference + np.log(integral)
 
-fig, axes = plt.subplots(1, 3, figsize=(12, 3.4), sharex=True, sharey=True)
-for ax, values, title in zip(
-    axes,
-    [np.exp(log_prior), np.exp(logL - logL.max()), posterior],
-    ["prior", "likelihood", "posterior"],
-):
-    image = ax.contourf(m_grid, c_grid, values.T, levels=24, cmap="magma")
-    ax.plot(true_parameters["m"], true_parameters["c"], "c*", ms=10)
-    ax.set(title=title, xlabel="slope m")
+
+def fit_on_grid(model, observed, first_grid, second_grid, time=time, sigma=sigma):
+    """Posterior and log evidence for a 2-parameter model with a flat prior.
+
+    Returns the two parameter meshes, the normalised posterior density, and
+    log Z. `time` and `sigma` are keyword arguments so that you can refit with
+    less data or with a different assumed noise level.
+    """
+    first, second = np.meshgrid(first_grid, second_grid, indexing="ij")
+    curves = jax.vmap(lambda a, b: model(jnp.asarray(time), a, b))(
+        first.ravel(), second.ravel()
+    )
+    residual = jnp.asarray(observed) - curves
+    log_l = np.asarray(
+        -0.5
+        * jnp.sum(
+            (residual / sigma) ** 2 + jnp.log(2 * jnp.pi * sigma**2),
+            axis=1,
+        )
+    ).reshape(first.shape)
+    log_z = log_trapezoid_exp(
+        np.array([log_trapezoid_exp(row, second_grid) for row in log_l]), first_grid
+    ) - np.log((first_grid[-1] - first_grid[0]) * (second_grid[-1] - second_grid[0]))
+    density = np.exp(log_l - log_l.max())
+    density /= np.trapezoid(np.trapezoid(density, second_grid, axis=1), first_grid)
+    return first, second, density, log_z
+
+
+m_grid = np.linspace(-2, 6, 141)
+c_grid = np.linspace(-15, 15, 161)
+M, C, posterior, log_z_line = fit_on_grid(signal_model, data, m_grid, c_grid)
+
+fig, axes = plt.subplots(1, 3, figsize=(12, 3.4))
+axes[0].contourf(m_grid, c_grid, np.ones_like(posterior).T, levels=1, cmap="magma")
+axes[0].set(title="prior (flat on the rectangle)", xlabel="slope m")
+axes[1].contourf(m_grid, c_grid, posterior.T, levels=24, cmap="magma")
+axes[1].set(title="posterior (same axes)", xlabel="slope m")
+axes[1].sharex(axes[0])
+axes[1].sharey(axes[0])
+
+# The posterior occupies a tiny corner of the prior, so zoom in on it.
+occupied = posterior > 1e-4 * posterior.max()
+zoom_m = m_grid[occupied.any(axis=1)]
+zoom_c = c_grid[occupied.any(axis=0)]
+axes[2].contourf(m_grid, c_grid, posterior.T, levels=24, cmap="magma")
+axes[2].set(
+    title="posterior (zoomed)",
+    xlabel="slope m",
+    xlim=(zoom_m[0], zoom_m[-1]),
+    ylim=(zoom_c[0], zoom_c[-1]),
+)
 axes[0].set_ylabel("intercept c")
+plt.tight_layout()
 plt.show()
+
+print(
+    "the posterior occupies "
+    f"{100 * occupied.mean():.2f}% of the prior rectangle"
+)
 
 # %% [markdown]
 # <details>
@@ -240,7 +301,7 @@ plt.show()
 # </details>
 
 # %% [markdown]
-# ### Now let a sampler explore the same posterior
+# ### Tool 2: the posterior from a sampler
 #
 # The grid above **defined and displayed** the posterior. NumPyro now gives NUTS
 # the same prior, signal model, likelihood, and data. The sampler changes how we
@@ -251,7 +312,6 @@ plt.show()
 # prediction with the observations using the same Gaussian noise model.
 
 # %% fqcp_figure="basics-numpyro-posterior"
-import jax.numpy as jnp
 from jax import random as jax_random
 import numpyro
 import numpyro.distributions as dist
@@ -259,8 +319,8 @@ from numpyro.infer import MCMC, NUTS
 
 
 def numpyro_line_model(time, observed=None):
-    m = numpyro.sample("m", dist.Uniform(0.0, 1.5))
-    c = numpyro.sample("c", dist.Uniform(-5.0, 5.0))
+    m = numpyro.sample("m", dist.Uniform(-2.0, 6.0))
+    c = numpyro.sample("c", dist.Uniform(-15.0, 15.0))
     mean = m * time + c
     numpyro.sample("data", dist.Normal(mean, sigma), obs=observed)
 
@@ -277,24 +337,80 @@ nuts_draws = {name: np.asarray(values) for name, values in nuts_run.get_samples(
 fig, axes = plt.subplots(1, 3, figsize=(12, 3.4))
 axes[0].contour(m_grid, c_grid, posterior.T, levels=7, cmap="magma")
 axes[0].scatter(nuts_draws["m"], nuts_draws["c"], s=5, alpha=0.15)
-axes[0].plot(true_parameters["m"], true_parameters["c"], "c*", ms=11)
 axes[0].set(xlabel="slope m", ylabel="intercept c", title="NUTS draws on grid posterior")
-for ax, name, grid, exact, truth in zip(
+for ax, name, grid, exact in zip(
     axes[1:],
     ["m", "c"],
     [m_grid, c_grid],
     [np.trapezoid(posterior, c_grid, axis=1), np.trapezoid(posterior, m_grid, axis=0)],
-    true_parameters.values(),
 ):
     ax.hist(nuts_draws[name], bins=35, density=True, alpha=0.45, label="NUTS")
     ax.plot(grid, exact, color="C3", lw=2, label="exact grid")
-    ax.axvline(truth, color="k", ls="--", label="injected")
     ax.set(xlabel=name, ylabel="posterior density", title=f"sampled {name} posterior")
 axes[1].legend(fontsize=8)
 plt.tight_layout()
 plt.show()
 
 print("posterior draws:", len(nuts_draws["m"]))
+
+# %% [markdown]
+# The same model, wrapped so that Section 5 can reuse it. It takes any
+# two-parameter `model(time, a, b)` written with `jnp` — the same convention
+# `fit_on_grid` uses — and uniform prior bounds for the two parameters. The
+# draws come back under the generic names `"a"` and `"b"`.
+
+# %%
+def run_nuts(model, bounds, observed=data, time=time, sigma=sigma, seed=2026):
+    """NUTS draws for a 2-parameter model with uniform priors.
+
+    `bounds` is ((a_low, a_high), (b_low, b_high)). Returns {"a": ..., "b": ...}.
+    """
+    (a_low, a_high), (b_low, b_high) = bounds
+
+    def wrapped(observed=None):
+        a = numpyro.sample("a", dist.Uniform(a_low, a_high))
+        b = numpyro.sample("b", dist.Uniform(b_low, b_high))
+        prediction = model(jnp.asarray(time), a, b)
+        numpyro.sample("data", dist.Normal(prediction, sigma), obs=observed)
+
+    run = MCMC(
+        NUTS(wrapped), num_warmup=500, num_samples=1500, progress_bar=False
+    )
+    run.run(jax_random.PRNGKey(seed), observed=jnp.asarray(observed))
+    return {name: np.asarray(values) for name, values in run.get_samples().items()}
+
+
+check_draws = run_nuts(signal_model, ((-2.0, 6.0), (-15.0, 15.0)))
+print(
+    f"slope from NUTS: {np.median(check_draws['a']):.3f} "
+    f"+/- {np.std(check_draws['a']):.3f}"
+)
+
+# %% [markdown]
+# :::{admonition} Grid or sampler? Use whichever you like
+# :class: tip
+#
+# For the rest of this notebook the two tools are interchangeable for
+# **posteriors**, and Section 5 accepts either. They are not interchangeable for
+# **evidence**:
+#
+# | | posterior | evidence $\mathcal Z$ |
+# | --- | --- | --- |
+# | `fit_on_grid` | yes | yes |
+# | `run_nuts` | yes | **no** |
+#
+# MCMC explores where the posterior is large; it never measures the volume under
+# it, so it cannot give you $\mathcal Z$. That is not a limitation of NUTS in
+# particular — it is true of Metropolis, HMC, and every other plain MCMC method.
+# Getting an evidence out of a sampler needs a different algorithm, which is why
+# the gravitational-wave community runs nested sampling (`dynesty`, `nessai`) or
+# thermodynamic integration whenever a Bayes factor is wanted. The
+# [sampler extension lab](01b_bayesian_samplers.ipynb) builds one.
+#
+# The grid only works here because there are two parameters. At the fifteen
+# parameters of a real CBC analysis it is hopeless: a grid of 100 points per
+# dimension is $10^{30}$ likelihood evaluations.
+# :::
 
 # %% [markdown]
 # :::{admonition} Live demonstration, not a convergence claim
@@ -316,7 +432,15 @@ print("posterior draws:", len(nuts_draws["m"]))
 # </details>
 
 # %% [markdown]
-# The posterior is a ridge: increasing the slope can be compensated by decreasing the intercept. Marginalisation integrates over the other parameter; it is not the same as holding it at a best-fit value.
+# Two things to take from that figure. The posterior is a **ridge**: increasing
+# the slope can be compensated by decreasing the intercept, so the two
+# parameters are correlated and neither is well determined on its own. And the
+# ridge occupies a vanishing fraction of the prior rectangle — that shrinkage is
+# what the evidence will charge the model for later, and it is the whole content
+# of the Occam factor.
+#
+# Marginalisation integrates over the other parameter; it is not the same as
+# holding it at a best-fit value.
 
 # %%
 p_m = np.trapezoid(posterior, c_grid, axis=1)
@@ -330,12 +454,9 @@ def interval(grid, density):
 
 
 fig, axes = plt.subplots(1, 2, figsize=(9, 3.2))
-for ax, grid, density, name, truth in zip(
-    axes, [m_grid, c_grid], [p_m, p_c], ["m", "c"], true_parameters.values()
-):
+for ax, grid, density, name in zip(axes, [m_grid, c_grid], [p_m, p_c], ["m", "c"]):
     q = interval(grid, density)
     ax.plot(grid, density)
-    ax.axvline(truth, color="k", ls="--")
     ax.axvspan(q[0], q[2], alpha=0.2)
     ax.set(
         xlabel=name,
@@ -344,127 +465,55 @@ for ax, grid, density, name, truth in zip(
     )
 plt.show()
 
-# %% [markdown]
-# :::{admonition} A correct sampler cannot repair a wrong likelihood
-# :class: warning
-#
-# Keep the same data but tell the likelihood that the noise standard deviation is
-# half its true value. The posterior becomes narrower because the calculation
-# thinks the data are more informative—not because it learned more. This is why
-# we check residuals and the noise/PSD model, rather than treating a sharp
-# posterior as success.
-# :::
-
-# %%
-wrong_sigma = sigma / 2
-wrong_logL = np.array(
-    [
-        [
-            -0.5 * np.sum(((data - signal_model(time, m, c)) / wrong_sigma) ** 2)
-            for c in c_grid
-        ]
-        for m in m_grid
-    ]
-)
-wrong_posterior = np.exp(wrong_logL - wrong_logL.max())
-wrong_posterior /= np.trapezoid(np.trapezoid(wrong_posterior, c_grid, axis=1), m_grid)
-wrong_p_m = np.trapezoid(wrong_posterior, c_grid, axis=1)
-fig, ax = plt.subplots(figsize=(7, 3.2))
-ax.plot(m_grid, p_m, label="correct noise model")
-ax.plot(m_grid, wrong_p_m, label="assumed noise is too small")
-ax.axvline(true_parameters["m"], color="k", ls="--", label="injected slope")
-ax.set(
-    xlabel="slope m",
-    ylabel="marginal posterior density",
-    title="Wrong noise model: overconfident, not more informed",
-)
-ax.legend()
-plt.show()
-
 
 # %% [markdown]
-# ### What does the evidence do?
+# ### Is there a signal at all? Evidence and the Bayes factor
 #
-# For a model $M$, the evidence averages the likelihood over its **normalised**
+# For a model $M$ the evidence averages the likelihood over its **normalised**
 # prior,
 #
 # $$
 # \mathcal Z_M=\int \mathcal L(d\mid\theta,M)\,\pi(\theta\mid M)\,d\theta.
 # $$
 #
-# The next cell compares a line with free slope and intercept ($M_1$) against a
-# line forced through zero ($M_0$). A model does not win merely because its best
-# fit is higher: extra prior volume that fits poorly reduces its evidence. This
-# is the Bayesian form of an Occam penalty, and it also means Bayes factors must
-# be reported with their priors.
-
-# %% [markdown]
-# **Predict before running:** If we widen a prior in a direction that the data
-# do not constrain, should the posterior peak move, the evidence move, both, or
-# neither?
-
-# %%
-def log_trapezoid_exp(log_values, grid, axis=-1):
-    """Stable log of the trapezoidal integral of exp(log_values)."""
-    reference = np.max(log_values)
-    integral = np.trapezoid(np.exp(log_values - reference), grid, axis=axis)
-    return reference + np.log(integral)
-
-
-# M1: m and c are both free with a uniform prior on the plotted rectangle.
-log_z_free_intercept = log_trapezoid_exp(
-    np.array([log_trapezoid_exp(logL[row], c_grid) for row in range(len(m_grid))]),
-    m_grid,
-) - np.log((m_grid[-1] - m_grid[0]) * (c_grid[-1] - c_grid[0]))
-
-# M0: c=0 exactly and only m is free.
-logL_zero_intercept = np.array([log_likelihood(m, 0.0) for m in m_grid])
-log_z_zero_intercept = log_trapezoid_exp(logL_zero_intercept, m_grid) - np.log(
-    m_grid[-1] - m_grid[0]
-)
-
-log_bayes_factor = log_z_free_intercept - log_z_zero_intercept
-print(f"log Z (free intercept): {log_z_free_intercept:.2f}")
-print(f"log Z (zero intercept): {log_z_zero_intercept:.2f}")
-print(f"log Bayes factor, free/zero: {log_bayes_factor:.2f}")
-
-# %% [markdown]
-# ### Fast animation: information accumulates
+# This is the gravitational-wave detection question in miniature. Compare two
+# models of the same data:
 #
-# Each frame uses a longer prefix of the same dataset. The posterior does not have to shrink monotonically for every noise realisation, but its typical scale contracts as information accumulates.
+# - $M_1$, **signal present**: the straight line, with $m$ and $c$ free over the
+#   prior rectangle;
+# - $M_0$, **noise only**: $h=0$, no free parameters at all, so
+#   $\mathcal Z_0=\mathcal L(d\mid h=0)$ with nothing to integrate.
+#
+# $M_1$ does not win merely because it can fit better. It pays for its two free
+# parameters: prior volume that fits badly drags the average down. That is the
+# Bayesian Occam factor, and it is why a Bayes factor must always be quoted
+# together with the priors that produced it.
+#
+# **Predict before running:** the straight line is not the shape that made these
+# data. Do you expect $\log\mathcal B_{10}$ to come out near zero, mildly
+# positive, or overwhelmingly positive?
 
 # %%
-model_cube = M[:, :, None] * time[None, None, :] + C[:, :, None]
-cumulative_sse = np.cumsum((data[None, None, :] - model_cube) ** 2, axis=2)
-frame_sizes = np.arange(8, time.size + 1, 6)
-slope_densities = []
-for n_used in frame_sizes:
-    frame_logp = -0.5 * cumulative_sse[:, :, n_used - 1] / sigma**2
-    frame_p = np.exp(frame_logp - frame_logp.max())
-    marginal = np.trapezoid(frame_p, c_grid, axis=1)
-    slope_densities.append(marginal / np.trapezoid(marginal, m_grid))
-fig, ax = plt.subplots(figsize=(7, 3.2))
-(line,) = ax.plot([], [], color="C3")
-ax.axvline(true_parameters["m"], color="k", ls="--")
-ax.set(
-    xlim=(m_grid.min(), m_grid.max()),
-    ylim=(0, 1.1 * np.max(slope_densities)),
-    xlabel="slope m",
-    ylabel="posterior density",
-)
+log_z_noise = -0.5 * np.sum((data / sigma) ** 2 + np.log(2 * np.pi * sigma**2))
+log_bayes_factor = log_z_line - log_z_noise
+print(f"log Z (line,  M1): {log_z_line:9.2f}")
+print(f"log Z (noise, M0): {log_z_noise:9.2f}")
+print(f"log Bayes factor, line over noise: {log_bayes_factor:.1f}")
 
-
-def animate_learning(i):
-    line.set_data(m_grid, slope_densities[i])
-    ax.set_title(f"posterior after {frame_sizes[i]} observations")
-    return (line,)
-
-
-learning_animation = FuncAnimation(
-    fig, animate_learning, frames=len(frame_sizes), interval=150
-)
-plt.close(fig)
-show_animation(learning_animation)
+# %% [markdown]
+# :::{admonition} Read that number carefully
+# :class: warning
+#
+# A log Bayes factor of several hundred is about as decisive as this statistic
+# gets. In a gravitational-wave search it would be reported as an unambiguous
+# detection.
+#
+# It says the data contain **something other than noise**. It does not say the
+# something is a straight line. $M_0$ is a very weak opponent: almost any smooth
+# curve through these points beats "nothing at all" by a similar margin. A Bayes
+# factor is a *comparison*, never a verdict on a single model, and the margin
+# tells you how bad the alternative was as much as how good the winner is.
+# :::
 
 
 # %% [markdown]
@@ -543,174 +592,169 @@ plt.show()
 # </details>
 
 # %% [markdown]
-# ### When the model is wrong
+# ### The check that fails
 #
-# Every check so far has passed, so none of them has yet been shown to *do*
-# anything. Here the data are generated by an exponential,
-# $h(t)=A\,(e^{t/\tau}-1)$, and fitted with both the exponential model and the
-# straight line. The line is simply the wrong shape.
+# Look at the residual panel before reading the number.
 #
-# Look at the left column before reading the numbers. The wrong model does not
-# look absurd: the posterior is tight, the fit passes through the data, and most
-# points sit inside the band. **A posterior cannot tell you its model is wrong** —
-# it only reports the best available parameters of whatever model it was given.
+# The left panel is unremarkable: the posterior is tight, the predictive band
+# covers the points, nothing looks absurd. The right panel is not scatter. It is
+# a slow arc — high, then low, then high — because a straight line cannot bend
+# the way these data bend, so every posterior draw is wrong in the same direction
+# at the same times.
 #
-# The two checks that do notice are the residual panel, where the misfit appears
-# as a slow arc instead of scatter, and the *p*-value.
-
-# %% fqcp_figure="basics-wrong-model"
-def exponential_model(time, amplitude, tau):
-    return amplitude * (np.exp(time / tau) - 1.0)
-
-
-true_curved = {"amplitude": 1.0, "tau": 3.0}
-curved_data = exponential_model(time, **true_curved) + rng.normal(0, sigma, time.size)
-
-
-def fit_on_grid(model, observed, first_grid, second_grid):
-    """Grid posterior and evidence for a two-parameter model with a flat prior."""
-    first, second = np.meshgrid(first_grid, second_grid, indexing="ij")
-    log_l = np.array(
-        [
-            [
-                -0.5
-                * np.sum(
-                    ((observed - model(time, a, b)) / sigma) ** 2
-                    + np.log(2 * np.pi * sigma**2)
-                )
-                for b in second_grid
-            ]
-            for a in first_grid
-        ]
-    )
-    log_z = log_trapezoid_exp(
-        np.array([log_trapezoid_exp(row, second_grid) for row in log_l]), first_grid
-    ) - np.log((first_grid[-1] - first_grid[0]) * (second_grid[-1] - second_grid[0]))
-    return first, second, np.exp(log_l - log_l.max()), log_z
-
-
-candidates = {
-    "linear (wrong)": (
-        signal_model,
-        np.linspace(-2, 6, 141),
-        np.linspace(-15, 15, 161),
-    ),
-    "exponential (true)": (
-        exponential_model,
-        np.linspace(0, 4, 141),
-        np.linspace(1, 10, 161),
-    ),
-}
-
-fig, axes = plt.subplots(2, 2, figsize=(11, 6), sharex=True)
-evidences, p_values = {}, {}
-for column, (name, (model, first_grid, second_grid)) in zip(axes.T, candidates.items()):
-    first, second, weights, log_z = fit_on_grid(
-        model, curved_data, first_grid, second_grid
-    )
-    curves, replicas, p_value = posterior_predictive(
-        model, first, second, weights, curved_data
-    )
-    evidences[name] = log_z
-    p_values[name] = p_value
-
-    top, bottom = column
-    top.fill_between(
-        time, *np.quantile(replicas, [0.05, 0.95], axis=0), alpha=0.2, color="C0"
-    )
-    top.fill_between(
-        time, *np.quantile(curves, [0.05, 0.95], axis=0), alpha=0.5, color="C1"
-    )
-    top.plot(time, curved_data, "o", ms=3, color="k")
-    top.set_title(f"{name}\nlog Z = {log_z:.1f},   p = {p_value:.2f}")
-
-    bottom.axhline(0, color="k", lw=1)
-    bottom.fill_between(
-        time,
-        *np.quantile(replicas - curves, [0.05, 0.95], axis=0),
-        alpha=0.25,
-        color="C0",
-    )
-    bottom.plot(time, np.median(curved_data - curves, axis=0), color="C3")
-    bottom.set(xlabel="time", ylim=(-12, 12))
-
-axes[0, 0].set_ylabel("observation")
-axes[1, 0].set_ylabel("data - signal")
-plt.show()
-
-for name, p_value in p_values.items():
-    print(f"{name:20s} posterior predictive p = {p_value:.3f}")
-log_bf = evidences["exponential (true)"] - evidences["linear (wrong)"]
-print(f"log Bayes factor, exponential over linear: {log_bf:.1f}")
-print(f"the two prior volumes differ by only {np.log(240 / 36):.1f} in log evidence")
-
-# %% [markdown]
-# <details>
-# <summary><i>Expected output &mdash; open this if your cell has not run yet</i></summary>
+# The $p$-value is $0.000$: not one dataset replicated from the line's own
+# posterior is as badly fitted as the real data. The line is not merely
+# imperfect, it is **excluded** — by the same data that just handed it a log
+# Bayes factor of several hundred over noise.
 #
-# <img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/basics-wrong-model.png" alt="expected output: basics-wrong-model" style="max-width:100%">
+# **The posterior could never have told you this.** A posterior reports the best
+# available parameters of whatever model it was handed. It has no way to say
+# "none of these". Only a check that compares *predicted data* with *observed
+# data* can.
 #
-# </details>
-
-# %% [markdown]
-# The line is not merely worse, it is excluded. Its *p*-value is zero to three
-# decimal places: not one replicated dataset drawn from its own posterior is as
-# badly fitted as the real data. The evidence agrees independently, and by a wide
-# margin.
+# So here is the reveal. The CSV was generated from an **exponential rise**,
 #
-# Two cautions that generalise to the gravitational-wave chapters:
+# $$h(t)=A\left(e^{t/\tau}-1\right),\qquad A=1,\quad \tau=3,$$
 #
-# - **The Bayes factor is not free of the priors.** These two models were given
-#   different prior boxes, worth about $1.9$ in log evidence. That is negligible
-#   against the log Bayes factor printed above, but it would not be negligible
-#   against a log Bayes factor of $3$.
-# - **A passing check is not proof.** The exponential model passes here because it
-#   is the model that generated the data. In a real analysis the true shape is
-#   never on the menu, and a *p*-value that is merely non-extreme means only that
-#   this particular statistic found nothing wrong. Note also that these *p*-values
-#   are not uniformly distributed under the true model: the data were used both to
+# with exactly the white $\sigma=3$ noise the notebook assumed. The noise model
+# was right all along. The *signal* model was the wrong shape, and we have spent
+# the whole notebook fitting a line to it — confidently, with tight error bars
+# and a decisive Bayes factor over noise.
+#
+# Two things generalise to every later chapter:
+#
+# - **Loud is not the same as right.** A signal-versus-noise Bayes factor is the
+#   beginning of an argument, not the end of one. This is why gravitational-wave
+#   analyses ship residual tests and waveform-systematics studies alongside their
+#   posteriors.
+# - **A passing check is not proof either.** A non-extreme $p$-value means only
+#   that this particular statistic found nothing wrong. These $p$-values are also
+#   not uniformly distributed under the true model — the data were used both to
 #   fit and to test, which makes them conservative.
-#
-# This is the whole reason gravitational-wave analyses carry residual tests and
-# waveform-systematics studies alongside their posteriors.
 
 # %% [markdown]
-# ### Question
+# ## 5. Your turn: four experiments
 #
-# Change the assumed noise standard deviation from `sigma` to `sigma / 2`. Recompute a normalized slope posterior and report how its 90% interval changes. Why is a narrower posterior not automatically a better result?
+# Everything above used one dataset, one amount of data, one assumed noise level,
+# and one signal model. The four experiments below change exactly one of those at
+# a time. Each is a few lines on top of `fit_on_grid`, `run_nuts`, `interval`,
+# and `posterior_predictive`, which are already defined above.
 #
-# Write your answer in the cell immediately below. The starter runs safely before
-# you edit it, so the complete notebook remains reproducible.
-
-# %%
-# Your code here
-assumed_sigma = sigma / 2
-print("Exercise ready:", "recompute the posterior with assumed_sigma")
-
-# %% [markdown]
-# <details>
-# <summary>Hint</summary>
+# **Grid or sampler — your choice.** Exercises 1 and 2 only need a posterior, so
+# use whichever tool you prefer; comparing the two is itself worthwhile.
+# Exercises 3 and 4 need an evidence, and `run_nuts` cannot give you one, so use
+# `fit_on_grid` there (or write your own nested sampler, which is what
+# [the sampler lab](01b_bayesian_samplers.ipynb) does).
 #
-# Reuse the `M`, `C`, `data`, and `time` arrays from the grid calculation. Only the likelihood width changes.
-# </details>
-#
-# <details>
-# <summary>Solution and check</summary>
+# Any new model you write must use `jnp` rather than `np` so that it works with
+# both tools:
 #
 # ```python
-# residual = data[None, None, :] - (M[:, :, None] * time + C[:, :, None])
-# log_like = -0.5 * np.sum((residual / assumed_sigma) ** 2, axis=-1)
-# p = np.exp(log_like - np.max(log_like))
-# p /= np.trapezoid(np.trapezoid(p, c_grid, axis=1), m_grid)
-# p_m_test = np.trapezoid(p, c_grid, axis=1)
-# print(interval(m_grid, p_m_test))
-# # The interval contracts because the likelihood was made overconfident, not
-# # because the data became more informative.
+# def my_model(time, first, second):
+#     return first * jnp.exp(time / second)
+# ```
+#
+# Work in pairs. Worked solutions are in the companion notebook
+# `01_bayesian_inference_answers.ipynb` — try each one before opening it.
+#
+# ### Exercise 1 — does more data help?
+#
+# Refit the line using only $N$ of the 100 observations, for
+# $N\in\{10,25,50,100\}$, and overlay the four marginal posteriors on $m$.
+#
+# Thin the data evenly across the whole time range rather than taking the first
+# $N$ points, so that the only thing changing is *how many* observations you
+# have.
+#
+# - How does the 90% width scale with $N$? Compare it with $1/\sqrt N$.
+# - Does it contract monotonically? Should it have to?
+# - Now try `data[:n]` instead and watch the scaling change. Why?
+#
+# <details><summary>Hint</summary>
+#
+# `keep = np.linspace(0, 99, n).astype(int)` picks the subset. Then either
+#
+# ```python
+# fit_on_grid(signal_model, data[keep], m_grid, c_grid, time=time[keep])
+# run_nuts(signal_model, ((-2, 6), (-15, 15)), observed=data[keep], time=time[keep])
+# ```
+#
+# For the grid, marginalise with `np.trapezoid(density, c_grid, axis=1)` and
+# summarise with `interval`. For the sampler, `np.quantile(draws["a"], [0.05, 0.95])`.
+# </details>
+#
+# ### Exercise 2 — what if the assumed noise is wrong?
+#
+# Keep all 100 points, but tell the likelihood the noise is $\sigma/2$, then that
+# it is $2\sigma$. Overlay the three marginal posteriors on $m$.
+#
+# - Which assumption gives the narrowest posterior?
+# - Is the narrowest one the best answer? What did the calculation actually
+#   believe when you halved $\sigma$?
+# - Nothing about the data changed. What does that say about reading confidence
+#   off a posterior width?
+#
+# <details><summary>Hint</summary>
+#
+# Both tools take `sigma` as a keyword argument:
+# `fit_on_grid(signal_model, data, m_grid, c_grid, sigma=sigma / 2)` or
+# `run_nuts(signal_model, ((-2, 6), (-15, 15)), sigma=sigma / 2)`.
+#
+# This is why the gravitational-wave chapters spend so long on PSD estimation:
+# the PSD *is* the assumed noise, and getting it wrong does exactly this.
+# </details>
+#
+# ### Exercise 3 — try a different signal model
+#
+# Section 4 showed the line failing its posterior predictive check. Fit an
+# exponential instead,
+#
+# $$h(t)=A\left(e^{t/\tau}-1\right),$$
+#
+# over $A\in[0,4]$ and $\tau\in[1,10]$. Report $\log\mathcal Z$ and the log Bayes
+# factor against the line, then run `posterior_predictive` on it and compare the
+# $p$-value with the line's.
+#
+# - Which model does the evidence prefer, and by how much?
+# - The two models were given different prior rectangles. How much of the log
+#   Bayes factor could that difference alone account for?
+#
+# <details><summary>Hint</summary>
+#
+# ```python
+# def exponential_model(time, amplitude, tau):
+#     return amplitude * (jnp.exp(time / tau) - 1.0)
+# ```
+#
+# then call
+# `fit_on_grid(exponential_model, data, np.linspace(0, 4, 141), np.linspace(1, 10, 161))`.
+# The prior-volume term is `np.log(volume_line / volume_exponential)`.
+# </details>
+#
+# ### Exercise 4 — a model that is wrong in a different way
+#
+# Now fit a sinusoid, $h(t)=A\sin(2\pi f t)$, over $A\in[0,40]$ and
+# $f\in[0.01,1]$. Compute its $\log\mathcal Z$ and compare it with *both* the
+# line and the noise-only model.
+#
+# - The sinusoid also beats noise-only by hundreds of log units. Does that make
+#   it a detection?
+# - Rank the three signal models by evidence, and by posterior predictive
+#   $p$-value. Do the two rankings agree?
+# - You now have three models, exactly one of which generated the data. In a real
+#   analysis the true shape is never on the menu. What is the honest statement to
+#   make about the winner?
+#
+# <details><summary>Hint</summary>
+#
+# ```python
+# def sine_model(time, amplitude, frequency):
+#     return amplitude * jnp.sin(2 * np.pi * frequency * time)
 # ```
 # </details>
 
 # %% [markdown]
-# ## 5. The gravitational-wave bridge: the same likelihood in frequency
+# ## 6. The gravitational-wave bridge: the same likelihood in frequency
 #
 # Nothing fundamentally new happens here. In Sections 1--4 we assumed
 #
@@ -838,7 +882,7 @@ axes[0, 1].set(
 
 for ax, series, title in [
     (axes[1, 0], bridge_data, "Before PSD weighting"),
-    (axes[1, 1], whitened_data, "After whitening by $\sqrt{S_n(f)}$"),
+    (axes[1, 1], whitened_data, r"After whitening by $\sqrt{S_n(f)}$"),
 ]:
     spec_f, spec_t, power = spectrogram(
         series,
@@ -862,37 +906,22 @@ for ax, series, title in [
 plt.show()
 
 # %% [markdown]
-# ### Code studio: whiten one data vector
-#
-# Complete the one Fourier-domain operation below. Divide each Fourier
-# coefficient by the square root of its expected noise power, then run the
-# check.
+# Whitening is one line, and it is worth seeing how little there is to it.
 
 # %%
-student_whitened_frequency = None  # YOUR CODE HERE
+whitened_frequency = np.fft.rfft(bridge_data) / np.sqrt(noise_psd_shape)
 
-if student_whitened_frequency is None:
-    print("Your turn: whiten np.fft.rfft(bridge_data) using noise_psd_shape.")
-else:
-    expected = np.fft.rfft(bridge_data) / np.sqrt(noise_psd_shape)
-    np.testing.assert_allclose(student_whitened_frequency, expected)
-    student_whitened_time = np.fft.irfft(
-        student_whitened_frequency,
-        n=bridge_time.size,
-    )
-    print("check passed:", student_whitened_time.shape)
 
-# %% [markdown]
-# <details>
-# <summary>Show one possible solution</summary>
-#
-# ```python
-# student_whitened_frequency = (
-#     np.fft.rfft(bridge_data) / np.sqrt(noise_psd_shape)
-# )
-# ```
-#
-# </details>
+def wall_height(spectrum):
+    """Low-frequency power relative to mid-band power."""
+    power = np.abs(spectrum) ** 2
+    return power[1:5].mean() / power[100:200].mean()
+
+
+print(
+    f"low-frequency excess: {wall_height(np.fft.rfft(bridge_data)):.0f}x "
+    f"before, {wall_height(whitened_frequency):.3f}x after"
+)
 
 # %% [markdown]
 # Whitening does not manufacture a signal. It changes coordinates so that every

@@ -34,6 +34,9 @@ html:
   use_issues_button: false
   use_repository_button: true
   home_page_in_sidebar: true
+  comments:
+    utterances:
+      repo: "nz-gravity/FQCP2026_GW_data_analysis"
 
 exclude_patterns:
   - _build/**

@@ -21,7 +21,7 @@ two-hour session.
 
 | Part | Notebook | Purpose |
 | --- | --- | --- |
-| 1 | **`01_bayesian_inference.ipynb`** | Bilby-free model, prior, likelihood, grid and NumPyro posteriors, checks, and Whittle bridge |
+| 1 | **`01_bayesian_inference.ipynb`** | Bilby-free model, prior, likelihood, grid and NumPyro posteriors, checks, and Whittle bridge. Fits a line to non-linear data on purpose; solutions to its four exercises are in `01_bayesian_inference_answers.ipynb` |
 | 1 extension | **`01b_bayesian_samplers.ipynb`** | Metropolis, nested sampling, NUTS, and VI code and animations |
 | 2A | **`02_lvk_signals_injections.ipynb`** | CBC signals, detector response, injections, matched filtering, and a manual likelihood |
 | 2B | **`03_lvk_gw150914_bilby.ipynb`** | Direct adaptation of the GWOSC GW150914 Bilby workflow |

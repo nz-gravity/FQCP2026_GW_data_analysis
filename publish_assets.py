@@ -13,8 +13,14 @@ from pathlib import Path
 
 import nbformat
 
+from scripts.build_notebooks import APPENDIX_DIR
+
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "assets" / "expected"
+
+# An appendix notebook re-emits every cell of the lab notebook it extends,
+# tagged cells included. The lab owns those figures; skip the copies.
+APPENDIX_STEMS = {path.stem for path in APPENDIX_DIR.glob("*.py")}
 
 
 def png_output(cell):
@@ -34,6 +40,8 @@ if __name__ == "__main__":
 
     written, missing = 0, []
     for path in sorted((ROOT / "notebooks").glob("*.ipynb")):
+        if path.stem in APPENDIX_STEMS:
+            continue
         for cell in nbformat.read(path, as_version=4).cells:
             slug = cell.get("metadata", {}).get("fqcp_figure")
             if not slug:
