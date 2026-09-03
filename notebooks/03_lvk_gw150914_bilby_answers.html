@@ -1,0 +1,1729 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Part 2B: GW150914 with Bilby &#8212; FQCP 2026 GW data analysis</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/03_lvk_gw150914_bilby_answers';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">FQCP 2026 GW data analysis</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    Bayesian gravitational-wave parameter estimation
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Before you start</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 1 — Bayesian inference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="01_bayesian_inference.html">Part 1: Bayesian inference from first principles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="01b_bayesian_samplers.html">Extension lab: how Bayesian samplers explore a posterior</a></li>
+<li class="toctree-l1"><a class="reference internal" href="01c_sampler_diagnostics.html">Extension lab: can you trust the sampler?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="01d_hubble_prior_sensitivity.html">Extension lab: a small Hubble-law inference</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 2 — LVK</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="02_lvk_signals_injections.html">Part 2A: LVK signals, injections, and matched filtering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="03_lvk_gw150914_bilby.html">Part 2B: GW150914 with Bilby</a></li>
+<li class="toctree-l1"><a class="reference internal" href="04_lvk_population_and_checks.html">Part 2C: LVK populations and PE checks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="04b_lvk_blind_data_challenge.html">Supplement: blind LVK data challenge</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 3 — LISA</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="05_lisa_signals_response_codes.html">Part 3A: LISA signals, response, and analysis codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="06_lisa_global_fit_gibbs.html">Part 3B: LISA global fitting and Gibbs sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="07_lisa_pspline_psd.html">Part 3C: LISA PSD estimation with P-splines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="08_lisa_wdm_time_frequency.html">Part 3D: LISA WDM time-frequency analysis</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 4 — Making inference fast</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="10_fast_likelihoods.html">Part 4: Fast likelihoods</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further study</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="03_literature.html">Essential literature for gravitational-wave research</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-launch-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Launch interactive content">
+    <i class="fas fa-rocket"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://colab.research.google.com/github/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/03_lvk_gw150914_bilby_answers.ipynb" target="_blank"
+   class="btn btn-sm dropdown-item"
+   title="Launch on Colab"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  
+    <img alt="Colab logo" src="../_static/images/logo_colab.png">
+  </span>
+<span class="btn__text-container">Colab</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+<a href="https://github.com/nz-gravity/FQCP2026_GW_data_analysis" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/notebooks/03_lvk_gw150914_bilby_answers.ipynb" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.ipynb</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Part 2B: GW150914 with Bilby</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Part 2B: GW150914 with Bilby</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal-and-route">Goal and route</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#source-and-attribution">Source and attribution</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#get-the-gw150914-analysis-data">1. Get the GW150914 analysis data</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#why-does-gw150914-need-only-four-seconds">Why does GW150914 need only four seconds?</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-those-analysis-windows-contain-in-the-time-domain">What those analysis windows contain in the time domain</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#estimate-the-psd-from-off-source-data">2. Estimate the PSD from off-source data</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#optional-visual-explainer-why-use-a-median">Optional visual explainer: why use a median?</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#question">Question</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#define-the-restricted-prior">3. Define the restricted prior</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#build-the-waveform-and-likelihood">4. Build the waveform and likelihood</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#run-dynesty">5. Run Dynesty</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#compare-with-the-published-posterior">Compare with the published posterior</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#getting-it-yourself">Getting it yourself</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Question</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#read-or-try-next">Read or try next</a></li>
+</ul>
+</li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#worked-solutions">Worked solutions</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#question-why-estimate-the-psd-off-source">Question: why estimate the PSD off-source?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#question-comparing-with-the-published-posterior">Question: comparing with the published posterior</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#do-they-agree">1. Do they agree?</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#why">2. Why?</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-would-you-change">3. What would you change?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <!-- colab-badge-top -->
+<p><a class="reference external" href="https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/03_lvk_gw150914_bilby.ipynb"><img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></a></p>
+<section class="tex2jax_ignore mathjax_ignore" id="part-2b-gw150914-with-bilby">
+<h1>Part 2B: GW150914 with Bilby<a class="headerlink" href="#part-2b-gw150914-with-bilby" title="Link to this heading">#</a></h1>
+<p><strong>FQCP 2026 · Bayesian parameter estimation for gravitational-wave sources</strong></p>
+<section id="goal-and-route">
+<h2>Goal and route<a class="headerlink" href="#goal-and-route" title="Link to this heading">#</a></h2>
+<p>Analyse public H1/L1 data around GW150914 with Bilby’s standard compact-binary likelihood.</p>
+<blockquote>
+<div><p><strong>Live route</strong></p>
+<p>Build the data and PSD, inspect which parameters are sampled or fixed, then construct the likelihood. The final Dynesty cell is optional live and can take 10–30 minutes in Colab.</p>
+</div></blockquote>
+<p><strong>Boundary:</strong> This is a restricted non-spinning analysis with several extrinsic parameters fixed and fast workshop sampler settings. It is not the published LVK production analysis.</p>
+</section>
+<section id="source-and-attribution">
+<h2>Source and attribution<a class="headerlink" href="#source-and-attribution" title="Link to this heading">#</a></h2>
+<p>This notebook directly adapts the GWOSC Open Data Workshop notebook
+<a class="reference external" href="https://github.com/gw-odw/odw-2023/blob/main/Tutorials/Day_3/Tuto_3.2_Parameter_estimation_for_compact_object_mergers.ipynb"><em>Parameter estimation for compact object mergers</em></a>.
+It preserves the
+recognisable GWOSC sequence:</p>
+<div class="math notranslate nohighlight">
+\[
+\text{open strain}\rightarrow\text{off-source PSD}\rightarrow
+\text{Bilby interferometers}\rightarrow\text{prior + likelihood}\rightarrow
+\text{Dynesty}\rightarrow\text{posterior checks}.
+\]</div>
+<p>The package versions, explanations, exercises, and reproducibility checks are
+adapted for this course.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span><span class="o">,</span><span class="w"> </span><span class="nn">sys</span><span class="o">,</span><span class="w"> </span><span class="nn">subprocess</span><span class="o">,</span><span class="w"> </span><span class="nn">importlib.util</span>
+
+<span class="n">IN_COLAB</span> <span class="o">=</span> <span class="s2">"COLAB_RELEASE_TAG"</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span>
+<span class="n">needed</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"bilby"</span><span class="p">,</span> <span class="s2">"gwpy"</span><span class="p">,</span> <span class="s2">"lal"</span><span class="p">,</span> <span class="s2">"lalsimulation"</span><span class="p">)</span>
+<span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="n">package</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">package</span> <span class="ow">in</span> <span class="n">needed</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">IN_COLAB</span><span class="p">:</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span>
+                <span class="s2">"-m"</span><span class="p">,</span>
+                <span class="s2">"pip"</span><span class="p">,</span>
+                <span class="s2">"install"</span><span class="p">,</span>
+                <span class="s2">"-q"</span><span class="p">,</span>
+                <span class="s2">"bilby==2.8.0"</span><span class="p">,</span>
+                <span class="s2">"gwpy&gt;=3.0,&lt;4"</span><span class="p">,</span>
+                <span class="s2">"lalsuite==7.26.15"</span><span class="p">,</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">"Install bilby, gwpy, and lalsuite, or run in Colab."</span><span class="p">)</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">urllib.request</span><span class="w"> </span><span class="kn">import</span> <span class="n">urlretrieve</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">bilby</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">gwpy.timeseries</span><span class="w"> </span><span class="kn">import</span> <span class="n">TimeSeries</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bilby.core.prior</span><span class="w"> </span><span class="kn">import</span> <span class="n">PowerLaw</span><span class="p">,</span> <span class="n">Uniform</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bilby.gw.conversion</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">convert_to_lal_binary_black_hole_parameters</span><span class="p">,</span>
+    <span class="n">generate_all_bbh_parameters</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">bilby</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">setup_logger</span><span class="p">(</span><span class="n">log_level</span><span class="o">=</span><span class="s2">"WARNING"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s2">"seaborn-v0_8-whitegrid"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Bilby version:"</span><span class="p">,</span> <span class="n">bilby</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/Users/avi/Documents/projects/WORKSHOP/FQCP2026_GW_data_analysis/.venv/lib/python3.12/site-packages/gwpy/time/__init__.py:36: UserWarning: Wswiglal-redir-stdio:
+
+SWIGLAL standard output/error redirection is enabled in IPython.
+This may lead to performance penalties. To disable locally, use:
+
+with lal.no_swig_redirect_standard_output_error():
+    ...
+
+To disable globally, use:
+
+lal.swig_redirect_standard_output_error(False)
+
+Note however that this will likely lead to error messages from
+LAL functions being either misdirected or lost when called from
+Jupyter notebooks.
+
+To suppress this warning, use:
+
+import warnings
+warnings.filterwarnings("ignore", "Wswiglal-redir-stdio")
+import lal
+
+  from lal import LIGOTimeGPS
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Bilby version: 2.8.0
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="get-the-gw150914-analysis-data">
+<h2>1. Get the GW150914 analysis data<a class="headerlink" href="#get-the-gw150914-analysis-data" title="Link to this heading">#</a></h2>
+<p>GW150914 occurred at GPS time <span class="math notranslate nohighlight">\(1126259462.4\)</span>. Following GWOSC, use a four-second
+analysis segment with two seconds after the trigger. The 4096-Hz public product
+is used explicitly.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">time_of_event</span> <span class="o">=</span> <span class="mf">1126259462.4</span>
+<span class="n">post_trigger_duration</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">duration</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">sampling_frequency</span> <span class="o">=</span> <span class="mi">4096</span>
+<span class="n">analysis_start</span> <span class="o">=</span> <span class="n">time_of_event</span> <span class="o">+</span> <span class="n">post_trigger_duration</span> <span class="o">-</span> <span class="n">duration</span>
+
+<span class="n">analysis_data</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">detector</span><span class="p">:</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">fetch_open_data</span><span class="p">(</span>
+        <span class="n">detector</span><span class="p">,</span>
+        <span class="n">analysis_start</span><span class="p">,</span>
+        <span class="n">analysis_start</span> <span class="o">+</span> <span class="n">duration</span><span class="p">,</span>
+        <span class="n">sample_rate</span><span class="o">=</span><span class="n">sampling_frequency</span><span class="p">,</span>
+        <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">timeout</span><span class="o">=</span><span class="mi">120</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">for</span> <span class="n">detector</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"H1"</span><span class="p">,</span> <span class="s2">"L1"</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="n">interferometers</span> <span class="o">=</span> <span class="n">bilby</span><span class="o">.</span><span class="n">gw</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">InterferometerList</span><span class="p">([</span><span class="s2">"H1"</span><span class="p">,</span> <span class="s2">"L1"</span><span class="p">])</span>
+<span class="k">for</span> <span class="n">interferometer</span> <span class="ow">in</span> <span class="n">interferometers</span><span class="p">:</span>
+    <span class="n">interferometer</span><span class="o">.</span><span class="n">minimum_frequency</span> <span class="o">=</span> <span class="mi">20</span>
+    <span class="n">interferometer</span><span class="o">.</span><span class="n">maximum_frequency</span> <span class="o">=</span> <span class="mi">1024</span>
+    <span class="n">interferometer</span><span class="o">.</span><span class="n">set_strain_data_from_gwpy_timeseries</span><span class="p">(</span>
+        <span class="n">analysis_data</span><span class="p">[</span><span class="n">interferometer</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
+    <span class="p">)</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">sharex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">axis</span><span class="p">,</span> <span class="n">detector</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">axes</span><span class="p">,</span> <span class="p">(</span><span class="s2">"H1"</span><span class="p">,</span> <span class="s2">"L1"</span><span class="p">)):</span>
+    <span class="n">series</span> <span class="o">=</span> <span class="n">analysis_data</span><span class="p">[</span><span class="n">detector</span><span class="p">]</span>
+    <span class="n">axis</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">series</span><span class="o">.</span><span class="n">times</span><span class="o">.</span><span class="n">value</span> <span class="o">-</span> <span class="n">time_of_event</span><span class="p">,</span> <span class="n">series</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+    <span class="n">axis</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">ylabel</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">detector</span><span class="si">}</span><span class="s2"> strain"</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">detector</span><span class="si">}</span><span class="s2">: public 4096-Hz data"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"time from GW150914 [s]"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/d203ea398831e806ef819db58995141501cd24e23d1fb50bac66cb74d117001d.png" src="../_images/d203ea398831e806ef819db58995141501cd24e23d1fb50bac66cb74d117001d.png" />
+</div>
+</div>
+<details>
+<summary><i>Expected output &mdash; open this if your cell has not run yet</i></summary>
+<img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/lvk-gwosc-strain.png" alt="expected output: lvk-gwosc-strain" style="max-width:100%">
+</details><section id="why-does-gw150914-need-only-four-seconds">
+<h3>Why does GW150914 need only four seconds?<a class="headerlink" href="#why-does-gw150914-need-only-four-seconds" title="Link to this heading">#</a></h3>
+<p>At leading post-Newtonian order, the time remaining from a low frequency
+<span class="math notranslate nohighlight">\(f_{\rm low}\)</span> scales as</p>
+<div class="math notranslate nohighlight">
+\[
+t_{\rm insp}(f_{\rm low}) = \frac{5}{256}
+\left(\frac{G\mathcal M}{c^3}\right)^{-5/3}
+(\pi f_{\rm low})^{-8/3}.
+\]</div>
+<p>A lower-chirp-mass binary spends much longer chirping through the detector
+band. CBC analyses therefore use longer data segments for lower masses and
+short power-of-two segments for high-mass systems. The curve below turns the
+leading-order time from 20 Hz, plus a 2.1-second post-trigger margin, into the
+smallest power-of-two segment from 4 to 64 seconds.</p>
+<p>This is an <strong>LVK/Bilby-style teaching rule</strong>, not a universal catalogue lookup:
+production choices also depend on the low-frequency cutoff, waveform modes,
+priors, and pipeline. The 4, 8, 16, 32, and 64-second analysis families are
+documented for the GWTC-1 Bilby analyses in
+<a class="reference external" href="https://arxiv.org/abs/2006.00714">Romero-Shaw et al. (2020)</a>.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">G</span><span class="p">,</span> <span class="n">c</span>
+
+<span class="n">solar_mass_kg</span> <span class="o">=</span> <span class="mf">1.988409870698051e30</span>
+<span class="n">chirp_mass_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">geomspace</span><span class="p">(</span><span class="mf">2.2</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">500</span><span class="p">)</span>
+<span class="n">chirp_mass_seconds</span> <span class="o">=</span> <span class="n">G</span> <span class="o">*</span> <span class="n">chirp_mass_grid</span> <span class="o">*</span> <span class="n">solar_mass_kg</span> <span class="o">/</span> <span class="n">c</span><span class="o">**</span><span class="mi">3</span>
+<span class="n">inspiral_time_20hz</span> <span class="o">=</span> <span class="mi">5</span> <span class="o">/</span> <span class="mi">256</span> <span class="o">*</span> <span class="n">chirp_mass_seconds</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">5</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">20</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">8</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span>
+<span class="n">required_time</span> <span class="o">=</span> <span class="n">inspiral_time_20hz</span> <span class="o">+</span> <span class="mf">2.1</span>
+<span class="n">analysis_duration</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">required_time</span><span class="p">)),</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mf">4.2</span><span class="p">))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">chirp_mass_grid</span><span class="p">,</span>
+    <span class="n">required_time</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">"0.35"</span><span class="p">,</span>
+    <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">label</span><span class="o">=</span><span class="sa">r</span><span class="s2">"leading-order time from 20 Hz + 2.1 s"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">step</span><span class="p">(</span>
+    <span class="n">chirp_mass_grid</span><span class="p">,</span>
+    <span class="n">analysis_duration</span><span class="p">,</span>
+    <span class="n">where</span><span class="o">=</span><span class="s2">"post"</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">"C0"</span><span class="p">,</span>
+    <span class="n">lw</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="n">label</span><span class="o">=</span><span class="s2">"smallest power-of-two analysis segment"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">([</span><span class="mf">31.2</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">marker</span><span class="o">=</span><span class="s2">"*"</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">180</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C3"</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span>
+    <span class="s2">"GW150914"</span><span class="p">,</span>
+    <span class="p">(</span><span class="mf">31.2</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+    <span class="n">xytext</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">12</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span>
+    <span class="n">textcoords</span><span class="o">=</span><span class="s2">"offset points"</span><span class="p">,</span>
+    <span class="n">ha</span><span class="o">=</span><span class="s2">"right"</span><span class="p">,</span>
+    <span class="n">arrowprops</span><span class="o">=</span><span class="p">{</span><span class="s2">"arrowstyle"</span><span class="p">:</span> <span class="s2">"-&gt;"</span><span class="p">,</span> <span class="s2">"color"</span><span class="p">:</span> <span class="s2">"0.25"</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">"detector-frame chirp mass $\mathcal</span><span class="si">{M}</span><span class="s2">^{\rm det}$ [$M_\odot$]"</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="s2">"duration [s]"</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">"Analysis duration follows the in-band chirp time"</span><span class="p">,</span>
+    <span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="mf">2.2</span><span class="p">,</span> <span class="mi">50</span><span class="p">),</span>
+    <span class="n">ylim</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">70</span><span class="p">),</span>
+    <span class="n">yticks</span><span class="o">=</span><span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">64</span><span class="p">],</span>
+<span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xscale</span><span class="p">(</span><span class="s2">"log"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">50</span><span class="p">])</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">([</span><span class="s2">"2"</span><span class="p">,</span> <span class="s2">"3"</span><span class="p">,</span> <span class="s2">"5"</span><span class="p">,</span> <span class="s2">"10"</span><span class="p">,</span> <span class="s2">"20"</span><span class="p">,</span> <span class="s2">"30"</span><span class="p">,</span> <span class="s2">"50"</span><span class="p">])</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib.ticker</span><span class="w"> </span><span class="kn">import</span> <span class="n">NullLocator</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_minor_locator</span><span class="p">(</span><span class="n">NullLocator</span><span class="p">())</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_yticklabels</span><span class="p">([</span><span class="s2">"4"</span><span class="p">,</span> <span class="s2">"8"</span><span class="p">,</span> <span class="s2">"16"</span><span class="p">,</span> <span class="s2">"32"</span><span class="p">,</span> <span class="s2">"64"</span><span class="p">])</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">frameon</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/7ad29c8f0d47ae16c8b9e1baa6bdcd6c37880f63a481506495eb036f288498cc.png" src="../_images/7ad29c8f0d47ae16c8b9e1baa6bdcd6c37880f63a481506495eb036f288498cc.png" />
+</div>
+</div>
+<details>
+<summary><i>Expected output &mdash; open this if your cell has not run yet</i></summary>
+<img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/lvk-analysis-duration.png" alt="expected output: lvk-analysis-duration" style="max-width:100%">
+</details></section>
+<section id="what-those-analysis-windows-contain-in-the-time-domain">
+<h3>What those analysis windows contain in the time domain<a class="headerlink" href="#what-those-analysis-windows-contain-in-the-time-domain" title="Link to this heading">#</a></h3>
+<p>The duration choice is not a statement that every second contains signal. The
+examples below show three <strong>equal-mass</strong> binaries in their selected records,
+recentered on merger for display as in the NZ workshop (only the first 0.35 s
+after merger is shown). The 60-<span class="math notranslate nohighlight">\(M_\odot\)</span> system enters at 20 Hz only near the
+end of its four-second record; the 6-<span class="math notranslate nohighlight">\(M_\odot\)</span> system has a long, slow inspiral,
+so it needs a much longer record.</p>
+<p>These use the same <strong>IMRPhenomPv2</strong> inspiral–merger–ringdown model as the
+NZ workshop, rendered through Bilby/LAL. Each panel has its own amplitude scale
+and uses equal masses solely to make the duration comparison transparent; it is
+not an event reconstruction.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Equal-mass IMRPhenomPv2 signals in their selected analysis windows.</span>
+<span class="c1"># The physical waveform removes the artificial ISCO cut in a Newtonian cartoon.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">normalized_imr_signal</span><span class="p">(</span><span class="n">total_mass</span><span class="p">,</span> <span class="n">window_duration</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="mi">2048</span><span class="p">):</span>
+    <span class="n">chirp_mass</span> <span class="o">=</span> <span class="n">total_mass</span> <span class="o">*</span> <span class="mf">0.25</span> <span class="o">**</span> <span class="p">(</span><span class="mi">3</span> <span class="o">/</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="n">generator</span> <span class="o">=</span> <span class="n">bilby</span><span class="o">.</span><span class="n">gw</span><span class="o">.</span><span class="n">WaveformGenerator</span><span class="p">(</span>
+        <span class="n">duration</span><span class="o">=</span><span class="n">window_duration</span><span class="p">,</span>
+        <span class="n">sampling_frequency</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">,</span>
+        <span class="n">frequency_domain_source_model</span><span class="o">=</span><span class="n">bilby</span><span class="o">.</span><span class="n">gw</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">lal_binary_black_hole</span><span class="p">,</span>
+        <span class="n">waveform_arguments</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">"waveform_approximant"</span><span class="p">:</span> <span class="s2">"IMRPhenomPv2"</span><span class="p">,</span>
+            <span class="s2">"reference_frequency"</span><span class="p">:</span> <span class="mf">20.0</span><span class="p">,</span>
+            <span class="s2">"minimum_frequency"</span><span class="p">:</span> <span class="mf">20.0</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">)</span>
+    <span class="n">parameters</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">mass_1</span><span class="o">=</span><span class="n">total_mass</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="n">mass_2</span><span class="o">=</span><span class="n">total_mass</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="n">a_1</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">a_2</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">tilt_1</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">tilt_2</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">phi_jl</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">phi_12</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">lambda_1</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">lambda_2</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">luminosity_distance</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span>
+        <span class="n">theta_jn</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">ra</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">dec</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">psi</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">phase</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">geocent_time</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">strain</span> <span class="o">=</span> <span class="n">generator</span><span class="o">.</span><span class="n">time_domain_strain</span><span class="p">(</span><span class="n">parameters</span><span class="p">)[</span><span class="s2">"plus"</span><span class="p">]</span>
+    <span class="c1"># The frequency-domain model is represented on a periodic FFT grid.  Roll</span>
+    <span class="c1"># the peak into the interior, as in the NZ workshop, before plotting it.</span>
+    <span class="n">strain</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">strain</span><span class="p">,</span> <span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">strain</span><span class="p">)</span> <span class="o">//</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">strain</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">strain</span><span class="p">))</span>
+    <span class="n">peak</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">strain</span><span class="p">))</span>
+    <span class="n">time_from_merger</span> <span class="o">=</span> <span class="n">generator</span><span class="o">.</span><span class="n">time_array</span> <span class="o">-</span> <span class="n">generator</span><span class="o">.</span><span class="n">time_array</span><span class="p">[</span><span class="n">peak</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">time_from_merger</span><span class="p">,</span> <span class="n">strain</span><span class="p">,</span> <span class="n">chirp_mass</span>
+
+
+<span class="n">examples</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">64</span><span class="p">),</span> <span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">8</span><span class="p">),</span> <span class="p">(</span><span class="mi">60</span><span class="p">,</span> <span class="mi">4</span><span class="p">)]</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mf">3.3</span><span class="p">))</span>
+<span class="k">for</span> <span class="n">ax</span><span class="p">,</span> <span class="p">(</span><span class="n">total_mass</span><span class="p">,</span> <span class="n">window_duration</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">axes</span><span class="p">,</span> <span class="n">examples</span><span class="p">):</span>
+    <span class="n">time</span><span class="p">,</span> <span class="n">strain</span><span class="p">,</span> <span class="n">chirp_mass</span> <span class="o">=</span> <span class="n">normalized_imr_signal</span><span class="p">(</span><span class="n">total_mass</span><span class="p">,</span> <span class="n">window_duration</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">strain</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C0"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"0.25"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+        <span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">window_duration</span> <span class="o">/</span> <span class="mi">3</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">window_duration</span> <span class="o">/</span> <span class="mi">3</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">)),</span>
+        <span class="n">ylim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mf">1.12</span><span class="p">,</span> <span class="mf">1.12</span><span class="p">),</span>
+        <span class="n">xlabel</span><span class="o">=</span><span class="s2">"time from merger [s]"</span><span class="p">,</span>
+        <span class="n">title</span><span class="o">=</span><span class="p">(</span>
+            <span class="sa">rf</span><span class="s2">"$M_</span><span class="se">{{</span><span class="s2">\rm tot</span><span class="se">}}</span><span class="s2">=</span><span class="si">{</span><span class="n">total_mass</span><span class="si">}</span><span class="s2">\,M_\odot$; "</span>
+            <span class="sa">rf</span><span class="s2">"$\mathcal</span><span class="se">{{</span><span class="s2">M</span><span class="se">}}</span><span class="s2">=</span><span class="si">{</span><span class="n">chirp_mass</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">\,M_\odot$; "</span>
+            <span class="sa">rf</span><span class="s2">"</span><span class="si">{</span><span class="n">window_duration</span><span class="si">}</span><span class="s2">-s record"</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">([])</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"normalised strain</span><span class="se">\n</span><span class="s2">(arbitrary amplitude per panel)"</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">"IMRPhenomPv2 signal within the selected analysis window"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mf">1.03</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/151785acc05dabec3462670afdb47b346a91ac7abba50b9f637f57cf0caa860a.png" src="../_images/151785acc05dabec3462670afdb47b346a91ac7abba50b9f637f57cf0caa860a.png" />
+</div>
+</div>
+<details>
+<summary><i>Expected output &mdash; open this if your cell has not run yet</i></summary>
+<img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/lvk-analysis-time-domain.png" alt="expected output: lvk-analysis-time-domain" style="max-width:100%">
+</details></section>
+</section>
+<section id="estimate-the-psd-from-off-source-data">
+<h2>2. Estimate the PSD from off-source data<a class="headerlink" href="#estimate-the-psd-from-off-source-data" title="Link to this heading">#</a></h2>
+<p>The likelihood weights residuals by a noise PSD. Following the GWOSC tutorial,
+estimate it from the 128 seconds immediately before the analysis segment using
+four-second Tukey-windowed periodograms, 50% overlap, and a median average. This
+is deliberately off source: the event should not define its own noise weighting.</p>
+<p>This off-source construction is a <strong>median-Welch PSD</strong>, and each word earns
+its place:</p>
+<ol class="arabic simple">
+<li><p><strong>Welch.</strong> One periodogram is a terrible estimate — its scatter at each
+frequency is comparable to its mean. Averaging many short windowed
+stretches trades frequency resolution for far lower variance.</p></li>
+<li><p><strong>Median.</strong> The mean is efficient for stationary Gaussian noise, but one
+glitchy stretch drags it upward. The median survives a contaminated
+minority. (<code class="docutils literal notranslate"><span class="pre">scipy</span></code> applies the median-bias correction; the raw median is
+not an unbiased PSD.)</p></li>
+<li><p><strong>Overlap.</strong> Windows downweight their own edges, so sliding by half a
+window reuses those samples near the next window’s centre. Adjacent
+estimates are correlated, so this improves stability but does <strong>not</strong>
+double the independent information.</p></li>
+</ol>
+<p>Keep the four timescales distinct:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>quantity</p></th>
+<th class="head text-right"><p>value here</p></th>
+<th class="head"><p>role</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>event-analysis duration</p></td>
+<td class="text-right"><p>4 s</p></td>
+<td><p>data entering the likelihood</p></td>
+</tr>
+<tr class="row-odd"><td><p>Welch FFT length</p></td>
+<td class="text-right"><p>4 s</p></td>
+<td><p>one periodogram; gives 0.25-Hz bins</p></td>
+</tr>
+<tr class="row-even"><td><p>overlap / stride</p></td>
+<td class="text-right"><p>2 s / 2 s</p></td>
+<td><p>50% overlap between periodograms</p></td>
+</tr>
+<tr class="row-odd"><td><p>off-source PSD record</p></td>
+<td class="text-right"><p>128 s</p></td>
+<td><p>reservoir supplying 63 stretches</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Median-Welch is common, not the only defensible LVK noise model. BayesLine-like
+on-source fits and pipeline-specific PSD estimators answer related but different
+questions; see <a class="reference external" href="https://arxiv.org/abs/1907.06540">Chatziioannou et al. (2019)</a>.</p>
+<section id="optional-visual-explainer-why-use-a-median">
+<h3>Optional visual explainer: why use a median?<a class="headerlink" href="#optional-visual-explainer-why-use-a-median" title="Link to this heading">#</a></h3>
+<p>The next cell builds a separate toy dataset to show how one transient affects
+individual periodograms, their mean, and their median. It is useful reference
+material, but it is not part of the GW150914 data path. On the live route,
+skip to the following cell, which estimates the actual H1/L1 PSDs.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># A visual Welch construction: one transient contaminates a few windows,</span>
+<span class="c1"># while the median remains representative of the many quiet windows.</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.signal</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_window</span><span class="p">,</span> <span class="n">periodogram</span><span class="p">,</span> <span class="n">welch</span>
+
+<span class="n">welch_rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">2026</span><span class="p">)</span>
+<span class="n">toy_rate</span> <span class="o">=</span> <span class="mi">256</span>
+<span class="n">toy_duration</span> <span class="o">=</span> <span class="mi">128</span>
+<span class="n">fft_length</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">nperseg</span> <span class="o">=</span> <span class="n">toy_rate</span> <span class="o">*</span> <span class="n">fft_length</span>
+<span class="n">noverlap</span> <span class="o">=</span> <span class="n">nperseg</span> <span class="o">//</span> <span class="mi">2</span>
+<span class="n">toy_time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">toy_rate</span> <span class="o">*</span> <span class="n">toy_duration</span><span class="p">)</span> <span class="o">/</span> <span class="n">toy_rate</span>
+
+<span class="c1"># Smooth coloured noise plus one deliberately obvious broadband transient.</span>
+<span class="n">toy_frequency</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">rfftfreq</span><span class="p">(</span><span class="n">toy_time</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">toy_rate</span><span class="p">)</span>
+<span class="n">toy_shape</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="p">(</span><span class="mi">18</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">toy_frequency</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="o">**</span> <span class="mi">4</span>
+<span class="n">quiet_noise</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">irfft</span><span class="p">(</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">rfft</span><span class="p">(</span><span class="n">welch_rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">toy_time</span><span class="o">.</span><span class="n">size</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">toy_shape</span><span class="p">),</span>
+    <span class="n">n</span><span class="o">=</span><span class="n">toy_time</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">glitch</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="mi">100</span>
+    <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">((</span><span class="n">toy_time</span> <span class="o">-</span> <span class="mf">11.2</span><span class="p">)</span> <span class="o">/</span> <span class="mf">0.08</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">70</span> <span class="o">*</span> <span class="p">(</span><span class="n">toy_time</span> <span class="o">-</span> <span class="mf">11.2</span><span class="p">))</span>
+<span class="p">)</span>
+<span class="n">contaminated_noise</span> <span class="o">=</span> <span class="n">quiet_noise</span> <span class="o">+</span> <span class="n">glitch</span>
+
+<span class="n">starts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">toy_time</span><span class="o">.</span><span class="n">size</span> <span class="o">-</span> <span class="n">nperseg</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">nperseg</span> <span class="o">-</span> <span class="n">noverlap</span><span class="p">)</span>
+<span class="n">window</span> <span class="o">=</span> <span class="n">get_window</span><span class="p">((</span><span class="s2">"tukey"</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">),</span> <span class="n">nperseg</span><span class="p">)</span>
+<span class="n">segment_psds</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">touches_glitch</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="n">starts</span><span class="p">:</span>
+    <span class="n">frequency</span><span class="p">,</span> <span class="n">one_psd</span> <span class="o">=</span> <span class="n">periodogram</span><span class="p">(</span>
+        <span class="n">contaminated_noise</span><span class="p">[</span><span class="n">start</span> <span class="p">:</span> <span class="n">start</span> <span class="o">+</span> <span class="n">nperseg</span><span class="p">],</span>
+        <span class="n">fs</span><span class="o">=</span><span class="n">toy_rate</span><span class="p">,</span>
+        <span class="n">window</span><span class="o">=</span><span class="n">window</span><span class="p">,</span>
+        <span class="n">scaling</span><span class="o">=</span><span class="s2">"density"</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">segment_psds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">one_psd</span><span class="p">)</span>
+    <span class="n">touches_glitch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">start</span> <span class="o">/</span> <span class="n">toy_rate</span> <span class="o">&lt;=</span> <span class="mf">11.2</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">nperseg</span><span class="p">)</span> <span class="o">/</span> <span class="n">toy_rate</span><span class="p">)</span>
+<span class="n">segment_psds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">segment_psds</span><span class="p">)</span>
+
+<span class="n">_</span><span class="p">,</span> <span class="n">clean_reference</span> <span class="o">=</span> <span class="n">welch</span><span class="p">(</span>
+    <span class="n">quiet_noise</span><span class="p">,</span>
+    <span class="n">fs</span><span class="o">=</span><span class="n">toy_rate</span><span class="p">,</span>
+    <span class="n">window</span><span class="o">=</span><span class="p">(</span><span class="s2">"tukey"</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">),</span>
+    <span class="n">nperseg</span><span class="o">=</span><span class="n">nperseg</span><span class="p">,</span>
+    <span class="n">noverlap</span><span class="o">=</span><span class="n">noverlap</span><span class="p">,</span>
+    <span class="n">average</span><span class="o">=</span><span class="s2">"median"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">contaminated_mean</span> <span class="o">=</span> <span class="n">welch</span><span class="p">(</span>
+    <span class="n">contaminated_noise</span><span class="p">,</span>
+    <span class="n">fs</span><span class="o">=</span><span class="n">toy_rate</span><span class="p">,</span>
+    <span class="n">window</span><span class="o">=</span><span class="p">(</span><span class="s2">"tukey"</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">),</span>
+    <span class="n">nperseg</span><span class="o">=</span><span class="n">nperseg</span><span class="p">,</span>
+    <span class="n">noverlap</span><span class="o">=</span><span class="n">noverlap</span><span class="p">,</span>
+    <span class="n">average</span><span class="o">=</span><span class="s2">"mean"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">contaminated_median</span> <span class="o">=</span> <span class="n">welch</span><span class="p">(</span>
+    <span class="n">contaminated_noise</span><span class="p">,</span>
+    <span class="n">fs</span><span class="o">=</span><span class="n">toy_rate</span><span class="p">,</span>
+    <span class="n">window</span><span class="o">=</span><span class="p">(</span><span class="s2">"tukey"</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">),</span>
+    <span class="n">nperseg</span><span class="o">=</span><span class="n">nperseg</span><span class="p">,</span>
+    <span class="n">noverlap</span><span class="o">=</span><span class="n">noverlap</span><span class="p">,</span>
+    <span class="n">average</span><span class="o">=</span><span class="s2">"median"</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mf">3.7</span><span class="p">))</span>
+<span class="n">shown</span> <span class="o">=</span> <span class="n">toy_time</span> <span class="o">&lt;</span> <span class="mi">16</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">toy_time</span><span class="p">[</span><span class="n">shown</span><span class="p">],</span> <span class="n">contaminated_noise</span><span class="p">[</span><span class="n">shown</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s2">"0.25"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">0.7</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">starts</span><span class="p">[:</span><span class="mi">7</span><span class="p">]):</span>
+    <span class="n">left</span> <span class="o">=</span> <span class="n">start</span> <span class="o">/</span> <span class="n">toy_rate</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">axvspan</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">left</span> <span class="o">+</span> <span class="n">fft_length</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="sa">f</span><span class="s2">"C</span><span class="si">{</span><span class="n">index</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">2</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.10</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="mf">11.2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C3"</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s2">"--"</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"transient"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">"off-source time [s]"</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="s2">"toy strain"</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">"4-s windows, shifted by 2 s"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">frameon</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="n">band</span> <span class="o">=</span> <span class="p">(</span><span class="n">frequency</span> <span class="o">&gt;=</span> <span class="mi">15</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">frequency</span> <span class="o">&lt;=</span> <span class="mi">120</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">one_psd</span><span class="p">,</span> <span class="n">bad</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">segment_psds</span><span class="p">,</span> <span class="n">touches_glitch</span><span class="p">):</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span>
+        <span class="n">frequency</span><span class="p">[</span><span class="n">band</span><span class="p">],</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">one_psd</span><span class="p">[</span><span class="n">band</span><span class="p">]),</span>
+        <span class="n">color</span><span class="o">=</span><span class="s2">"C3"</span> <span class="k">if</span> <span class="n">bad</span> <span class="k">else</span> <span class="s2">"0.7"</span><span class="p">,</span>
+        <span class="n">alpha</span><span class="o">=</span><span class="mf">0.85</span> <span class="k">if</span> <span class="n">bad</span> <span class="k">else</span> <span class="mf">0.16</span><span class="p">,</span>
+        <span class="n">lw</span><span class="o">=</span><span class="mf">1.1</span> <span class="k">if</span> <span class="n">bad</span> <span class="k">else</span> <span class="mf">0.7</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">"frequency [Hz]"</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="s2">"ASD [toy units]"</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">"Each window gives a noisy periodogram"</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span>
+    <span class="n">frequency</span><span class="p">[</span><span class="n">band</span><span class="p">],</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">clean_reference</span><span class="p">[</span><span class="n">band</span><span class="p">]),</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">"0.2"</span><span class="p">,</span>
+    <span class="n">ls</span><span class="o">=</span><span class="s2">"--"</span><span class="p">,</span>
+    <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">label</span><span class="o">=</span><span class="s2">"quiet reference"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span>
+    <span class="n">frequency</span><span class="p">[</span><span class="n">band</span><span class="p">],</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">contaminated_mean</span><span class="p">[</span><span class="n">band</span><span class="p">]),</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">"C3"</span><span class="p">,</span>
+    <span class="n">alpha</span><span class="o">=</span><span class="mf">0.85</span><span class="p">,</span>
+    <span class="n">label</span><span class="o">=</span><span class="s2">"mean with transient"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span>
+    <span class="n">frequency</span><span class="p">[</span><span class="n">band</span><span class="p">],</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">contaminated_median</span><span class="p">[</span><span class="n">band</span><span class="p">]),</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">"C0"</span><span class="p">,</span>
+    <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">label</span><span class="o">=</span><span class="s2">"median with transient"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">"frequency [Hz]"</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="s2">"ASD [toy units]"</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">"Combine </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">starts</span><span class="p">)</span><span class="si">}</span><span class="s2"> overlapping estimates"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">frameon</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/a8636f9cb52bbe849bba8dfb81152d30f3809339cb5af1572526c55a73aa9fa8.png" src="../_images/a8636f9cb52bbe849bba8dfb81152d30f3809339cb5af1572526c55a73aa9fa8.png" />
+</div>
+</div>
+<details>
+<summary><i>Expected output &mdash; open this if your cell has not run yet</i></summary>
+<img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/lvk-welch-explainer.png" alt="expected output: lvk-welch-explainer" style="max-width:100%">
+</details><div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">psd_duration</span> <span class="o">=</span> <span class="mi">32</span> <span class="o">*</span> <span class="n">duration</span>
+<span class="n">psd_start</span> <span class="o">=</span> <span class="n">analysis_start</span> <span class="o">-</span> <span class="n">psd_duration</span>
+
+<span class="n">psd_data</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">detector</span><span class="p">:</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">fetch_open_data</span><span class="p">(</span>
+        <span class="n">detector</span><span class="p">,</span>
+        <span class="n">psd_start</span><span class="p">,</span>
+        <span class="n">psd_start</span> <span class="o">+</span> <span class="n">psd_duration</span><span class="p">,</span>
+        <span class="n">sample_rate</span><span class="o">=</span><span class="n">sampling_frequency</span><span class="p">,</span>
+        <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">timeout</span><span class="o">=</span><span class="mi">120</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">for</span> <span class="n">detector</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"H1"</span><span class="p">,</span> <span class="s2">"L1"</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">for</span> <span class="n">interferometer</span> <span class="ow">in</span> <span class="n">interferometers</span><span class="p">:</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">interferometer</span><span class="o">.</span><span class="n">strain_data</span><span class="o">.</span><span class="n">roll_off</span> <span class="o">/</span> <span class="n">duration</span>
+    <span class="n">estimate</span> <span class="o">=</span> <span class="n">psd_data</span><span class="p">[</span><span class="n">interferometer</span><span class="o">.</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">psd</span><span class="p">(</span>
+        <span class="n">fftlength</span><span class="o">=</span><span class="n">duration</span><span class="p">,</span>
+        <span class="n">overlap</span><span class="o">=</span><span class="n">duration</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="n">window</span><span class="o">=</span><span class="p">(</span><span class="s2">"tukey"</span><span class="p">,</span> <span class="n">alpha</span><span class="p">),</span>
+        <span class="n">method</span><span class="o">=</span><span class="s2">"median"</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">interferometer</span><span class="o">.</span><span class="n">power_spectral_density</span> <span class="o">=</span> <span class="n">bilby</span><span class="o">.</span><span class="n">gw</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">PowerSpectralDensity</span><span class="p">(</span>
+        <span class="n">frequency_array</span><span class="o">=</span><span class="n">estimate</span><span class="o">.</span><span class="n">frequencies</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+        <span class="n">psd_array</span><span class="o">=</span><span class="n">estimate</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="k">for</span> <span class="n">interferometer</span> <span class="ow">in</span> <span class="n">interferometers</span><span class="p">:</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">interferometer</span><span class="o">.</span><span class="n">strain_data</span><span class="o">.</span><span class="n">frequency_mask</span>
+    <span class="n">frequency</span> <span class="o">=</span> <span class="n">interferometer</span><span class="o">.</span><span class="n">frequency_array</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+    <span class="n">asd</span> <span class="o">=</span> <span class="n">interferometer</span><span class="o">.</span><span class="n">amplitude_spectral_density_array</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">asd</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">interferometer</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">"frequency [Hz]"</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">"ASD [1/$\sqrt{\mathrm</span><span class="si">{Hz}</span><span class="s2">}$]"</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">"Off-source noise model used by the likelihood"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/18271830bca18424ca31507ff019b23a73a58e9462e96cc08e8c040e806656eb.png" src="../_images/18271830bca18424ca31507ff019b23a73a58e9462e96cc08e8c040e806656eb.png" />
+</div>
+</div>
+<details>
+<summary><i>Expected output &mdash; open this if your cell has not run yet</i></summary>
+<img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/lvk-gwosc-psd.png" alt="expected output: lvk-gwosc-psd" style="max-width:100%">
+</details></section>
+<section id="question">
+<h3>Question<a class="headerlink" href="#question" title="Link to this heading">#</a></h3>
+<p>Why should the PSD normally be estimated away from the signal? Compute the ratio of the H1 ASD near 100 Hz to its median between 80 and 120 Hz as a quick local sanity check.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h1</span> <span class="o">=</span> <span class="n">interferometers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="c1"># Your code here: mask to the 80-120 Hz band, then compare the ASD at 100 Hz</span>
+<span class="c1"># with the median of the band.</span>
+</pre></div>
+</div>
+</div>
+</div>
+<details>
+<summary>Hint</summary>
+<p>Use <code class="docutils literal notranslate"><span class="pre">h1.frequency_array</span></code> and <code class="docutils literal notranslate"><span class="pre">h1.amplitude_spectral_density_array</span></code>; apply the interferometer’s frequency mask as well.</p>
+</details>
+</section>
+</section>
+<section id="define-the-restricted-prior">
+<h2>3. Define the restricted prior<a class="headerlink" href="#define-the-restricted-prior" title="Link to this heading">#</a></h2>
+<p>Before reading the code, separate what this workshop analysis learns from what
+it assumes:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Sampled from the data</p></th>
+<th class="head"><p>Fixed for speed</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>detector-frame chirp mass</p></td>
+<td><p>both spins</p></td>
+</tr>
+<tr class="row-odd"><td><p>mass ratio</p></td>
+<td><p>sky position</p></td>
+</tr>
+<tr class="row-even"><td><p>coalescence time and phase</p></td>
+<td><p>inclination and polarisation</p></td>
+</tr>
+<tr class="row-odd"><td><p>luminosity distance</p></td>
+<td><p>calibration uncertainty</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Sample detector-frame chirp mass, mass ratio, phase, coalescence time, and
+luminosity distance. Fix spins, sky position, orientation, and polarisation to
+keep the workshop runtime manageable. The prior is part of this analysis; these
+fixed values are not facts established by the data.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">prior</span> <span class="o">=</span> <span class="n">bilby</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">prior</span><span class="o">.</span><span class="n">PriorDict</span><span class="p">()</span>
+<span class="n">prior</span><span class="p">[</span><span class="s2">"chirp_mass"</span><span class="p">]</span> <span class="o">=</span> <span class="n">Uniform</span><span class="p">(</span><span class="mf">30.0</span><span class="p">,</span> <span class="mf">32.5</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"chirp_mass"</span><span class="p">)</span>
+<span class="n">prior</span><span class="p">[</span><span class="s2">"mass_ratio"</span><span class="p">]</span> <span class="o">=</span> <span class="n">Uniform</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"mass_ratio"</span><span class="p">)</span>
+<span class="n">prior</span><span class="p">[</span><span class="s2">"phase"</span><span class="p">]</span> <span class="o">=</span> <span class="n">Uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"phase"</span><span class="p">,</span> <span class="n">boundary</span><span class="o">=</span><span class="s2">"periodic"</span><span class="p">)</span>
+<span class="n">prior</span><span class="p">[</span><span class="s2">"geocent_time"</span><span class="p">]</span> <span class="o">=</span> <span class="n">Uniform</span><span class="p">(</span>
+    <span class="n">time_of_event</span> <span class="o">-</span> <span class="mf">0.1</span><span class="p">,</span> <span class="n">time_of_event</span> <span class="o">+</span> <span class="mf">0.1</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"geocent_time"</span>
+<span class="p">)</span>
+<span class="n">prior</span><span class="p">[</span><span class="s2">"luminosity_distance"</span><span class="p">]</span> <span class="o">=</span> <span class="n">PowerLaw</span><span class="p">(</span>
+    <span class="n">alpha</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">minimum</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">maximum</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"luminosity_distance"</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s2">"Mpc"</span>
+<span class="p">)</span>
+<span class="n">prior</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">"a_1"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="s2">"a_2"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="s2">"tilt_1"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="s2">"tilt_2"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="s2">"phi_12"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="s2">"phi_jl"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="s2">"dec"</span><span class="p">:</span> <span class="o">-</span><span class="mf">1.2232</span><span class="p">,</span>
+        <span class="s2">"ra"</span><span class="p">:</span> <span class="mf">2.19432</span><span class="p">,</span>
+        <span class="s2">"theta_jn"</span><span class="p">:</span> <span class="mf">1.89694</span><span class="p">,</span>
+        <span class="s2">"psi"</span><span class="p">:</span> <span class="mf">0.532268</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+<span class="n">prior</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>{'chirp_mass': Uniform(minimum=30.0, maximum=32.5, name='chirp_mass', latex_label='$\\mathcal{M}$', unit=None, boundary=None),
+ 'mass_ratio': Uniform(minimum=0.5, maximum=1.0, name='mass_ratio', latex_label='$q$', unit=None, boundary=None),
+ 'phase': Uniform(minimum=0, maximum=6.283185307179586, name='phase', latex_label='$\\phi$', unit=None, boundary='periodic'),
+ 'geocent_time': Uniform(minimum=1126259462.3000002, maximum=1126259462.5, name='geocent_time', latex_label='$t_c$', unit=None, boundary=None),
+ 'luminosity_distance': PowerLaw(alpha=2, minimum=50, maximum=2000, name='luminosity_distance', latex_label='$d_L$', unit='Mpc', boundary=None),
+ 'a_1': 0.0,
+ 'a_2': 0.0,
+ 'tilt_1': 0.0,
+ 'tilt_2': 0.0,
+ 'phi_12': 0.0,
+ 'phi_jl': 0.0,
+ 'dec': -1.2232,
+ 'ra': 2.19432,
+ 'theta_jn': 1.89694,
+ 'psi': 0.532268}
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="build-the-waveform-and-likelihood">
+<h2>4. Build the waveform and likelihood<a class="headerlink" href="#build-the-waveform-and-likelihood" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">WaveformGenerator</span></code> maps parameters to polarizations. Each interferometer then
+applies its response and arrival-time delay. <code class="docutils literal notranslate"><span class="pre">GravitationalWaveTransient</span></code>
+evaluates the coherent PSD-weighted residual likelihood. Time, phase, and
+distance are analytically marginalised during sampling and reconstructed later.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">waveform_arguments</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="n">waveform_approximant</span><span class="o">=</span><span class="s2">"IMRPhenomPv2"</span><span class="p">,</span>
+    <span class="n">reference_frequency</span><span class="o">=</span><span class="mf">50.0</span><span class="p">,</span>
+    <span class="n">minimum_frequency</span><span class="o">=</span><span class="mf">20.0</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">waveform_generator</span> <span class="o">=</span> <span class="n">bilby</span><span class="o">.</span><span class="n">gw</span><span class="o">.</span><span class="n">WaveformGenerator</span><span class="p">(</span>
+    <span class="n">duration</span><span class="o">=</span><span class="n">duration</span><span class="p">,</span>
+    <span class="n">sampling_frequency</span><span class="o">=</span><span class="n">sampling_frequency</span><span class="p">,</span>
+    <span class="n">frequency_domain_source_model</span><span class="o">=</span><span class="n">bilby</span><span class="o">.</span><span class="n">gw</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">lal_binary_black_hole</span><span class="p">,</span>
+    <span class="n">parameter_conversion</span><span class="o">=</span><span class="n">convert_to_lal_binary_black_hole_parameters</span><span class="p">,</span>
+    <span class="n">waveform_arguments</span><span class="o">=</span><span class="n">waveform_arguments</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">likelihood</span> <span class="o">=</span> <span class="n">bilby</span><span class="o">.</span><span class="n">gw</span><span class="o">.</span><span class="n">likelihood</span><span class="o">.</span><span class="n">GravitationalWaveTransient</span><span class="p">(</span>
+    <span class="n">interferometers</span><span class="o">=</span><span class="n">interferometers</span><span class="p">,</span>
+    <span class="n">waveform_generator</span><span class="o">=</span><span class="n">waveform_generator</span><span class="p">,</span>
+    <span class="n">priors</span><span class="o">=</span><span class="n">prior</span><span class="p">,</span>
+    <span class="n">time_marginalization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">phase_marginalization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">distance_marginalization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Likelihood:"</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">likelihood</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span>
+    <span class="s2">"Frequency bins used:"</span><span class="p">,</span>
+    <span class="nb">sum</span><span class="p">(</span><span class="n">ifo</span><span class="o">.</span><span class="n">strain_data</span><span class="o">.</span><span class="n">frequency_mask</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="k">for</span> <span class="n">ifo</span> <span class="ow">in</span> <span class="n">interferometers</span><span class="p">),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Likelihood: GravitationalWaveTransient
+Frequency bins used: 8034
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="run-dynesty">
+<h2>5. Run Dynesty<a class="headerlink" href="#run-dynesty" title="Link to this heading">#</a></h2>
+<p>This is the genuine sampler call from the GWOSC workflow. The deliberately
+loose stopping criterion and small live-point count reduce classroom runtime.
+Do not reuse them as production defaults.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">result_short</span> <span class="o">=</span> <span class="n">bilby</span><span class="o">.</span><span class="n">run_sampler</span><span class="p">(</span>
+    <span class="n">likelihood</span><span class="o">=</span><span class="n">likelihood</span><span class="p">,</span>
+    <span class="n">priors</span><span class="o">=</span><span class="n">prior</span><span class="p">,</span>
+    <span class="n">sampler</span><span class="o">=</span><span class="s2">"dynesty"</span><span class="p">,</span>
+    <span class="n">outdir</span><span class="o">=</span><span class="s2">"gw150914_short"</span><span class="p">,</span>
+    <span class="n">label</span><span class="o">=</span><span class="s2">"GW150914"</span><span class="p">,</span>
+    <span class="n">conversion_function</span><span class="o">=</span><span class="n">generate_all_bbh_parameters</span><span class="p">,</span>
+    <span class="n">nlive</span><span class="o">=</span><span class="mi">250</span><span class="p">,</span>
+    <span class="n">dlogz</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">sample</span><span class="o">=</span><span class="s2">"rwalk"</span><span class="p">,</span>
+    <span class="n">clean</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">parameters</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"chirp_mass"</span><span class="p">,</span> <span class="s2">"mass_ratio"</span><span class="p">,</span> <span class="s2">"geocent_time"</span><span class="p">,</span> <span class="s2">"phase"</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result_short</span><span class="o">.</span><span class="n">posterior</span><span class="p">[</span><span class="n">parameters</span><span class="p">]</span><span class="o">.</span><span class="n">describe</span><span class="p">(</span><span class="n">percentiles</span><span class="o">=</span><span class="p">[</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">]))</span>
+<span class="nb">print</span><span class="p">(</span>
+    <span class="sa">f</span><span class="s2">"log Bayes factor: </span><span class="si">{</span><span class="n">result_short</span><span class="o">.</span><span class="n">log_bayes_factor</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> +/- </span><span class="si">{</span><span class="n">result_short</span><span class="o">.</span><span class="n">log_evidence_err</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">"</span>
+<span class="p">)</span>
+<span class="n">result_short</span><span class="o">.</span><span class="n">plot_corner</span><span class="p">(</span><span class="n">parameters</span><span class="o">=</span><span class="n">parameters</span><span class="p">,</span> <span class="n">prior</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">save</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>16:45 bilby WARNING : Using cached result
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>16:45 bilby WARNING : Result.save_to_file called with extension=True. This will default to json, and ignore the extension from the filename. This behaviour is deprecated and will be removed. 
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>       chirp_mass  mass_ratio  geocent_time       phase
+count  285.000000  285.000000  2.850000e+02  285.000000
+mean    31.104106    0.870579  1.126259e+09    3.469115
+std      0.303559    0.096464  1.893994e-04    1.578519
+min     30.177741    0.565134  1.126259e+09    0.624340
+5%      30.601197    0.680850  1.126259e+09    1.725767
+50%     31.110819    0.892530  1.126259e+09    2.258739
+95%     31.583848    0.987836  1.126259e+09    5.325347
+max     32.067853    0.998354  1.126259e+09    5.494090
+log Bayes factor: 265.7 +/- 0.2
+</pre></div>
+</div>
+<img alt="../_images/3ec2847dab0525213403ca9679ca707ac6dd8f448381fd1fde8157d1dc7da74c.png" src="../_images/3ec2847dab0525213403ca9679ca707ac6dd8f448381fd1fde8157d1dc7da74c.png" />
+</div>
+</div>
+<details>
+<summary><i>Expected output &mdash; open this if your cell has not run yet</i></summary>
+<img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/lvk-gwosc-bilby-corner.png" alt="expected output: lvk-gwosc-bilby-corner" style="max-width:100%">
+</details></section>
+<section id="compare-with-the-published-posterior">
+<h2>Compare with the published posterior<a class="headerlink" href="#compare-with-the-published-posterior" title="Link to this heading">#</a></h2>
+<p>We have a posterior for GW150914. So does the LVK, from an analysis that took
+rather longer than four minutes. Both are public, so the comparison is
+available to anyone — and it is the only honest way to find out whether the
+run above meant anything.</p>
+<p>The reference is the <strong>GWTC-2.1</strong> data release,
+<a class="reference external" href="https://doi.org/10.5281/zenodo.6513631">doi:10.5281/zenodo.6513631</a>, released
+under CC BY 4.0. Inside it, the analysis labelled <code class="docutils literal notranslate"><span class="pre">C01:Mixed</span></code> holds the
+catalogue’s fiducial samples for this event, pooled over two waveform families
+(IMRPhenomXPHM and SEOBNRv4PHM).</p>
+<section id="getting-it-yourself">
+<h3>Getting it yourself<a class="headerlink" href="#getting-it-yourself" title="Link to this heading">#</a></h3>
+<p>The full file for this one event is <strong>134 MB</strong>, which is not a thing to
+download in a workshop room. So the cell below reads a small CSV of the columns
+we need. This is how you would pull the real thing later:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">urllib.request</span><span class="w"> </span><span class="kn">import</span> <span class="n">urlretrieve</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
+
+<span class="n">url</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"https://zenodo.org/api/records/6513631/files/"</span>
+    <span class="s2">"IGWN-GWTC2p1-v2-GW150914_095045_PEDataRelease_mixed_cosmo.h5/content"</span>
+<span class="p">)</span>
+<span class="n">urlretrieve</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="s2">"GW150914_gwtc2p1.h5"</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="s2">"GW150914_gwtc2p1.h5"</span><span class="p">,</span> <span class="s2">"r"</span><span class="p">)</span> <span class="k">as</span> <span class="n">source</span><span class="p">:</span>
+    <span class="n">published</span> <span class="o">=</span> <span class="n">source</span><span class="p">[</span><span class="s2">"C01:Mixed/posterior_samples"</span><span class="p">][()]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">published</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span><span class="p">)</span>  <span class="c1"># 59 parameters</span>
+</pre></div>
+</div>
+<p>Every event in the catalogue is there under its own filename, and <code class="docutils literal notranslate"><span class="pre">pesummary</span></code>
+will read these files for you if you would rather not touch h5py.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">published_candidates</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">Path</span><span class="p">(</span><span class="s2">"assets/gw150914_gwtc2p1_posterior.csv"</span><span class="p">),</span>
+    <span class="n">Path</span><span class="p">(</span><span class="s2">"../assets/gw150914_gwtc2p1_posterior.csv"</span><span class="p">),</span>
+<span class="p">]</span>
+<span class="n">published_path</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
+    <span class="p">(</span><span class="n">path</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">published_candidates</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">()),</span> <span class="n">published_candidates</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="p">)</span>
+<span class="n">published_url</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"https://raw.githubusercontent.com/nz-gravity/"</span>
+    <span class="s2">"FQCP2026_GW_data_analysis/main/assets/gw150914_gwtc2p1_posterior.csv"</span>
+<span class="p">)</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">published_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+    <span class="n">published_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">urlretrieve</span><span class="p">(</span><span class="n">published_url</span><span class="p">,</span> <span class="n">published_path</span><span class="p">)</span>
+
+<span class="n">published</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">genfromtxt</span><span class="p">(</span><span class="n">published_path</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">","</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">chirp_mass_samples</span> <span class="o">=</span> <span class="n">result_short</span><span class="o">.</span><span class="n">posterior</span><span class="p">[</span><span class="s2">"chirp_mass"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+<span class="n">mass_ratio_samples</span> <span class="o">=</span> <span class="n">result_short</span><span class="o">.</span><span class="n">posterior</span><span class="p">[</span><span class="s2">"mass_ratio"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">bx</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">11</span><span class="p">,</span> <span class="mf">3.8</span><span class="p">))</span>
+<span class="n">bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">28.0</span><span class="p">,</span> <span class="mf">34.0</span><span class="p">,</span> <span class="mi">60</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span>
+    <span class="n">published</span><span class="p">[</span><span class="s2">"chirp_mass"</span><span class="p">],</span>
+    <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">,</span>
+    <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">alpha</span><span class="o">=</span><span class="mf">0.45</span><span class="p">,</span>
+    <span class="n">label</span><span class="o">=</span><span class="s2">"GWTC-2.1 (C01:Mixed)"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span>
+    <span class="n">chirp_mass_samples</span><span class="p">,</span>
+    <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">,</span>
+    <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">histtype</span><span class="o">=</span><span class="s2">"step"</span><span class="p">,</span>
+    <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">"C3"</span><span class="p">,</span>
+    <span class="n">label</span><span class="o">=</span><span class="s2">"this notebook"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="p">(</span><span class="n">prior</span><span class="p">[</span><span class="s2">"chirp_mass"</span><span class="p">]</span><span class="o">.</span><span class="n">minimum</span><span class="p">,</span> <span class="n">prior</span><span class="p">[</span><span class="s2">"chirp_mass"</span><span class="p">]</span><span class="o">.</span><span class="n">maximum</span><span class="p">):</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"k"</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s2">":"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.5</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">"detector-frame chirp mass $\mathcal</span><span class="si">{M}</span><span class="s2">$ [$M_\odot$]"</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="s2">"posterior density"</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">"Dotted lines are our prior edges"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+
+<span class="n">bx</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span>
+    <span class="n">published</span><span class="p">[</span><span class="s2">"chirp_mass"</span><span class="p">],</span>
+    <span class="n">published</span><span class="p">[</span><span class="s2">"mass_ratio"</span><span class="p">],</span>
+    <span class="n">s</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">alpha</span><span class="o">=</span><span class="mf">0.18</span><span class="p">,</span>
+    <span class="n">label</span><span class="o">=</span><span class="s2">"GWTC-2.1"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">bx</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span>
+    <span class="n">chirp_mass_samples</span><span class="p">,</span> <span class="n">mass_ratio_samples</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C3"</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"ours"</span>
+<span class="p">)</span>
+<span class="n">bx</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">"$\mathcal</span><span class="si">{M}</span><span class="s2">$ [$M_\odot$]"</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="s2">"mass ratio $q$"</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">"The same two parameters"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">bx</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s2">"GWTC-2.1"</span><span class="p">,</span> <span class="n">published</span><span class="p">[</span><span class="s2">"chirp_mass"</span><span class="p">]),</span>
+    <span class="p">(</span><span class="s2">"this notebook"</span><span class="p">,</span> <span class="n">chirp_mass_samples</span><span class="p">),</span>
+<span class="p">]:</span>
+    <span class="n">low</span><span class="p">,</span> <span class="n">median</span><span class="p">,</span> <span class="n">high</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="p">[</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">:</span><span class="s2">15s</span><span class="si">}</span><span class="s2"> Mc = </span><span class="si">{</span><span class="n">median</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> [</span><span class="si">{</span><span class="n">low</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">high</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">] Msun  (90%)"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/6cc18d91dbbe1c5f640b472a8ffe5da5629bbe1c74c96b935387d0e693c1f691.png" src="../_images/6cc18d91dbbe1c5f640b472a8ffe5da5629bbe1c74c96b935387d0e693c1f691.png" />
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>GWTC-2.1        Mc = 30.69 [29.07, 32.49] Msun  (90%)
+this notebook   Mc = 31.11 [30.60, 31.58] Msun  (90%)
+</pre></div>
+</div>
+</div>
+</div>
+<details>
+<summary><i>Expected output &mdash; open this if your cell has not run yet</i></summary>
+<img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/lvk-gwosc-published-overlay.png" alt="expected output: lvk-gwosc-published-overlay" style="max-width:100%">
+</details></section>
+<section id="id1">
+<h3>Question<a class="headerlink" href="#id1" title="Link to this heading">#</a></h3>
+<p>Look at the overlay, then answer three things.</p>
+<ol class="arabic simple">
+<li><p><strong>Do the two posteriors agree?</strong> Quote the median and 90% interval for
+each. Say what “agree” should even mean here — overlapping intervals,
+consistent medians, or matching widths? They are not the same test.</p></li>
+<li><p><strong>Why, or why not?</strong> Our run and the published one differ in many ways at
+once. List every difference you can identify, then say which of them you
+think actually moved the answer. One of them is visible directly in the
+left-hand panel.</p></li>
+<li><p><strong>What would you change?</strong> You have four minutes of compute. Spend it: name
+the single change most likely to bring our posterior closer to the
+published one, and say how you would know whether it worked.</p></li>
+</ol>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Your code here.</span>
+</pre></div>
+</div>
+</div>
+</div>
+<details>
+<summary>Hint</summary>
+<p>For (1): <code class="docutils literal notranslate"><span class="pre">np.quantile(...,</span> <span class="pre">[0.05,</span> <span class="pre">0.5,</span> <span class="pre">0.95])</span></code> on both, and compare the widths
+as well as the centres.</p>
+<p>For (2): work through the analysis from the top. Waveform model, spins,
+extrinsic parameters, PSD estimate, calibration, sampler settings, priors.
+Then look again at where the dotted prior edges fall relative to the grey
+histogram.</p>
+<p>For (3): whatever you identified in (2) as the binding constraint. Note that
+“run the sampler longer” and “let the model move” are different kinds of fix,
+and only one of them is about convergence.</p>
+</details></section>
+</section>
+<section id="read-or-try-next">
+<h2>Read or try next<a class="headerlink" href="#read-or-try-next" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>The <a class="reference external" href="https://learn.gwosc.org/courses/odw2025">current GWOSC workshop course</a>
+supplies the wider open-data workflow and newer exercises.</p></li>
+<li><p><a class="reference external" href="https://bilby-dev.github.io/bilby/compact-binary-coalescence-parameter-estimation.html">Bilby’s compact-binary tutorial</a>
+is the maintained reference for the likelihood and marginalisation options.</p></li>
+<li><p>The <a class="reference external" href="https://gwosc.org/eventapi/">GWOSC event portal</a> links strain products,
+catalogue metadata, and released posterior samples. Compare products only
+after checking which catalogue release and waveform model produced them.</p></li>
+</ul>
+<!-- colab-badge-next -->
+<p>Next: <a class="reference external" href="https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/04_lvk_population_and_checks.ipynb"><img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></a></p>
+</section>
+</section>
+<hr class="docutils" />
+<section class="tex2jax_ignore mathjax_ignore" id="worked-solutions">
+<h1>Worked solutions<a class="headerlink" href="#worked-solutions" title="Link to this heading">#</a></h1>
+<p>Everything above this line is the lab notebook, unchanged. Below are the
+solutions to its exercises, as cells that actually run: execute the notebook
+from the top and every variable they need will already exist.</p>
+<section id="question-why-estimate-the-psd-off-source">
+<h2>Question: why estimate the PSD off-source?<a class="headerlink" href="#question-why-estimate-the-psd-off-source" title="Link to this heading">#</a></h2>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mask</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">h1</span><span class="o">.</span><span class="n">strain_data</span><span class="o">.</span><span class="n">frequency_mask</span>
+    <span class="o">&amp;</span> <span class="p">(</span><span class="n">h1</span><span class="o">.</span><span class="n">frequency_array</span> <span class="o">&gt;=</span> <span class="mi">80</span><span class="p">)</span>
+    <span class="o">&amp;</span> <span class="p">(</span><span class="n">h1</span><span class="o">.</span><span class="n">frequency_array</span> <span class="o">&lt;=</span> <span class="mi">120</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">band_frequency</span> <span class="o">=</span> <span class="n">h1</span><span class="o">.</span><span class="n">frequency_array</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+<span class="n">band_asd</span> <span class="o">=</span> <span class="n">h1</span><span class="o">.</span><span class="n">amplitude_spectral_density_array</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+<span class="n">near_100</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">band_frequency</span> <span class="o">-</span> <span class="mi">100</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"ASD at 100 Hz / band median: </span><span class="si">{</span><span class="n">band_asd</span><span class="p">[</span><span class="n">near_100</span><span class="p">]</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">band_asd</span><span class="p">)</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>ASD at 100 Hz / band median: 0.984
+</pre></div>
+</div>
+</div>
+</div>
+<p>The ratio is close to 1, so 100 Hz is unremarkable in this band — which is the
+point. The PSD has to describe the noise <em>the signal sits in</em>. Estimating it
+from data containing the signal would let the signal inflate its own assumed
+noise floor and quietly suppress itself, exactly the Section-2 failure of
+notebook 01 with the sign reversed.</p>
+</section>
+<section id="question-comparing-with-the-published-posterior">
+<h2>Question: comparing with the published posterior<a class="headerlink" href="#question-comparing-with-the-published-posterior" title="Link to this heading">#</a></h2>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s2">"GWTC-2.1"</span><span class="p">,</span> <span class="n">published</span><span class="p">[</span><span class="s2">"chirp_mass"</span><span class="p">]),</span>
+    <span class="p">(</span><span class="s2">"this notebook"</span><span class="p">,</span> <span class="n">chirp_mass_samples</span><span class="p">),</span>
+<span class="p">]:</span>
+    <span class="n">low</span><span class="p">,</span> <span class="n">median</span><span class="p">,</span> <span class="n">high</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="p">[</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">:</span><span class="s2">15s</span><span class="si">}</span><span class="s2"> Mc = </span><span class="si">{</span><span class="n">median</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> [</span><span class="si">{</span><span class="n">low</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">high</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">]  width </span><span class="si">{</span><span class="n">high</span><span class="o">-</span><span class="n">low</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">our prior: U(</span><span class="si">{</span><span class="n">prior</span><span class="p">[</span><span class="s1">'chirp_mass'</span><span class="p">]</span><span class="o">.</span><span class="n">minimum</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">prior</span><span class="p">[</span><span class="s1">'chirp_mass'</span><span class="p">]</span><span class="o">.</span><span class="n">maximum</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+<span class="n">inside</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span>
+    <span class="p">(</span><span class="n">published</span><span class="p">[</span><span class="s2">"chirp_mass"</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">prior</span><span class="p">[</span><span class="s2">"chirp_mass"</span><span class="p">]</span><span class="o">.</span><span class="n">minimum</span><span class="p">)</span>
+    <span class="o">&amp;</span> <span class="p">(</span><span class="n">published</span><span class="p">[</span><span class="s2">"chirp_mass"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">prior</span><span class="p">[</span><span class="s2">"chirp_mass"</span><span class="p">]</span><span class="o">.</span><span class="n">maximum</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"fraction of the published posterior our prior even allows: </span><span class="si">{</span><span class="n">inside</span><span class="si">:</span><span class="s2">.1%</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>GWTC-2.1        Mc = 30.69 [29.07, 32.49]  width 3.41
+this notebook   Mc = 31.11 [30.60, 31.58]  width 0.98
+
+our prior: U(30.0, 32.5)
+fraction of the published posterior our prior even allows: 70.9%
+</pre></div>
+</div>
+</div>
+</div>
+<section id="do-they-agree">
+<h3>1. Do they agree?<a class="headerlink" href="#do-they-agree" title="Link to this heading">#</a></h3>
+<p>It depends which test you mean, and that is the first thing worth saying out
+loud.</p>
+<ul class="simple">
+<li><p><strong>Medians:</strong> yes, near enough. Ours sits about <span class="math notranslate nohighlight">\(0.4\,M_\odot\)</span> high, well
+inside the published 90% interval.</p></li>
+<li><p><strong>Intervals:</strong> ours is <em>contained in</em> theirs, which is not the same as
+agreeing. Our 90% interval is roughly four times narrower.</p></li>
+<li><p><strong>Widths:</strong> no. We are far more confident than the LVK, on the same event,
+from the same data.</p></li>
+</ul>
+<p>Being more precise than the published analysis, using less of everything, is
+not a success. It is the notebook-01 lesson in the wild: a narrow posterior
+reports what the model was told, not what the data know.</p>
+</section>
+<section id="why">
+<h3>2. Why?<a class="headerlink" href="#why" title="Link to this heading">#</a></h3>
+<p>Everything below differs between the two analyses:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p></p></th>
+<th class="head"><p>this notebook</p></th>
+<th class="head"><p>GWTC-2.1</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>waveform</p></td>
+<td><p>restricted, non-spinning</p></td>
+<td><p>IMRPhenomXPHM + SEOBNRv4PHM, precessing</p></td>
+</tr>
+<tr class="row-odd"><td><p>spins</p></td>
+<td><p>fixed at zero</p></td>
+<td><p>6 spin parameters sampled</p></td>
+</tr>
+<tr class="row-even"><td><p>extrinsic</p></td>
+<td><p>sky and orientation fixed</p></td>
+<td><p>fully sampled</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="math notranslate nohighlight">\(\mathcal M\)</span> prior</p></td>
+<td><p><span class="math notranslate nohighlight">\(U(30, 32.5)\)</span></p></td>
+<td><p>wide, astrophysical</p></td>
+</tr>
+<tr class="row-even"><td><p>calibration</p></td>
+<td><p>ignored</p></td>
+<td><p>marginalised</p></td>
+</tr>
+<tr class="row-odd"><td><p>PSD</p></td>
+<td><p>our own short estimate</p></td>
+<td><p>on-source, carefully validated</p></td>
+</tr>
+<tr class="row-even"><td><p>sampler</p></td>
+<td><p>minutes, few hundred samples</p></td>
+<td><p>hours to days, converged</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Most of those widen a posterior. The one that dominates here is visible in the
+left panel: <strong>our prior is narrower than the published posterior.</strong> The dotted
+lines cut straight through the grey histogram — the printout above shows what
+fraction of the published posterior our prior even permits. A parameter cannot
+be measured to be outside its prior, so part of our apparent precision was
+assumed, not inferred.</p>
+<p>The rest comes from fixing spins and extrinsic parameters. Every parameter
+held fixed is a direction the posterior cannot spread into, and chirp mass is
+correlated with several of them.</p>
+</section>
+<section id="what-would-you-change">
+<h3>3. What would you change?<a class="headerlink" href="#what-would-you-change" title="Link to this heading">#</a></h3>
+<p><strong>Widen the chirp-mass prior</strong>, to something like <span class="math notranslate nohighlight">\(U(25, 40)\)</span>, and rerun.
+Nothing else is worth trying first, because until the prior stops binding you
+cannot see what the data alone would have said.</p>
+<p>How you would know it worked: the posterior should get <em>wider</em> and its edges
+should stop coinciding with the prior edges. If it widens to roughly the
+published width, the prior was the whole story. If it widens only a little,
+the fixed spins and extrinsic parameters are carrying the rest — and that is a
+waveform-cost problem, not a prior problem, and no amount of sampling fixes
+it.</p>
+<p>Note that “run the sampler longer” is a different kind of fix, and not the one
+needed here. More samples would reduce the noise on our estimate of a posterior
+that is the wrong width. Convergence and correctness are separate problems.</p>
+</section>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./notebooks"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Part 2B: GW150914 with Bilby</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal-and-route">Goal and route</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#source-and-attribution">Source and attribution</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#get-the-gw150914-analysis-data">1. Get the GW150914 analysis data</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#why-does-gw150914-need-only-four-seconds">Why does GW150914 need only four seconds?</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-those-analysis-windows-contain-in-the-time-domain">What those analysis windows contain in the time domain</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#estimate-the-psd-from-off-source-data">2. Estimate the PSD from off-source data</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#optional-visual-explainer-why-use-a-median">Optional visual explainer: why use a median?</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#question">Question</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#define-the-restricted-prior">3. Define the restricted prior</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#build-the-waveform-and-likelihood">4. Build the waveform and likelihood</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#run-dynesty">5. Run Dynesty</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#compare-with-the-published-posterior">Compare with the published posterior</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#getting-it-yourself">Getting it yourself</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Question</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#read-or-try-next">Read or try next</a></li>
+</ul>
+</li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#worked-solutions">Worked solutions</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#question-why-estimate-the-psd-off-source">Question: why estimate the PSD off-source?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#question-comparing-with-the-published-posterior">Question: comparing with the published posterior</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#do-they-agree">1. Do they agree?</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#why">2. Why?</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-would-you-change">3. What would you change?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Avi Vajpeyi
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  <script src="https://utteranc.es/client.js"
+        repo="nz-gravity/FQCP2026_GW_data_analysis"
+        issue-term="url"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

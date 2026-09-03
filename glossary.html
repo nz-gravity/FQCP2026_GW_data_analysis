@@ -1,0 +1,800 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Glossary &#8212; FQCP 2026 GW data analysis</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'glossary';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Part 1: Bayesian inference from first principles" href="notebooks/01_bayesian_inference.html" />
+    <link rel="prev" title="Bayesian gravitational-wave parameter estimation" href="index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="_static/searchtools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script src="searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">FQCP 2026 GW data analysis</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="index.html">
+                    Bayesian gravitational-wave parameter estimation
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Before you start</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Glossary</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 1 — Bayesian inference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="notebooks/01_bayesian_inference.html">Part 1: Bayesian inference from first principles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/01b_bayesian_samplers.html">Extension lab: how Bayesian samplers explore a posterior</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/01c_sampler_diagnostics.html">Extension lab: can you trust the sampler?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/01d_hubble_prior_sensitivity.html">Extension lab: a small Hubble-law inference</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 2 — LVK</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="notebooks/02_lvk_signals_injections.html">Part 2A: LVK signals, injections, and matched filtering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/03_lvk_gw150914_bilby.html">Part 2B: GW150914 with Bilby</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/04_lvk_population_and_checks.html">Part 2C: LVK populations and PE checks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/04b_lvk_blind_data_challenge.html">Supplement: blind LVK data challenge</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 3 — LISA</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="notebooks/05_lisa_signals_response_codes.html">Part 3A: LISA signals, response, and analysis codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/06_lisa_global_fit_gibbs.html">Part 3B: LISA global fitting and Gibbs sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/07_lisa_pspline_psd.html">Part 3C: LISA PSD estimation with P-splines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/08_lisa_wdm_time_frequency.html">Part 3D: LISA WDM time-frequency analysis</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 4 — Making inference fast</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="notebooks/10_fast_likelihoods.html">Part 4: Fast likelihoods</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further study</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="notebooks/03_literature.html">Essential literature for gravitational-wave research</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/nz-gravity/FQCP2026_GW_data_analysis" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/glossary.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Glossary</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#bayesian-inference">Bayesian inference</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#sampling">Sampling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#noise-and-data">Noise and data</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#signals-and-detection">Signals and detection</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lisa">LISA</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#software">Software</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="glossary">
+<h1>Glossary<a class="headerlink" href="#glossary" title="Link to this heading">#</a></h1>
+<p>Short definitions for terms used in the notebooks.</p>
+<section id="bayesian-inference">
+<h2>Bayesian inference<a class="headerlink" href="#bayesian-inference" title="Link to this heading">#</a></h2>
+<dl class="simple myst">
+<dt><strong>Prior</strong>, <span class="math notranslate nohighlight">\(\pi(\theta)\)</span></dt><dd><p>What you were willing to believe about the parameters <em>before</em> looking at
+these data. It is part of the model, not a formality. <em>Not</em> a statement of
+ignorance — a “wide” prior is still a specific claim.</p>
+</dd>
+<dt><strong>Likelihood</strong>, <span class="math notranslate nohighlight">\(\mathcal{L}(d\mid\theta)\)</span></dt><dd><p>How probable the observed data are <em>if</em> the parameters were <span class="math notranslate nohighlight">\(\theta\)</span>. <em>Not</em>
+the probability that <span class="math notranslate nohighlight">\(\theta\)</span> is correct — that is the posterior, and the two
+get swapped constantly in casual speech.</p>
+</dd>
+<dt><strong>Posterior</strong>, <span class="math notranslate nohighlight">\(p(\theta\mid d)\)</span></dt><dd><p>What you believe about the parameters after seeing the data. This is the
+answer a parameter-estimation analysis produces. It is a whole distribution,
+<em>not</em> a single best-fit number with an error bar attached.</p>
+</dd>
+<dt><strong>Marginalisation</strong></dt><dd><p>Integrating a parameter out to get the distribution of the ones you care
+about. <em>Not</em> the same as fixing the nuisance parameter at its best value —
+that throws away its uncertainty and gives you a falsely tight answer.</p>
+</dd>
+<dt><strong>Evidence</strong> (or marginal likelihood), <span class="math notranslate nohighlight">\(\mathcal{Z}\)</span></dt><dd><p>The average of the likelihood over the prior. Used to compare whole models
+against each other. It depends on the prior <em>by construction</em>, which is why a
+Bayes factor must always be quoted alongside the priors that produced it.</p>
+</dd>
+<dt><strong>Bayes factor</strong></dt><dd><p>A ratio of two evidences — how much the data prefer one model over another.</p>
+</dd>
+<dt><strong>Credible interval</strong></dt><dd><p>A range containing, say, 90% of the posterior probability. <em>Not</em> a confidence
+interval, which is a different (frequentist) construction that answers a
+different question.</p>
+</dd>
+<dt><strong>Posterior predictive check</strong></dt><dd><p>Simulate fake datasets from your own fitted model and ask whether they look
+like the data you actually got. The main way to catch a model that is
+confidently wrong. A posterior alone can never tell you its model is wrong.</p>
+</dd>
+<dt><strong>P–P test</strong></dt><dd><p>Run the whole pipeline on hundreds of simulations and check that the truth
+falls inside the 90% interval 90% of the time. This is how LVK validates
+parameter-estimation code. A single injection landing inside its interval
+proves nothing.</p>
+</dd>
+</dl>
+</section>
+<section id="sampling">
+<h2>Sampling<a class="headerlink" href="#sampling" title="Link to this heading">#</a></h2>
+<dl class="simple myst">
+<dt><strong>MCMC</strong> / <strong>Metropolis–Hastings</strong></dt><dd><p>A random walk whose visiting frequency converges to the posterior. Proposes a
+move, accepts it always if uphill and sometimes if downhill. Only needs
+likelihood <em>ratios</em>, so the unknown evidence cancels.</p>
+</dd>
+<dt><strong>Burn-in</strong></dt><dd><p>The early part of a chain that still remembers where it started. Discarded,
+because it describes your starting guess rather than the posterior.</p>
+</dd>
+<dt><strong>Effective sample size</strong> (<span class="math notranslate nohighlight">\(N_{\rm eff}\)</span>)</dt><dd><p>How many genuinely independent samples your correlated chain is worth. This,
+not the raw chain length, sets the error on every number you quote.</p>
+</dd>
+<dt><strong>Proposal scale</strong></dt><dd><p>How big a step the sampler tries. Too small and it crawls; too large and
+everything is rejected. Both failures produce a chain that looks like it ran
+fine and is wrong.</p>
+</dd>
+<dt><strong>Nested sampling</strong></dt><dd><p>An algorithm that computes the evidence <em>and</em> gives posterior samples, by
+peeling the prior away from the outside in. <code class="docutils literal notranslate"><span class="pre">dynesty</span></code> and <code class="docutils literal notranslate"><span class="pre">MultiNest</span></code> are
+production implementations.</p>
+</dd>
+<dt><strong>Live points</strong></dt><dd><p>The population of active samples in a nested sampler, which contracts onto
+the peak as the likelihood threshold rises.</p>
+</dd>
+<dt><strong>Fisher matrix</strong></dt><dd><p>A cheap Gaussian approximation to the posterior, from the curvature of the
+likelihood at its peak. Exact for linear-Gaussian problems; only a high-SNR,
+near-linear approximation for real signals. <em>Not</em> a substitute for sampling.</p>
+</dd>
+<dt><strong>Corner plot</strong></dt><dd><p>The standard display of a multi-dimensional posterior: 1D marginals on the
+diagonal, 2D marginals below.</p>
+</dd>
+</dl>
+</section>
+<section id="noise-and-data">
+<h2>Noise and data<a class="headerlink" href="#noise-and-data" title="Link to this heading">#</a></h2>
+<dl class="simple myst">
+<dt><strong>Strain</strong>, <span class="math notranslate nohighlight">\(h(t)\)</span></dt><dd><p>The fractional stretching of space a detector measures. Dimensionless, and
+fantastically small — around <span class="math notranslate nohighlight">\(10^{-21}\)</span>.</p>
+</dd>
+<dt><strong>PSD</strong> (power spectral density), <span class="math notranslate nohighlight">\(S_n(f)\)</span></dt><dd><p>How the noise variance is spread across frequency. Units of strain²/Hz.
+Detector noise is much louder at some frequencies than others, and the PSD is
+how the analysis knows that.</p>
+</dd>
+<dt><strong>ASD</strong> (amplitude spectral density)</dt><dd><p><span class="math notranslate nohighlight">\(\sqrt{S_n(f)}\)</span>, units strain/<span class="math notranslate nohighlight">\(\sqrt{\rm Hz}\)</span>. Just the square root of the
+PSD — plots use it because the numbers are friendlier.</p>
+</dd>
+<dt><strong>Whitening</strong></dt><dd><p>Dividing each frequency component by the noise ASD, so every frequency
+carries comparable noise. This is what makes a signal visible by eye, and it
+is the same weighting the likelihood applies internally.</p>
+</dd>
+<dt><strong>Periodogram</strong></dt><dd><p>The raw <span class="math notranslate nohighlight">\(|\tilde{d}(f)|^2\)</span> estimate of the spectrum. Too noisy to use
+directly as a noise model, which is why PSDs get smoothed or fitted.</p>
+</dd>
+<dt><strong>Whittle likelihood</strong></dt><dd><p>The frequency-domain Gaussian likelihood used throughout GW analysis. Assumes
+the noise is stationary and Gaussian and that Fourier bins are independent.
+Gaps, spectral lines, and non-stationarity all break those assumptions.</p>
+</dd>
+<dt><strong>Stationary</strong></dt><dd><p>Statistical properties do not change with time. Real detector noise is only
+approximately stationary, and only over short stretches.</p>
+</dd>
+<dt><strong>Glitch</strong></dt><dd><p>A short non-Gaussian noise transient. Looks like a signal to a naive search,
+and handling glitches is a large part of real analysis work.</p>
+</dd>
+<dt><strong>Inner product</strong>, <span class="math notranslate nohighlight">\((a\mid b)\)</span></dt><dd><p>The noise-weighted overlap of two signals,
+<span class="math notranslate nohighlight">\(4\,{\rm Re}\sum_k \tilde{a}_k\tilde{b}_k^*/S_n(f_k)\,\Delta f\)</span>. Nearly every
+GW formula is built from it.</p>
+</dd>
+</dl>
+</section>
+<section id="signals-and-detection">
+<h2>Signals and detection<a class="headerlink" href="#signals-and-detection" title="Link to this heading">#</a></h2>
+<dl class="simple myst">
+<dt><strong>CBC</strong> (compact binary coalescence)</dt><dd><p>Two black holes or neutron stars spiralling together and merging. The source
+class behind every LVK detection so far.</p>
+</dd>
+<dt><strong>Chirp</strong></dt><dd><p>The characteristic sweep upward in frequency and amplitude as a binary
+inspirals.</p>
+</dd>
+<dt><strong>Chirp mass</strong>, <span class="math notranslate nohighlight">\(\mathcal{M}\)</span></dt><dd><p>The specific mass combination
+<span class="math notranslate nohighlight">\((m_1m_2)^{3/5}/(m_1+m_2)^{1/5}\)</span> that controls how fast the chirp sweeps. It
+is measured far more precisely than either individual mass, because the
+signal’s phase depends on it directly.</p>
+</dd>
+<dt><strong>Mass ratio</strong>, <span class="math notranslate nohighlight">\(q\)</span></dt><dd><p><span class="math notranslate nohighlight">\(m_2/m_1\)</span>. Much harder to measure than the chirp mass.</p>
+</dd>
+<dt><strong>SNR</strong> (signal-to-noise ratio)</dt><dd><p>How loud a signal is relative to the noise. Around 8 is a marginal detection;
+GW150914 had about 24.</p>
+</dd>
+<dt><strong>Matched filter</strong></dt><dd><p>Slide a template waveform through the data and measure the noise-weighted
+overlap at every arrival time. The optimal way to find a signal of known shape
+in Gaussian noise, and the basis of every CBC search.</p>
+</dd>
+<dt><strong>Template bank</strong></dt><dd><p>A grid of waveforms covering the parameter space, spaced finely enough that
+any real signal is close to at least one of them.</p>
+</dd>
+<dt><strong>Waveform model / approximant</strong></dt><dd><p>The theoretical prediction <span class="math notranslate nohighlight">\(h(\theta)\)</span> — e.g. <code class="docutils literal notranslate"><span class="pre">IMRPhenomD</span></code>. Different
+approximants disagree slightly, and that disagreement is a real systematic
+error in published results.</p>
+</dd>
+<dt><strong>Antenna pattern</strong>, <span class="math notranslate nohighlight">\(F_+, F_\times\)</span></dt><dd><p>How sensitive a detector is to a source in a given sky direction and
+polarisation. Detectors are not equally sensitive in all directions.</p>
+</dd>
+<dt><strong>GW150914</strong></dt><dd><p>The first direct detection, September 2015. Two black holes around 36 and 29
+solar masses. Used as the real-data example in Part 2B.</p>
+</dd>
+</dl>
+</section>
+<section id="lisa">
+<h2>LISA<a class="headerlink" href="#lisa" title="Link to this heading">#</a></h2>
+<dl class="simple myst">
+<dt><strong>LISA</strong></dt><dd><p>A planned space-based detector: three spacecraft in a triangle 2.5 million km
+on a side, sensitive to millihertz frequencies rather than the hundreds of
+hertz LVK sees.</p>
+</dd>
+<dt><strong>TDI</strong> (time-delay interferometry)</dt><dd><p>The post-processing that combines delayed laser-link measurements so that
+laser frequency noise — which is enormously larger than any signal — cancels.
+Without TDI, LISA sees nothing.</p>
+</dd>
+<dt><strong><span class="math notranslate nohighlight">\(X, Y, Z\)</span></strong></dt><dd><p>The Michelson-like TDI combinations, one per spacecraft vertex.</p>
+</dd>
+<dt><strong><span class="math notranslate nohighlight">\(A, E, T\)</span></strong></dt><dd><p>A rotation of <span class="math notranslate nohighlight">\(X,Y,Z\)</span> into combinations with more convenient noise
+properties. <span class="math notranslate nohighlight">\(T\)</span> is approximately signal-insensitive at low frequency, so it is
+used as a noise monitor — approximately, <em>not</em> universally.</p>
+</dd>
+<dt><strong>Galactic binaries</strong></dt><dd><p>Tens of millions of white-dwarf pairs in our galaxy, each nearly
+monochromatic. Individually resolvable ones are sources; the unresolved bulk
+becomes a noise-like foreground.</p>
+</dd>
+<dt><strong>Confusion foreground</strong></dt><dd><p>The unresolved pile-up of overlapping Galactic binaries. It is a signal <em>and</em>
+part of the effective noise, which is why LISA noise models are fitted rather
+than assumed.</p>
+</dd>
+<dt><strong>MBHB</strong> (massive black-hole binary)</dt><dd><p>Mergers of black holes of millions of solar masses — LISA’s loudest sources.</p>
+</dd>
+<dt><strong>Global fit</strong></dt><dd><p>Fitting every overlapping source and the noise model <em>simultaneously</em>,
+because subtracting one source wrongly corrupts every other. This is the
+central computational problem of LISA analysis.</p>
+</dd>
+<dt><strong>Gibbs sampling</strong></dt><dd><p>Update one block of parameters at a time, conditional on the current values
+of the rest. How global fits are made tractable.</p>
+</dd>
+<dt><strong>RJMCMC</strong> (reversible-jump MCMC)</dt><dd><p>Sampling in which the <em>number</em> of sources is itself unknown and changes during
+the run.</p>
+</dd>
+<dt><strong>Wavelet / WDM domain</strong></dt><dd><p>A time–frequency representation; WDM stands for
+Wilson–Daubechies–Meyer. It is useful when the noise level or data quality
+changes with time, because affected intervals can remain localised rather
+than contaminating every ordinary Fourier bin. It does not automatically
+remove gap-edge correlations or make overlapping sources independent.</p>
+</dd>
+</dl>
+</section>
+<section id="software">
+<h2>Software<a class="headerlink" href="#software" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Package</p></th>
+<th class="head"><p>What it does here</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">numpy</span></code> / <code class="docutils literal notranslate"><span class="pre">scipy</span></code></p></td>
+<td><p>Every algorithm is written in plain NumPy first</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">bilby</span></code></p></td>
+<td><p>The standard LVK parameter-estimation front end</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">dynesty</span></code></p></td>
+<td><p>The nested sampler Bilby drives in Part 2B</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">corner</span></code></p></td>
+<td><p>Corner plots</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">gwpy</span></code></p></td>
+<td><p>Fetching and handling public detector strain data</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">rippleGW</span></code></p></td>
+<td><p>Fast CBC waveform generation</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">lisatools</span></code></p></td>
+<td><p>LISA sensitivity curves and likelihood plumbing</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">jaxgb</span></code></p></td>
+<td><p>LISA orbit and TDI response generation</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">eryn</span></code></p></td>
+<td><p>Ensemble and trans-dimensional sampling for LISA-style problems</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./."
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="index.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Bayesian gravitational-wave parameter estimation</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="notebooks/01_bayesian_inference.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Part 1: Bayesian inference from first principles</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#bayesian-inference">Bayesian inference</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#sampling">Sampling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#noise-and-data">Noise and data</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#signals-and-detection">Signals and detection</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lisa">LISA</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#software">Software</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Avi Vajpeyi
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  <script src="https://utteranc.es/client.js"
+        repo="nz-gravity/FQCP2026_GW_data_analysis"
+        issue-term="url"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

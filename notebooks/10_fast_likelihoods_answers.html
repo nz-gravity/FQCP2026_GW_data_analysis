@@ -1,0 +1,1470 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Part 4: Fast likelihoods &#8212; FQCP 2026 GW data analysis</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/10_fast_likelihoods_answers';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">FQCP 2026 GW data analysis</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    Bayesian gravitational-wave parameter estimation
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Before you start</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 1 — Bayesian inference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="01_bayesian_inference.html">Part 1: Bayesian inference from first principles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="01b_bayesian_samplers.html">Extension lab: how Bayesian samplers explore a posterior</a></li>
+<li class="toctree-l1"><a class="reference internal" href="01c_sampler_diagnostics.html">Extension lab: can you trust the sampler?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="01d_hubble_prior_sensitivity.html">Extension lab: a small Hubble-law inference</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 2 — LVK</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="02_lvk_signals_injections.html">Part 2A: LVK signals, injections, and matched filtering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="03_lvk_gw150914_bilby.html">Part 2B: GW150914 with Bilby</a></li>
+<li class="toctree-l1"><a class="reference internal" href="04_lvk_population_and_checks.html">Part 2C: LVK populations and PE checks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="04b_lvk_blind_data_challenge.html">Supplement: blind LVK data challenge</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 3 — LISA</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="05_lisa_signals_response_codes.html">Part 3A: LISA signals, response, and analysis codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="06_lisa_global_fit_gibbs.html">Part 3B: LISA global fitting and Gibbs sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="07_lisa_pspline_psd.html">Part 3C: LISA PSD estimation with P-splines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="08_lisa_wdm_time_frequency.html">Part 3D: LISA WDM time-frequency analysis</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 4 — Making inference fast</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="10_fast_likelihoods.html">Part 4: Fast likelihoods</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further study</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="03_literature.html">Essential literature for gravitational-wave research</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-launch-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Launch interactive content">
+    <i class="fas fa-rocket"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://colab.research.google.com/github/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/10_fast_likelihoods_answers.ipynb" target="_blank"
+   class="btn btn-sm dropdown-item"
+   title="Launch on Colab"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  
+    <img alt="Colab logo" src="../_static/images/logo_colab.png">
+  </span>
+<span class="btn__text-container">Colab</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+<a href="https://github.com/nz-gravity/FQCP2026_GW_data_analysis" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/notebooks/10_fast_likelihoods_answers.ipynb" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.ipynb</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Part 4: Fast likelihoods</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Part 4: Fast likelihoods</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal-and-route">Goal and route</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-the-time-goes">1. Where the time goes</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#heterodyning-divide-out-the-carrier">2. Heterodyning: divide out the carrier</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#relative-binning-do-the-frequency-sum-in-advance">3. Relative binning: do the frequency sum in advance</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-check-that-decides-whether-you-may-use-them">4. The check that decides whether you may use them</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#extension-reduced-order-modelling">5. Extension: reduced-order modelling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#extension-parallel-likelihoods">6. Extension: parallel likelihoods</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#question">Question</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#other-directions-in-one-paragraph-each">7. Other directions, in one paragraph each</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-to-take-away">What to take away</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#read-or-try-next">Read or try next</a></li>
+</ul>
+</li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#worked-solutions">Worked solutions</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#question-how-tight-does-the-tolerance-need-to-be">Question: how tight does the tolerance need to be?</a></li>
+</ul>
+</li>
+</ul>
+
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <!-- colab-badge-top -->
+<p><a class="reference external" href="https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/10_fast_likelihoods.ipynb"><img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></a></p>
+<section class="tex2jax_ignore mathjax_ignore" id="part-4-fast-likelihoods">
+<h1>Part 4: Fast likelihoods<a class="headerlink" href="#part-4-fast-likelihoods" title="Link to this heading">#</a></h1>
+<p><strong>FQCP 2026 · Bayesian parameter estimation for gravitational-wave sources</strong></p>
+<section id="goal-and-route">
+<h2>Goal and route<a class="headerlink" href="#goal-and-route" title="Link to this heading">#</a></h2>
+<p>Make one log-likelihood call one hundred times cheaper without changing the answer, and measure the error you accept in exchange.</p>
+<blockquote>
+<div><p><strong>Live route</strong></p>
+<p>Sections 1–4: the cost of an exact call, heterodyning, relative binning, and the accuracy check that decides whether either is safe. Sections 5–7 are extension material.</p>
+</div></blockquote>
+<p><strong>Boundary:</strong> The waveform here is a leading-order stationary-phase inspiral with an analytic toy PSD, which keeps every step readable. Production implementations (<code class="docutils literal notranslate"><span class="pre">bilby.gw.likelihood.RelativeBinningGravitationalWaveLikelihood</span></code>, <code class="docutils literal notranslate"><span class="pre">ROQGravitationalWaveTransientLikelihood</span></code>) carry the same algebra plus the bookkeeping this notebook omits.</p>
+</section>
+<section id="where-the-time-goes">
+<h2>1. Where the time goes<a class="headerlink" href="#where-the-time-goes" title="Link to this heading">#</a></h2>
+<p>A sampler asks for <span class="math notranslate nohighlight">\(\ln\mathcal{L}\)</span> between <span class="math notranslate nohighlight">\(10^6\)</span> and <span class="math notranslate nohighlight">\(10^8\)</span> times. Each call
+evaluates a waveform on every frequency bin and forms two noise-weighted inner
+products,</p>
+<div class="math notranslate nohighlight">
+\[
+\ln\mathcal{L}(\theta)=\langle d\mid h(\theta)\rangle
+-\tfrac12\langle h(\theta)\mid h(\theta)\rangle+\text{constant},
+\qquad
+\langle a\mid b\rangle = 4\,\mathrm{Re}\int_{f_{\rm low}}^{f_{\rm high}}
+\frac{\tilde a(f)\,\tilde b^{*}(f)}{S_n(f)}\,\mathrm{d}f .
+\]</div>
+<p>So the wall-clock cost of a run is a product of three things:</p>
+<div class="math notranslate nohighlight">
+\[
+T_{\rm run}\;\approx\;N_{\rm calls}\times\bigl(c_{\rm waveform}+c_{\rm inner}\bigr)
+\times N_f \big/ P .
+\]</div>
+<p>The frequency resolution is fixed by the segment duration, <span class="math notranslate nohighlight">\(\Delta f = 1/T\)</span>, so
+<span class="math notranslate nohighlight">\(N_f = T\,(f_{\rm high}-f_{\rm low})\)</span> — a 16-second segment analysed to 1024 Hz
+already needs 16064 bins, and a long BNS segment needs half a million.</p>
+<p>This notebook attacks each factor in turn. Sections 2 and 3 cut <span class="math notranslate nohighlight">\(N_f\)</span>,
+Section 5 cuts <span class="math notranslate nohighlight">\(c_{\rm waveform}\)</span>, and Section 6 deals with <span class="math notranslate nohighlight">\(P\)</span>. Nothing here
+touches <span class="math notranslate nohighlight">\(N_{\rm calls}\)</span>; that is the sampler’s problem.</p>
+<p>Start with the exact likelihood that everything else is measured against.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.interpolate</span><span class="w"> </span><span class="kn">import</span> <span class="n">CubicSpline</span>
+
+<span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">20260817</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s2">"seaborn-v0_8-whitegrid"</span><span class="p">)</span>
+
+<span class="n">MSUN_SECONDS</span> <span class="o">=</span> <span class="mf">4.9254909476412675e-6</span>
+<span class="n">F_LOW</span><span class="p">,</span> <span class="n">F_HIGH</span><span class="p">,</span> <span class="n">DF</span> <span class="o">=</span> <span class="mf">20.0</span><span class="p">,</span> <span class="mf">1024.0</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="mf">16.0</span>
+<span class="n">frequency</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">F_LOW</span><span class="p">,</span> <span class="n">F_HIGH</span><span class="p">,</span> <span class="n">DF</span><span class="p">)</span>
+<span class="n">psd</span> <span class="o">=</span> <span class="mf">1e-46</span> <span class="o">*</span> <span class="p">((</span><span class="mf">20.0</span> <span class="o">/</span> <span class="n">frequency</span><span class="p">)</span> <span class="o">**</span> <span class="mi">4</span> <span class="o">+</span> <span class="mf">2.0</span> <span class="o">+</span> <span class="p">(</span><span class="n">frequency</span> <span class="o">/</span> <span class="mf">200.0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">weight</span> <span class="o">=</span> <span class="mf">4.0</span> <span class="o">*</span> <span class="n">DF</span> <span class="o">/</span> <span class="n">psd</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">inspiral_phase</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">chirp_mass</span><span class="p">,</span> <span class="n">time_shift</span><span class="p">,</span> <span class="n">phase_shift</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Leading-order stationary-phase inspiral phase."""</span>
+    <span class="n">mass_seconds</span> <span class="o">=</span> <span class="n">chirp_mass</span> <span class="o">*</span> <span class="n">MSUN_SECONDS</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">f</span> <span class="o">*</span> <span class="n">time_shift</span>
+        <span class="o">-</span> <span class="n">phase_shift</span>
+        <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">4</span>
+        <span class="o">+</span> <span class="p">(</span><span class="mi">3</span> <span class="o">/</span> <span class="mi">128</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">mass_seconds</span> <span class="o">*</span> <span class="n">f</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">5</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">waveform</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">chirp_mass</span><span class="o">=</span><span class="mf">30.0</span><span class="p">,</span> <span class="n">time_shift</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">phase_shift</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">amplitude</span><span class="o">=</span><span class="mf">1.0</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">amplitude</span>
+        <span class="o">*</span> <span class="mf">1e-23</span>
+        <span class="o">*</span> <span class="n">f</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">7</span> <span class="o">/</span> <span class="mi">6</span><span class="p">)</span>
+        <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">inspiral_phase</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">chirp_mass</span><span class="p">,</span> <span class="n">time_shift</span><span class="p">,</span> <span class="n">phase_shift</span><span class="p">))</span>
+    <span class="p">)</span>
+
+
+<span class="c1"># One injection at SNR 20, and the reference point every approximation expands about.</span>
+<span class="n">reference</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">chirp_mass</span><span class="o">=</span><span class="mf">30.0</span><span class="p">,</span> <span class="n">time_shift</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">phase_shift</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">amplitude</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+<span class="n">reference</span><span class="p">[</span><span class="s2">"amplitude"</span><span class="p">]</span> <span class="o">=</span> <span class="mf">20.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weight</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">waveform</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="o">**</span><span class="n">reference</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">reference_waveform</span> <span class="o">=</span> <span class="n">waveform</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="o">**</span><span class="n">reference</span><span class="p">)</span>
+<span class="n">noise</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">frequency</span><span class="o">.</span><span class="n">size</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">frequency</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+<span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">psd</span> <span class="o">/</span> <span class="p">(</span><span class="mi">8</span> <span class="o">*</span> <span class="n">DF</span><span class="p">))</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">reference_waveform</span> <span class="o">+</span> <span class="n">noise</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">exact_log_likelihood</span><span class="p">(</span><span class="n">parameters</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">waveform</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weight</span> <span class="o">*</span> <span class="n">data</span> <span class="o">*</span> <span class="n">model</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span><span class="o">.</span><span class="n">real</span> <span class="o">-</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="n">weight</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">model</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="p">)</span>
+
+
+<span class="n">trial</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="n">chirp_mass</span><span class="o">=</span><span class="mf">30.03</span><span class="p">,</span>
+    <span class="n">time_shift</span><span class="o">=</span><span class="mf">1.5e-4</span><span class="p">,</span>
+    <span class="n">phase_shift</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">amplitude</span><span class="o">=</span><span class="n">reference</span><span class="p">[</span><span class="s2">"amplitude"</span><span class="p">],</span>
+<span class="p">)</span>
+<span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">200</span><span class="p">):</span>
+    <span class="n">exact_log_likelihood</span><span class="p">(</span><span class="n">trial</span><span class="p">)</span>
+<span class="n">exact_cost</span> <span class="o">=</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span> <span class="o">/</span> <span class="mi">200</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"frequency bins:"</span><span class="p">,</span> <span class="n">frequency</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span>
+    <span class="s2">"optimal SNR:"</span><span class="p">,</span>
+    <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weight</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">reference_waveform</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))),</span> <span class="mi">2</span><span class="p">),</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"lnL at the reference:"</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">exact_log_likelihood</span><span class="p">(</span><span class="n">reference</span><span class="p">),</span> <span class="mi">3</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"exact call: </span><span class="si">{</span><span class="mf">1e3</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">exact_cost</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> ms"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"10^7 calls on one core: </span><span class="si">{</span><span class="mf">1e7</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">exact_cost</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">3600</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> hours"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>frequency bins: 16064
+optimal SNR: 20.0
+lnL at the reference: 191.631
+exact call: 0.378 ms
+10^7 calls on one core: 1.0 hours
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="heterodyning-divide-out-the-carrier">
+<h2>2. Heterodyning: divide out the carrier<a class="headerlink" href="#heterodyning-divide-out-the-carrier" title="Link to this heading">#</a></h2>
+<p>The waveform is not hard to represent; its <em>carrier phase</em> is. Everything in
+<span class="math notranslate nohighlight">\(\tilde h(f)\)</span> that forces a fine grid is the rapidly winding
+<span class="math notranslate nohighlight">\(\Psi(f)\)</span>, and two nearby waveforms share almost all of it. Factor any
+<span class="math notranslate nohighlight">\(\theta\)</span> against a fixed reference <span class="math notranslate nohighlight">\(\theta_0\)</span>,</p>
+<div class="math notranslate nohighlight">
+\[
+\tilde h(f;\theta) \;=\; \tilde h(f;\theta_0)\; r(f;\theta),
+\qquad
+r(f;\theta)=\frac{A(f;\theta)}{A(f;\theta_0)}\,
+e^{\,i[\Psi(f;\theta)-\Psi(f;\theta_0)]} .
+\]</div>
+<p>The exponent is now a <em>difference</em> of phases. For <span class="math notranslate nohighlight">\(\theta\)</span> within a few standard
+deviations of the peak it moves by order one radian across the whole band, so
+<span class="math notranslate nohighlight">\(r\)</span> is smooth: evaluate it at a few dozen nodes, spline it onto the full grid,
+and multiply by the reference waveform, which was computed once.</p>
+<p>The figure below makes the contrast concrete. The <span class="math notranslate nohighlight">\(30\,M_\odot\)</span> binary used here
+turns through 9 cycles between 20 Hz and 1 kHz; a <span class="math notranslate nohighlight">\(1.4+1.4\,M_\odot\)</span> binary from
+the same starting frequency turns through more than <span class="math notranslate nohighlight">\(10^{4}\)</span> radians, which is
+why heterodyning matters most exactly where the analysis is most expensive.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">nodes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">geomspace</span><span class="p">(</span><span class="n">F_LOW</span><span class="p">,</span> <span class="n">F_HIGH</span><span class="p">,</span> <span class="mi">50</span><span class="p">)</span>
+<span class="n">reference_at_nodes</span> <span class="o">=</span> <span class="n">waveform</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="o">**</span><span class="n">reference</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">heterodyne_log_likelihood</span><span class="p">(</span><span class="n">parameters</span><span class="p">):</span>
+    <span class="n">ratio_at_nodes</span> <span class="o">=</span> <span class="n">waveform</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">)</span> <span class="o">/</span> <span class="n">reference_at_nodes</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">reference_waveform</span> <span class="o">*</span> <span class="n">CubicSpline</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="n">ratio_at_nodes</span><span class="p">)(</span><span class="n">frequency</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weight</span> <span class="o">*</span> <span class="n">data</span> <span class="o">*</span> <span class="n">model</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span><span class="o">.</span><span class="n">real</span> <span class="o">-</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="n">weight</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">model</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="p">)</span>
+
+
+<span class="n">carrier</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">inspiral_phase</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+<span class="n">trial_ratio</span> <span class="o">=</span> <span class="n">waveform</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="o">**</span><span class="n">trial</span><span class="p">)</span> <span class="o">/</span> <span class="n">reference_waveform</span>
+<span class="n">node_ratio</span> <span class="o">=</span> <span class="n">waveform</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="o">**</span><span class="n">trial</span><span class="p">)</span> <span class="o">/</span> <span class="n">reference_at_nodes</span>
+<span class="n">spline_ratio</span> <span class="o">=</span> <span class="n">CubicSpline</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="n">node_ratio</span><span class="p">)(</span><span class="n">frequency</span><span class="p">)</span>
+<span class="n">carrier_swing</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">inspiral_phase</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+<span class="n">residual_swing</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unwrap</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">angle</span><span class="p">(</span><span class="n">trial_ratio</span><span class="p">)))</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mf">5.4</span><span class="p">),</span> <span class="n">sharex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">carrier</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"0.35"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">"$\cos\Psi(f)$"</span><span class="p">,</span>
+    <span class="n">ylim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mf">1.6</span><span class="p">,</span> <span class="mf">1.6</span><span class="p">),</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">"The carrier sets the grid; the ratio to a reference does not"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+    <span class="mf">0.985</span><span class="p">,</span>
+    <span class="mf">0.07</span><span class="p">,</span>
+    <span class="sa">rf</span><span class="s2">"$\Psi$ sweeps </span><span class="si">{</span><span class="n">carrier_swing</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> rad (</span><span class="si">{</span><span class="n">carrier_swing</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> cycles)"</span><span class="p">,</span>
+    <span class="n">transform</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">transAxes</span><span class="p">,</span>
+    <span class="n">ha</span><span class="o">=</span><span class="s2">"right"</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">"C3"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">trial_ratio</span><span class="o">.</span><span class="n">real</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C0"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.6</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">r</span><span class="s2">"Re $r(f)$"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">trial_ratio</span><span class="o">.</span><span class="n">imag</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C2"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.6</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">r</span><span class="s2">"Im $r(f)$"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="n">node_ratio</span><span class="o">.</span><span class="n">real</span><span class="p">,</span> <span class="s2">"o"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C3"</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"50 spline nodes"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="n">node_ratio</span><span class="o">.</span><span class="n">imag</span><span class="p">,</span> <span class="s2">"o"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C3"</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">"frequency [Hz]"</span><span class="p">,</span>
+    <span class="n">ylim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.45</span><span class="p">),</span>
+    <span class="n">xscale</span><span class="o">=</span><span class="s2">"log"</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">"$r(f)=\tilde h(f;\theta)/\tilde h(f;\theta_0)$"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+    <span class="mf">0.985</span><span class="p">,</span>
+    <span class="mf">0.06</span><span class="p">,</span>
+    <span class="sa">rf</span><span class="s2">"$\Delta\Psi$ sweeps </span><span class="si">{</span><span class="n">residual_swing</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> rad"</span><span class="p">,</span>
+    <span class="n">transform</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">transAxes</span><span class="p">,</span>
+    <span class="n">ha</span><span class="o">=</span><span class="s2">"right"</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">"C3"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">"upper left"</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">ncol</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"max |r - spline(r)|: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">trial_ratio</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">spline_ratio</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">:</span><span class="s2">.1e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"exact       lnL = </span><span class="si">{</span><span class="n">exact_log_likelihood</span><span class="p">(</span><span class="n">trial</span><span class="p">)</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"heterodyned lnL = </span><span class="si">{</span><span class="n">heterodyne_log_likelihood</span><span class="p">(</span><span class="n">trial</span><span class="p">)</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/3c069d4271c2b2610072719a6309b986eaaf4bd120156c66c328d235e58883a0.png" src="../_images/3c069d4271c2b2610072719a6309b986eaaf4bd120156c66c328d235e58883a0.png" />
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>max |r - spline(r)|: 6.9e-06
+exact       lnL = 182.03894
+heterodyned lnL = 182.03894
+</pre></div>
+</div>
+</div>
+</div>
+<details>
+<summary><i>Expected output &mdash; open this if your cell has not run yet</i></summary>
+<img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/fast-heterodyne.png" alt="expected output: fast-heterodyne" style="max-width:100%">
+</details></section>
+<section id="relative-binning-do-the-frequency-sum-in-advance">
+<h2>3. Relative binning: do the frequency sum in advance<a class="headerlink" href="#relative-binning-do-the-frequency-sum-in-advance" title="Link to this heading">#</a></h2>
+<p>Heterodyning still forms the inner products over all 16064 bins. Relative
+binning removes that too. Partition the band into bins with edges <span class="math notranslate nohighlight">\(f_b\)</span> and
+midpoints <span class="math notranslate nohighlight">\(f_{m,b}\)</span>, and expand the same ratio to first order inside each bin,</p>
+<div class="math notranslate nohighlight">
+\[
+r(f)\;\approx\;r_{0,b}+r_{1,b}\,(f-f_{m,b}),\qquad f\in\text{bin }b .
+\]</div>
+<p>Substituting into the inner products, every sum over frequency splits into a
+piece that depends only on <span class="math notranslate nohighlight">\((d,\tilde h_0,S_n)\)</span> and a piece that depends only on
+the two coefficients. The first piece is the <strong>summary data</strong>: four arrays of
+length <span class="math notranslate nohighlight">\(N_b\)</span>, computed once,</p>
+<div class="math notranslate nohighlight">
+\[
+A_{0,b}=4\Delta f\!\!\sum_{f\in b}\frac{\tilde d\,\tilde h_0^{*}}{S_n},\quad
+A_{1,b}=4\Delta f\!\!\sum_{f\in b}(f-f_{m,b})\frac{\tilde d\,\tilde h_0^{*}}{S_n},\quad
+B_{0,b}=4\Delta f\!\!\sum_{f\in b}\frac{|\tilde h_0|^{2}}{S_n},\quad
+B_{1,b}=4\Delta f\!\!\sum_{f\in b}(f-f_{m,b})\frac{|\tilde h_0|^{2}}{S_n}.
+\]</div>
+<p>The likelihood then costs <span class="math notranslate nohighlight">\(N_b\)</span> terms instead of <span class="math notranslate nohighlight">\(N_f\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[
+\langle d\mid h\rangle\approx\sum_b\mathrm{Re}\bigl[A_{0,b}r_{0,b}^{*}
++A_{1,b}r_{1,b}^{*}\bigr],\qquad
+\langle h\mid h\rangle\approx\sum_b\bigl[B_{0,b}|r_{0,b}|^{2}
++2B_{1,b}\,\mathrm{Re}(r_{0,b}r_{1,b}^{*})\bigr].
+\]</div>
+<p>The waveform is now only ever called at the <span class="math notranslate nohighlight">\(N_b+1\)</span> bin edges.</p>
+<p><strong>Choosing the bins.</strong> A bin is narrow enough when the residual phase
+<span class="math notranslate nohighlight">\(\Delta\Psi=\Psi(\theta)-\Psi(\theta_0)\)</span> drifts by less than a tolerance across
+it, for the <em>worst</em> <span class="math notranslate nohighlight">\(\theta\)</span> in the prior. Measuring that drift directly over
+the corners of the prior box is the most explicit way to say it, and produces
+bins that are sub-hertz at 20 Hz and several hertz near 1 kHz. The right-hand
+panel shows what the straight line inside a bin actually misses: a residual of
+a few parts in <span class="math notranslate nohighlight">\(10^5\)</span>, with the parabolic shape of the first neglected term.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">PRIOR_CORNERS</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="mf">30.0</span> <span class="o">+</span> <span class="n">delta_mass</span><span class="p">,</span> <span class="n">delta_time</span><span class="p">,</span> <span class="n">delta_phase</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">delta_mass</span> <span class="ow">in</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">delta_time</span> <span class="ow">in</span> <span class="p">(</span><span class="o">-</span><span class="mf">2e-4</span><span class="p">,</span> <span class="mf">2e-4</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">delta_phase</span> <span class="ow">in</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">)</span>
+<span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">bin_edges</span><span class="p">(</span><span class="n">tolerance</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">n_grid</span><span class="o">=</span><span class="mi">4000</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Edges such that the residual phase drifts &lt; `tolerance` rad per bin."""</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">F_LOW</span><span class="p">,</span> <span class="n">F_HIGH</span><span class="p">,</span> <span class="n">n_grid</span><span class="p">)</span>
+    <span class="n">residual</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">inspiral_phase</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="o">*</span><span class="n">corner</span><span class="p">)</span> <span class="o">-</span> <span class="n">inspiral_phase</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">corner</span> <span class="ow">in</span> <span class="n">PRIOR_CORNERS</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">drift</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">residual</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">budget</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([[</span><span class="mf">0.0</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">drift</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">grid</span><span class="p">))])</span>
+    <span class="n">n_bins</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">budget</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">tolerance</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">budget</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n_bins</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">budget</span><span class="p">,</span> <span class="n">grid</span><span class="p">)</span>
+
+
+<span class="n">edges</span> <span class="o">=</span> <span class="n">bin_edges</span><span class="p">()</span>
+<span class="n">start_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">edges</span><span class="p">)</span>
+<span class="n">start_index</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">frequency</span><span class="o">.</span><span class="n">size</span>
+<span class="n">midpoint</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="n">edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+<span class="n">offset</span> <span class="o">=</span> <span class="n">frequency</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">midpoint</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">start_index</span><span class="p">))</span>
+<span class="n">bin_sum</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="o">.</span><span class="n">reduceat</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">start_index</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+<span class="c1"># Summary data: four arrays of length N_b, computed once.</span>
+<span class="n">A0</span> <span class="o">=</span> <span class="n">bin_sum</span><span class="p">(</span><span class="n">weight</span> <span class="o">*</span> <span class="n">data</span> <span class="o">*</span> <span class="n">reference_waveform</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span>
+<span class="n">A1</span> <span class="o">=</span> <span class="n">bin_sum</span><span class="p">(</span><span class="n">weight</span> <span class="o">*</span> <span class="n">data</span> <span class="o">*</span> <span class="n">reference_waveform</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span> <span class="o">*</span> <span class="n">offset</span><span class="p">)</span>
+<span class="n">B0</span> <span class="o">=</span> <span class="n">bin_sum</span><span class="p">(</span><span class="n">weight</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">reference_waveform</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">B1</span> <span class="o">=</span> <span class="n">bin_sum</span><span class="p">(</span><span class="n">weight</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">reference_waveform</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">offset</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">binned_log_likelihood</span><span class="p">(</span><span class="n">parameters</span><span class="p">):</span>
+    <span class="n">ratio</span> <span class="o">=</span> <span class="n">waveform</span><span class="p">(</span><span class="n">edges</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">)</span> <span class="o">/</span> <span class="n">waveform</span><span class="p">(</span><span class="n">edges</span><span class="p">,</span> <span class="o">**</span><span class="n">reference</span><span class="p">)</span>
+    <span class="n">r0</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">ratio</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="n">ratio</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">r1</span> <span class="o">=</span> <span class="p">(</span><span class="n">ratio</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">ratio</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">edges</span><span class="p">)</span>
+    <span class="n">data_model</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">A0</span> <span class="o">*</span> <span class="n">r0</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span> <span class="o">+</span> <span class="n">A1</span> <span class="o">*</span> <span class="n">r1</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span><span class="o">.</span><span class="n">real</span>
+    <span class="n">model_model</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">B0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">r0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">B1</span> <span class="o">*</span> <span class="p">(</span><span class="n">r0</span> <span class="o">*</span> <span class="n">r1</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span><span class="o">.</span><span class="n">real</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">data_model</span> <span class="o">-</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">model_model</span>
+
+
+<span class="n">show</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="n">zoom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">edges</span><span class="p">[</span><span class="n">show</span><span class="p">],</span> <span class="n">edges</span><span class="p">[</span><span class="n">show</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="mi">200</span><span class="p">)</span>
+<span class="n">ends</span> <span class="o">=</span> <span class="n">edges</span><span class="p">[</span><span class="n">show</span> <span class="p">:</span> <span class="n">show</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span>
+<span class="n">zoom_ratio</span> <span class="o">=</span> <span class="n">waveform</span><span class="p">(</span><span class="n">zoom</span><span class="p">,</span> <span class="o">**</span><span class="n">trial</span><span class="p">)</span> <span class="o">/</span> <span class="n">waveform</span><span class="p">(</span><span class="n">zoom</span><span class="p">,</span> <span class="o">**</span><span class="n">reference</span><span class="p">)</span>
+<span class="n">end_ratio</span> <span class="o">=</span> <span class="n">waveform</span><span class="p">(</span><span class="n">ends</span><span class="p">,</span> <span class="o">**</span><span class="n">trial</span><span class="p">)</span> <span class="o">/</span> <span class="n">waveform</span><span class="p">(</span><span class="n">ends</span><span class="p">,</span> <span class="o">**</span><span class="n">reference</span><span class="p">)</span>
+<span class="n">secant</span> <span class="o">=</span> <span class="n">end_ratio</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">end_ratio</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">end_ratio</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">zoom</span> <span class="o">-</span> <span class="n">ends</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span>
+    <span class="n">ends</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">ends</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="p">)</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mf">3.8</span><span class="p">))</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">semilogy</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">reference_waveform</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="n">psd</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"0.6"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.2</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">edges</span><span class="p">[::</span><span class="mi">3</span><span class="p">]:</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C0"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">axvspan</span><span class="p">(</span><span class="n">edges</span><span class="p">[</span><span class="n">show</span><span class="p">],</span> <span class="n">edges</span><span class="p">[</span><span class="n">show</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C3"</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">"frequency [Hz]"</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">"$|\tilde h_0|^2/S_n$"</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">edges</span><span class="o">.</span><span class="n">size</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2"> bins from a phase-drift budget (every 3rd shown)"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">zoom</span><span class="p">,</span> <span class="mf">1e4</span> <span class="o">*</span> <span class="p">(</span><span class="n">zoom_ratio</span> <span class="o">-</span> <span class="n">secant</span><span class="p">)</span><span class="o">.</span><span class="n">real</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C0"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"real"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">zoom</span><span class="p">,</span> <span class="mf">1e4</span> <span class="o">*</span> <span class="p">(</span><span class="n">zoom_ratio</span> <span class="o">-</span> <span class="n">secant</span><span class="p">)</span><span class="o">.</span><span class="n">imag</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C2"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"imaginary"</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C3"</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s2">"--"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.4</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">"frequency [Hz]"</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">"$10^4\times(r-\mathrm</span><span class="si">{secant}</span><span class="s2">)$"</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">"bin </span><span class="si">{</span><span class="n">show</span><span class="si">}</span><span class="s2">: what the linear fit misses"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">200</span><span class="p">):</span>
+    <span class="n">binned_log_likelihood</span><span class="p">(</span><span class="n">trial</span><span class="p">)</span>
+<span class="n">binned_cost</span> <span class="o">=</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span> <span class="o">/</span> <span class="mi">200</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"bins: </span><span class="si">{</span><span class="n">edges</span><span class="o">.</span><span class="n">size</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"waveform evaluations per call: </span><span class="si">{</span><span class="n">frequency</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">edges</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"exact  </span><span class="si">{</span><span class="mf">1e3</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">exact_cost</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> ms   relative binning </span><span class="si">{</span><span class="mf">1e3</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">binned_cost</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> ms"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"speedup: </span><span class="si">{</span><span class="n">exact_cost</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">binned_cost</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">x"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/fb091470f3d801a32e07ca4a3b99d12492adf269171c662320dd4dd75b7d3a6e.png" src="../_images/fb091470f3d801a32e07ca4a3b99d12492adf269171c662320dd4dd75b7d3a6e.png" />
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>bins: 141
+waveform evaluations per call: 16064 -&gt; 142
+exact  0.378 ms   relative binning 0.023 ms
+speedup: 17x
+</pre></div>
+</div>
+</div>
+</div>
+<details>
+<summary><i>Expected output &mdash; open this if your cell has not run yet</i></summary>
+<img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/fast-relative-binning.png" alt="expected output: fast-relative-binning" style="max-width:100%">
+</details></section>
+<section id="the-check-that-decides-whether-you-may-use-them">
+<h2>4. The check that decides whether you may use them<a class="headerlink" href="#the-check-that-decides-whether-you-may-use-them" title="Link to this heading">#</a></h2>
+<p>A speedup is only a speedup if the posterior is unchanged. The honest test is
+not agreement at the reference point — both methods are exact there by
+construction — but agreement across the region the sampler actually explores.</p>
+<p>A useful working threshold is <span class="math notranslate nohighlight">\(|\Delta\ln\mathcal{L}|\lesssim0.1\)</span> over the bulk
+of the posterior; below that the induced change in the posterior is smaller
+than its own Monte Carlo noise. Both methods clear it here by two orders of
+magnitude.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">scan</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">29.95</span><span class="p">,</span> <span class="mf">30.05</span><span class="p">,</span> <span class="mi">240</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">scan_likelihood</span><span class="p">(</span><span class="n">function</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">function</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">reference</span><span class="p">,</span> <span class="n">chirp_mass</span><span class="o">=</span><span class="n">mass</span><span class="p">))</span> <span class="k">for</span> <span class="n">mass</span> <span class="ow">in</span> <span class="n">scan</span><span class="p">])</span>
+
+
+<span class="n">exact_scan</span> <span class="o">=</span> <span class="n">scan_likelihood</span><span class="p">(</span><span class="n">exact_log_likelihood</span><span class="p">)</span>
+<span class="n">heterodyne_scan</span> <span class="o">=</span> <span class="n">scan_likelihood</span><span class="p">(</span><span class="n">heterodyne_log_likelihood</span><span class="p">)</span>
+<span class="n">binned_scan</span> <span class="o">=</span> <span class="n">scan_likelihood</span><span class="p">(</span><span class="n">binned_log_likelihood</span><span class="p">)</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span>
+    <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mf">4.8</span><span class="p">),</span> <span class="n">sharex</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">gridspec_kw</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">height_ratios</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">scan</span><span class="p">,</span>
+    <span class="n">exact_scan</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">"k"</span><span class="p">,</span>
+    <span class="n">lw</span><span class="o">=</span><span class="mf">3.5</span><span class="p">,</span>
+    <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+    <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">"exact, </span><span class="si">{</span><span class="n">frequency</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> bins"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">scan</span><span class="p">,</span> <span class="n">heterodyne_scan</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C0"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.4</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">"heterodyned, </span><span class="si">{</span><span class="n">nodes</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> nodes"</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">scan</span><span class="p">,</span>
+    <span class="n">binned_scan</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">"C3"</span><span class="p">,</span>
+    <span class="n">lw</span><span class="o">=</span><span class="mf">1.4</span><span class="p">,</span>
+    <span class="n">ls</span><span class="o">=</span><span class="s2">"--"</span><span class="p">,</span>
+    <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">"relative binning, </span><span class="si">{</span><span class="n">edges</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> calls"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">"$\ln\mathcal</span><span class="si">{L}</span><span class="s2">$"</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Both approximations track the exact likelihood"</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">semilogy</span><span class="p">(</span>
+    <span class="n">scan</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">heterodyne_scan</span> <span class="o">-</span> <span class="n">exact_scan</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C0"</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"heterodyned"</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">semilogy</span><span class="p">(</span>
+    <span class="n">scan</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">binned_scan</span> <span class="o">-</span> <span class="n">exact_scan</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C3"</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"relative binning"</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"k"</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s2">":"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">"chirp mass $\mathcal</span><span class="si">{M}</span><span class="s2">\,[M_\odot]$"</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="sa">r</span><span class="s2">"$|\Delta\ln\mathcal</span><span class="si">{L}</span><span class="s2">|$"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">ncol</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"worst heterodyne error:       </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">heterodyne_scan</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">exact_scan</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"worst relative-binning error: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">binned_scan</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">exact_scan</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/c28be248a3ae2758bb97cff9261f9e312c170f58c3fd04817969edf6859838b4.png" src="../_images/c28be248a3ae2758bb97cff9261f9e312c170f58c3fd04817969edf6859838b4.png" />
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>worst heterodyne error:       3.24e-05
+worst relative-binning error: 1.57e-03
+</pre></div>
+</div>
+</div>
+</div>
+<details>
+<summary><i>Expected output &mdash; open this if your cell has not run yet</i></summary>
+<img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/fast-likelihood-accuracy.png" alt="expected output: fast-likelihood-accuracy" style="max-width:100%">
+</details></section>
+<section id="extension-reduced-order-modelling">
+<h2>5. Extension: reduced-order modelling<a class="headerlink" href="#extension-reduced-order-modelling" title="Link to this heading">#</a></h2>
+<p>Sections 2 and 3 cut <span class="math notranslate nohighlight">\(N_f\)</span>. This one cuts <span class="math notranslate nohighlight">\(c_{\rm waveform}\)</span> — the cost of
+producing the waveform at all — and it is the factor that dominates when the
+model is an expensive numerical-relativity surrogate or an EOB waveform solved
+by ODE integration.</p>
+<p>Waveforms at nearby parameters are smooth deformations of one another, so the
+family <span class="math notranslate nohighlight">\(\{\tilde h(\cdot;\theta):\theta\in\Theta\}\)</span> lies close to a
+low-dimensional subspace whose approximation error falls <em>exponentially</em>:</p>
+<div class="math notranslate nohighlight">
+\[
+\tilde h(f;\theta)\approx\sum_{i=1}^{N}c_i(\theta)\,e_i(f),
+\qquad
+\sigma_N=\max_{\theta\in\Theta}\bigl\lVert \tilde h(\theta)-P_N\tilde h(\theta)\bigr\rVert
+\sim e^{-cN}.
+\]</div>
+<p>An SVD of a training set gives the basis <span class="math notranslate nohighlight">\(\{e_i\}\)</span>, but that alone is not yet a
+speedup: computing <span class="math notranslate nohighlight">\(c_i=\langle e_i\mid \tilde h(\theta)\rangle\)</span> still needs the
+full grid. The second half of the trick is the <strong>empirical interpolant</strong> —
+choose <span class="math notranslate nohighlight">\(N\)</span> frequencies <span class="math notranslate nohighlight">\(F_j\)</span> greedily and solve the <span class="math notranslate nohighlight">\(N\times N\)</span> system</p>
+<div class="math notranslate nohighlight">
+\[
+\sum_i e_i(F_j)\,c_i=\tilde h(F_j;\theta)
+\qquad\Longrightarrow\qquad
+c=\mathbf{A}^{-1}\,\tilde h\big|_{F},
+\]</div>
+<p>with <span class="math notranslate nohighlight">\(\mathbf{A}^{-1}\)</span> precomputed. The expensive model is then called at <span class="math notranslate nohighlight">\(N\)</span>
+frequencies only.</p>
+<p>The same idea applied to the likelihood integral rather than the waveform is
+the reduced-order quadrature (ROQ) used in production LVK analyses.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Offline: a basis from the SVD of a training set.</span>
+<span class="n">training</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">20.0</span><span class="p">,</span> <span class="mf">40.0</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+<span class="n">bank</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">waveform</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">chirp_mass</span><span class="o">=</span><span class="n">mass</span><span class="p">)</span> <span class="k">for</span> <span class="n">mass</span> <span class="ow">in</span> <span class="n">training</span><span class="p">])</span>
+<span class="n">bank</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">bank</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">all_modes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">bank</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)[</span><span class="mi">2</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">projection_error</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+    <span class="n">projected</span> <span class="o">=</span> <span class="p">(</span><span class="n">bank</span> <span class="o">@</span> <span class="n">all_modes</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">@</span> <span class="n">all_modes</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">bank</span> <span class="o">-</span> <span class="n">projected</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+
+
+<span class="n">sizes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">61</span><span class="p">)</span>
+<span class="n">errors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">projection_error</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">sizes</span><span class="p">])</span>
+<span class="n">n_basis</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sizes</span><span class="p">[</span><span class="n">errors</span> <span class="o">&lt;</span> <span class="mf">1e-12</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">basis</span> <span class="o">=</span> <span class="n">all_modes</span><span class="p">[:</span><span class="n">n_basis</span><span class="p">]</span>
+
+
+<span class="c1"># Offline: greedy empirical-interpolation nodes, then one N x N inverse.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">empirical_nodes</span><span class="p">(</span><span class="n">basis</span><span class="p">):</span>
+    <span class="n">chosen</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">basis</span><span class="p">[</span><span class="mi">0</span><span class="p">])))]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">basis</span><span class="p">)):</span>
+        <span class="n">coefficients</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">basis</span><span class="p">[:</span><span class="n">i</span><span class="p">,</span> <span class="n">chosen</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">basis</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">chosen</span><span class="p">])</span>
+        <span class="n">chosen</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">basis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">coefficients</span> <span class="o">@</span> <span class="n">basis</span><span class="p">[:</span><span class="n">i</span><span class="p">]))))</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">chosen</span><span class="p">)</span>
+
+
+<span class="n">eim_nodes</span> <span class="o">=</span> <span class="n">empirical_nodes</span><span class="p">(</span><span class="n">basis</span><span class="p">)</span>
+<span class="n">interpolation_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">basis</span><span class="p">[:,</span> <span class="n">eim_nodes</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+
+<span class="c1"># Online: N waveform evaluations and one matrix-vector product.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">rom_waveform</span><span class="p">(</span><span class="n">chirp_mass</span><span class="p">):</span>
+    <span class="n">at_nodes</span> <span class="o">=</span> <span class="n">waveform</span><span class="p">(</span><span class="n">frequency</span><span class="p">[</span><span class="n">eim_nodes</span><span class="p">],</span> <span class="n">chirp_mass</span><span class="o">=</span><span class="n">chirp_mass</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">interpolation_matrix</span> <span class="o">@</span> <span class="n">at_nodes</span><span class="p">)</span> <span class="o">@</span> <span class="n">basis</span>
+
+
+<span class="n">test_mass</span> <span class="o">=</span> <span class="mf">27.3</span>  <span class="c1"># deliberately not a training point</span>
+<span class="n">exact_unit</span> <span class="o">=</span> <span class="n">waveform</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">chirp_mass</span><span class="o">=</span><span class="n">test_mass</span><span class="p">)</span>
+<span class="n">exact_unit</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">exact_unit</span><span class="p">)</span>
+<span class="n">rom_unit</span> <span class="o">=</span> <span class="n">rom_waveform</span><span class="p">(</span><span class="n">test_mass</span><span class="p">)</span>
+<span class="n">rom_unit</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">rom_unit</span><span class="p">)</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mf">3.8</span><span class="p">))</span>
+<span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">semilogx</span><span class="p">(</span>
+        <span class="n">frequency</span><span class="p">,</span>
+        <span class="n">basis</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">real</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">basis</span><span class="p">[</span><span class="n">index</span><span class="p">])</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="mf">2.4</span> <span class="o">*</span> <span class="n">index</span><span class="p">,</span>
+        <span class="n">lw</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="sa">f</span><span class="s2">"C</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="sa">rf</span><span class="s2">"$e_</span><span class="si">{</span><span class="n">index</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">$"</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="s2">"frequency [Hz]"</span><span class="p">,</span> <span class="n">yticks</span><span class="o">=</span><span class="p">[],</span> <span class="n">title</span><span class="o">=</span><span class="s2">"First three reduced-basis modes"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s2">"lower right"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">semilogy</span><span class="p">(</span><span class="n">sizes</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">errors</span><span class="p">,</span> <span class="mf">1e-16</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C0"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">n_basis</span><span class="p">,</span> <span class="n">errors</span><span class="p">[</span><span class="n">n_basis</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span> <span class="s2">"o"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C3"</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span>
+    <span class="sa">f</span><span class="s2">"N = </span><span class="si">{</span><span class="n">n_basis</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+    <span class="p">(</span><span class="n">n_basis</span><span class="p">,</span> <span class="n">errors</span><span class="p">[</span><span class="n">n_basis</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]),</span>
+    <span class="n">textcoords</span><span class="o">=</span><span class="s2">"offset points"</span><span class="p">,</span>
+    <span class="n">xytext</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">14</span><span class="p">),</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">"C3"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">"basis size N"</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="s2">"worst-case projection error"</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">"Error falls exponentially with basis size"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"basis size for 1e-12 accuracy: </span><span class="si">{</span><span class="n">n_basis</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"waveform evaluations per call: </span><span class="si">{</span><span class="n">frequency</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">eim_nodes</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span>
+    <span class="sa">f</span><span class="s2">"interpolation error at M = </span><span class="si">{</span><span class="n">test_mass</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">rom_unit</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">exact_unit</span><span class="p">)</span><span class="si">:</span><span class="s2">.1e</span><span class="si">}</span><span class="s2">"</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/5fc7b3a3cee9ee356f567741ee47568141e36a59cbe2d48c8954095026235bc1.png" src="../_images/5fc7b3a3cee9ee356f567741ee47568141e36a59cbe2d48c8954095026235bc1.png" />
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>basis size for 1e-12 accuracy: 31
+waveform evaluations per call: 16064 -&gt; 31
+interpolation error at M = 27.3: 5.7e-13
+</pre></div>
+</div>
+</div>
+</div>
+<details>
+<summary><i>Expected output &mdash; open this if your cell has not run yet</i></summary>
+<img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/fast-reduced-order.png" alt="expected output: fast-reduced-order" style="max-width:100%">
+</details></section>
+<section id="extension-parallel-likelihoods">
+<h2>6. Extension: parallel likelihoods<a class="headerlink" href="#extension-parallel-likelihoods" title="Link to this heading">#</a></h2>
+<p>This is the one method here that does no less work. It buys latency with cores,
+and what limits it is worth understanding.</p>
+<p>Samplers differ in how much of their work is embarrassingly parallel. A single
+MCMC chain is inherently serial. An <em>ensemble</em> sampler proposes for all walkers
+at once, and a nested sampler can draw many replacement live points at the same
+time. If a fraction <span class="math notranslate nohighlight">\(p\)</span> of the run is inside those parallel batches,</p>
+<div class="math notranslate nohighlight">
+\[
+S(P)=\frac{1}{(1-p)+p/P+P\,\tau_{\rm comm}/T_1}.
+\]</div>
+<p>The last term is the one people forget. Every dispatch pays serialisation of
+the parameter vector out and the scalar back — with Python’s
+<code class="docutils literal notranslate"><span class="pre">multiprocessing</span></code> that is a pickle round-trip of order 10–100 µs. Once
+Sections 2–5 have brought <span class="math notranslate nohighlight">\(T_L\)</span> down to tens of microseconds, the overhead is
+comparable to the useful work and the curve flattens well before <span class="math notranslate nohighlight">\(P=N\)</span>.</p>
+<p>Which is why, at this scale, the first thing to reach for is not more processes
+but <strong>one array operation over the whole ensemble</strong>. The batched relative-binning
+likelihood below evaluates every walker in a single NumPy call.</p>
+<p>For genuinely expensive likelihoods, processes are still the right answer. Run
+that as a script rather than in a notebook, and stop NumPy from oversubscribing
+the machine:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"OMP_NUM_THREADS"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"1"</span>  <span class="c1"># before importing numpy, in every worker</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">multiprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pool</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>  <span class="c1"># required on macOS and Windows</span>
+    <span class="k">with</span> <span class="n">Pool</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">log_likelihood</span><span class="p">,</span> <span class="n">walkers</span><span class="p">,</span> <span class="n">chunksize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">chunksize</span></code> amortises the round-trip over many tasks and is usually the
+difference between a 2x and a 7x speedup.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">batched_log_likelihood</span><span class="p">(</span><span class="n">chirp_masses</span><span class="p">,</span> <span class="n">time_shifts</span><span class="p">,</span> <span class="n">phase_shifts</span><span class="p">,</span> <span class="n">amplitudes</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Relative binning for a whole ensemble in one array operation."""</span>
+    <span class="n">ratio</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">amplitudes</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="o">*</span> <span class="mf">1e-23</span>
+        <span class="o">*</span> <span class="n">edges</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">7</span> <span class="o">/</span> <span class="mi">6</span><span class="p">)</span>
+        <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span>
+            <span class="mi">1</span><span class="n">j</span>
+            <span class="o">*</span> <span class="n">inspiral_phase</span><span class="p">(</span>
+                <span class="n">edges</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:],</span>
+                <span class="n">chirp_masses</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">],</span>
+                <span class="n">time_shifts</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">],</span>
+                <span class="n">phase_shifts</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">],</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+    <span class="p">)</span> <span class="o">/</span> <span class="n">waveform</span><span class="p">(</span><span class="n">edges</span><span class="p">,</span> <span class="o">**</span><span class="n">reference</span><span class="p">)</span>
+    <span class="n">r0</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">ratio</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="n">ratio</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">r1</span> <span class="o">=</span> <span class="p">(</span><span class="n">ratio</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">ratio</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">edges</span><span class="p">)</span>
+    <span class="n">data_model</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">A0</span> <span class="o">*</span> <span class="n">r0</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span> <span class="o">+</span> <span class="n">A1</span> <span class="o">*</span> <span class="n">r1</span><span class="o">.</span><span class="n">conj</span><span class="p">(),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+    <span class="n">model_model</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">B0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">r0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">B1</span> <span class="o">*</span> <span class="p">(</span><span class="n">r0</span> <span class="o">*</span> <span class="n">r1</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span><span class="o">.</span><span class="n">real</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">data_model</span> <span class="o">-</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">model_model</span>
+
+
+<span class="n">n_walkers</span> <span class="o">=</span> <span class="mi">512</span>
+<span class="n">walker_mass</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mf">29.96</span><span class="p">,</span> <span class="mf">30.04</span><span class="p">,</span> <span class="n">n_walkers</span><span class="p">)</span>
+<span class="n">walker_time</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mf">2e-4</span><span class="p">,</span> <span class="mf">2e-4</span><span class="p">,</span> <span class="n">n_walkers</span><span class="p">)</span>
+<span class="n">walker_phase</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="n">n_walkers</span><span class="p">)</span>
+<span class="n">walker_amplitude</span> <span class="o">=</span> <span class="n">reference</span><span class="p">[</span><span class="s2">"amplitude"</span><span class="p">]</span> <span class="o">*</span> <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mf">0.95</span><span class="p">,</span> <span class="mf">1.05</span><span class="p">,</span> <span class="n">n_walkers</span><span class="p">)</span>
+
+<span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+<span class="n">looped</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">binned_log_likelihood</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">chirp_mass</span><span class="o">=</span><span class="n">a</span><span class="p">,</span> <span class="n">time_shift</span><span class="o">=</span><span class="n">b</span><span class="p">,</span> <span class="n">phase_shift</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">amplitude</span><span class="o">=</span><span class="n">d</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">walker_mass</span><span class="p">,</span> <span class="n">walker_time</span><span class="p">,</span> <span class="n">walker_phase</span><span class="p">,</span> <span class="n">walker_amplitude</span><span class="p">)</span>
+<span class="p">]</span>
+<span class="n">loop_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span>
+
+<span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+<span class="n">batched</span> <span class="o">=</span> <span class="n">batched_log_likelihood</span><span class="p">(</span>
+    <span class="n">walker_mass</span><span class="p">,</span> <span class="n">walker_time</span><span class="p">,</span> <span class="n">walker_phase</span><span class="p">,</span> <span class="n">walker_amplitude</span>
+<span class="p">)</span>
+<span class="n">batch_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span>
+
+<span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+    <span class="n">heterodyne_log_likelihood</span><span class="p">(</span><span class="n">trial</span><span class="p">)</span>
+<span class="n">heterodyne_cost</span> <span class="o">=</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span> <span class="o">/</span> <span class="mi">100</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mf">3.8</span><span class="p">))</span>
+<span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"exact"</span><span class="p">,</span> <span class="s2">"heterodyne"</span><span class="p">,</span> <span class="s2">"relative</span><span class="se">\n</span><span class="s2">binning"</span><span class="p">,</span> <span class="s2">"batched</span><span class="se">\n</span><span class="s2">rel. binning"</span><span class="p">]</span>
+<span class="n">costs</span> <span class="o">=</span> <span class="mf">1e3</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+    <span class="p">[</span><span class="n">exact_cost</span><span class="p">,</span> <span class="n">heterodyne_cost</span><span class="p">,</span> <span class="n">binned_cost</span><span class="p">,</span> <span class="n">batch_time</span> <span class="o">/</span> <span class="n">n_walkers</span><span class="p">]</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">costs</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="s2">"0.6"</span><span class="p">,</span> <span class="s2">"C0"</span><span class="p">,</span> <span class="s2">"C3"</span><span class="p">,</span> <span class="s2">"C2"</span><span class="p">])</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">yscale</span><span class="o">=</span><span class="s2">"log"</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="s2">"time per likelihood [ms]"</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">"Measured cost of one call"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="k">for</span> <span class="n">position</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">costs</span><span class="p">):</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">value</span> <span class="o">*</span> <span class="mf">1.3</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">value</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s2">"center"</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+<span class="n">processes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">65</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">ratio_value</span><span class="p">,</span> <span class="n">style</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="s2">"-"</span><span class="p">,</span> <span class="s2">"--"</span><span class="p">,</span> <span class="s2">"-."</span><span class="p">,</span> <span class="s2">":"</span><span class="p">]):</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+        <span class="n">processes</span><span class="p">,</span>
+        <span class="n">processes</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">ratio_value</span> <span class="o">*</span> <span class="n">processes</span><span class="p">),</span>
+        <span class="n">style</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="s2">"C0"</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="sa">rf</span><span class="s2">"$\tau_</span><span class="se">{{</span><span class="s2">\rm comm</span><span class="se">}}</span><span class="s2">/T_L=</span><span class="si">{</span><span class="n">ratio_value</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">$"</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">"processes P"</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="s2">"speedup"</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">"Communication overhead caps the speedup"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"512 walkers, python loop: </span><span class="si">{</span><span class="mf">1e3</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">loop_time</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> ms"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"512 walkers, one batched call: </span><span class="si">{</span><span class="mf">1e3</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">batch_time</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> ms"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"vectorisation speedup: </span><span class="si">{</span><span class="n">loop_time</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">batch_time</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">x"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"largest disagreement: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">looped</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">batched</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">:</span><span class="s2">.1e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span>
+    <span class="sa">f</span><span class="s2">"total speedup over the exact likelihood: </span><span class="si">{</span><span class="n">exact_cost</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="n">batch_time</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">n_walkers</span><span class="p">)</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">x"</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/a3dfa21b91b7be01ff63245ac05bffc92200f43a9f2889e056f0b336c763b055.png" src="../_images/a3dfa21b91b7be01ff63245ac05bffc92200f43a9f2889e056f0b336c763b055.png" />
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>512 walkers, python loop: 12.7 ms
+512 walkers, one batched call: 2.8 ms
+vectorisation speedup: 4.5x
+largest disagreement: 0.0e+00
+total speedup over the exact likelihood: 69x
+</pre></div>
+</div>
+</div>
+</div>
+<details>
+<summary><i>Expected output &mdash; open this if your cell has not run yet</i></summary>
+<img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/fast-parallel-scaling.png" alt="expected output: fast-parallel-scaling" style="max-width:100%">
+</details><section id="question">
+<h3>Question<a class="headerlink" href="#question" title="Link to this heading">#</a></h3>
+<p>The bins were built with <code class="docutils literal notranslate"><span class="pre">tolerance=0.01</span></code> radians. Rebuild them with
+tolerances 0.3, 0.1, 0.03 and 0.01, and for each one record the number of bins
+and the worst <span class="math notranslate nohighlight">\(|\Delta\ln\mathcal{L}|\)</span> over the chirp-mass scan of Section 4.</p>
+<p>Where does the error cross the 0.1 threshold, and how many bins does that buy
+you?</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">tolerances</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.03</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">]</span>
+<span class="n">results_by_tolerance</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="c1"># Your code here: for each tolerance record (number of bins, worst |dlnL|).</span>
+</pre></div>
+</div>
+</div>
+</div>
+<details>
+<summary>Hint</summary>
+<p>Everything downstream of <code class="docutils literal notranslate"><span class="pre">edges</span></code> has to be rebuilt: <code class="docutils literal notranslate"><span class="pre">start_index</span></code>, <code class="docutils literal notranslate"><span class="pre">offset</span></code>,
+and all four summary arrays. Wrap that in a function that returns a fresh
+<code class="docutils literal notranslate"><span class="pre">binned_log_likelihood</span></code>, then reuse <code class="docutils literal notranslate"><span class="pre">scan_likelihood</span></code> and <code class="docutils literal notranslate"><span class="pre">exact_scan</span></code>.</p>
+</details>
+</section>
+</section>
+<section id="other-directions-in-one-paragraph-each">
+<h2>7. Other directions, in one paragraph each<a class="headerlink" href="#other-directions-in-one-paragraph-each" title="Link to this heading">#</a></h2>
+<p><strong>Simulation-based inference.</strong> Train a normalising flow to map data directly
+to a posterior, amortising the whole cost into a one-off training stage and
+returning samples in seconds. It removes the likelihood rather than speeding it
+up, which also removes the ability to check it directly; validation is by
+coverage tests and by importance-reweighting against the true likelihood.
+<code class="docutils literal notranslate"><span class="pre">DINGO</span></code> is the reference implementation.</p>
+<p><img alt="The xkcd Machine Learning comic depicts data entering a large, opaque pile of linear algebra and answers emerging from the other side." src="https://imgs.xkcd.com/comics/machine_learning.png" /></p>
+<p><em>Figure: Randall Munroe, <a class="reference external" href="https://xkcd.com/1838/">“Machine Learning,” xkcd 1838</a>,
+used under the <a class="reference external" href="https://xkcd.com/license.html">CC BY-NC 2.5 licence</a>. See also
+the community <a class="reference external" href="https://www.explainxkcd.com/wiki/index.php/1838:_Machine_Learning">panel-by-panel discussion</a>.</em></p>
+<p>The useful warning for simulation-based inference is not “machine learning is
+unknowable.” It is that plausible-looking answers are not a validation test.
+Coverage on simulated populations, checks under distribution shift, and exact
+likelihood reweighting where available are what turn a fast surrogate into a
+scientific inference tool.</p>
+<p><strong>Gradient-based sampling.</strong> Hamiltonian Monte Carlo and NUTS scale far better
+with parameter dimension than random-walk or ensemble methods, which matters
+for the 15+ dimensions of a precessing signal with calibration marginalisation.
+The prerequisite is <span class="math notranslate nohighlight">\(\nabla_\theta\ln\mathcal{L}\)</span>, so the waveform must be
+written in an autodiff framework — hence the JAX reimplementations of the PN
+and phenomenological families. Everything in this notebook stays
+differentiable, so the two compose.</p>
+<p><strong>Hardware and precision.</strong> GPU-resident likelihoods batched over the whole
+ensemble, and single precision where the SNR does not justify double.
+Unglamorous, and frequently the largest single factor available.</p>
+<p><strong>Marginalisation.</strong> Analytic or semi-analytic marginalisation over distance,
+coalescence phase and time removes dimensions from the sampled space instead of
+making each call cheaper. It is the cheapest speedup on this list whenever the
+model permits it, and it is often overlooked.</p>
+</section>
+<section id="what-to-take-away">
+<h2>What to take away<a class="headerlink" href="#what-to-take-away" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>The three algorithmic methods multiply together; parallelism is orthogonal
+and should be applied last, to whatever is left.</p></li>
+<li><p>Heterodyning and relative binning are the same idea at two depths. Relative
+binning is the faster of the two once you can afford to precompute summary
+data; the explicit spline is more flexible when the reference or PSD changes
+often.</p></li>
+<li><p>All of them rest on a reference point <span class="math notranslate nohighlight">\(\theta_0\)</span> near the peak. Finding a
+good one by optimisation is not a preliminary — it is the load-bearing step.</p></li>
+<li><p>The summary data bakes in <span class="math notranslate nohighlight">\(d\)</span>, <span class="math notranslate nohighlight">\(S_n\)</span> and <span class="math notranslate nohighlight">\(\theta_0\)</span>. A re-estimated PSD, a
+different segment, or calibration marginalisation means rebuilding it.</p></li>
+<li><p>A reduced-order model is an interpolant, and interpolants do not extrapolate.
+Outside the training box the error is unbounded and gives no warning.</p></li>
+<li><p>Validate on posterior samples, not at the reference. Re-evaluating the exact
+likelihood at a few thousand final samples and reweighting turns the whole
+approximation into an exact result with a computable efficiency.</p></li>
+</ul>
+</section>
+<section id="read-or-try-next">
+<h2>Read or try next<a class="headerlink" href="#read-or-try-next" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://arxiv.org/abs/1806.08792">Zackay, Dai &amp; Venumadhav</a> introduce
+relative binning; <a class="reference external" href="https://bilby-dev.github.io/bilby/api/bilby.gw.likelihood.relative.RelativeBinningGravitationalWaveTransient.html">Bilby’s implementation</a>
+shows the fiducial-point and marginalisation bookkeeping needed in practice.</p></li>
+<li><p><a class="reference external" href="https://doi.org/10.1103/PhysRevD.104.104054">Cornish (2021)</a> develops the
+heterodyned likelihood; <a class="reference external" href="https://arxiv.org/abs/1404.6284">Canizares et al. (2015)</a>
+develop reduced-order quadrature.</p></li>
+<li><p><a class="reference external" href="https://arxiv.org/abs/2106.12594">DINGO</a> and
+<a class="reference external" href="https://arxiv.org/abs/2302.05333">gradient-based GW sampling</a> pursue the two
+alternatives sketched in Section 7: amortise inference or differentiate it.</p></li>
+</ul>
+</section>
+</section>
+<hr class="docutils" />
+<section class="tex2jax_ignore mathjax_ignore" id="worked-solutions">
+<h1>Worked solutions<a class="headerlink" href="#worked-solutions" title="Link to this heading">#</a></h1>
+<p>Everything above this line is the lab notebook, unchanged. Below are the
+solutions to its exercises, as cells that actually run: execute the notebook
+from the top and every variable they need will already exist.</p>
+<section id="question-how-tight-does-the-tolerance-need-to-be">
+<h2>Question: how tight does the tolerance need to be?<a class="headerlink" href="#question-how-tight-does-the-tolerance-need-to-be" title="Link to this heading">#</a></h2>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">build_binned_likelihood</span><span class="p">(</span><span class="n">tolerance</span><span class="p">):</span>
+    <span class="n">local_edges</span> <span class="o">=</span> <span class="n">bin_edges</span><span class="p">(</span><span class="n">tolerance</span><span class="p">)</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">local_edges</span><span class="p">)</span>
+    <span class="n">index</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">frequency</span><span class="o">.</span><span class="n">size</span>
+    <span class="n">local_offset</span> <span class="o">=</span> <span class="n">frequency</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span>
+        <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">local_edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="n">local_edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="o">.</span><span class="n">reduceat</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">index</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">a0</span> <span class="o">=</span> <span class="n">total</span><span class="p">(</span><span class="n">weight</span> <span class="o">*</span> <span class="n">data</span> <span class="o">*</span> <span class="n">reference_waveform</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span>
+    <span class="n">a1</span> <span class="o">=</span> <span class="n">total</span><span class="p">(</span><span class="n">weight</span> <span class="o">*</span> <span class="n">data</span> <span class="o">*</span> <span class="n">reference_waveform</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span> <span class="o">*</span> <span class="n">local_offset</span><span class="p">)</span>
+    <span class="n">b0</span> <span class="o">=</span> <span class="n">total</span><span class="p">(</span><span class="n">weight</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">reference_waveform</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">b1</span> <span class="o">=</span> <span class="n">total</span><span class="p">(</span><span class="n">weight</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">reference_waveform</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">local_offset</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">likelihood</span><span class="p">(</span><span class="n">parameters</span><span class="p">):</span>
+        <span class="n">ratio</span> <span class="o">=</span> <span class="n">waveform</span><span class="p">(</span><span class="n">local_edges</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">)</span> <span class="o">/</span> <span class="n">waveform</span><span class="p">(</span><span class="n">local_edges</span><span class="p">,</span> <span class="o">**</span><span class="n">reference</span><span class="p">)</span>
+        <span class="n">r0</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">ratio</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="n">ratio</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">r1</span> <span class="o">=</span> <span class="p">(</span><span class="n">ratio</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">ratio</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">local_edges</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">a0</span> <span class="o">*</span> <span class="n">r0</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span> <span class="o">+</span> <span class="n">a1</span> <span class="o">*</span> <span class="n">r1</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span><span class="o">.</span><span class="n">real</span>
+            <span class="o">-</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">b0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">r0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">b1</span> <span class="o">*</span> <span class="p">(</span><span class="n">r0</span> <span class="o">*</span> <span class="n">r1</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span><span class="o">.</span><span class="n">real</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">local_edges</span><span class="o">.</span><span class="n">size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">likelihood</span>
+
+
+<span class="k">for</span> <span class="n">tolerance</span> <span class="ow">in</span> <span class="n">tolerances</span><span class="p">:</span>
+    <span class="n">n_bins</span><span class="p">,</span> <span class="n">likelihood</span> <span class="o">=</span> <span class="n">build_binned_likelihood</span><span class="p">(</span><span class="n">tolerance</span><span class="p">)</span>
+    <span class="n">worst</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">scan_likelihood</span><span class="p">(</span><span class="n">likelihood</span><span class="p">)</span> <span class="o">-</span> <span class="n">exact_scan</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+    <span class="n">results_by_tolerance</span><span class="p">[</span><span class="n">tolerance</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_bins</span><span class="p">,</span> <span class="n">worst</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"tolerance </span><span class="si">{</span><span class="n">tolerance</span><span class="si">:</span><span class="s2">&gt;5</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">n_bins</span><span class="si">:</span><span class="s2">&gt;4</span><span class="si">}</span><span class="s2"> bins, worst dlnL = </span><span class="si">{</span><span class="n">worst</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>tolerance   0.3:    4 bins, worst dlnL = 1.96e+00
+tolerance   0.1:   14 bins, worst dlnL = 2.06e-01
+tolerance  0.03:   47 bins, worst dlnL = 1.91e-02
+tolerance  0.01:  141 bins, worst dlnL = 1.57e-03
+</pre></div>
+</div>
+</div>
+</div>
+<p>The error scales roughly as the square of the tolerance, because the neglected
+term is the quadratic one plotted in Section 3. Tightening the tolerance tenfold
+costs ten times as many bins and buys a hundredfold accuracy, so the crossing
+point is worth locating rather than guessing.</p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./notebooks"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Part 4: Fast likelihoods</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal-and-route">Goal and route</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-the-time-goes">1. Where the time goes</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#heterodyning-divide-out-the-carrier">2. Heterodyning: divide out the carrier</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#relative-binning-do-the-frequency-sum-in-advance">3. Relative binning: do the frequency sum in advance</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-check-that-decides-whether-you-may-use-them">4. The check that decides whether you may use them</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#extension-reduced-order-modelling">5. Extension: reduced-order modelling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#extension-parallel-likelihoods">6. Extension: parallel likelihoods</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#question">Question</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#other-directions-in-one-paragraph-each">7. Other directions, in one paragraph each</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-to-take-away">What to take away</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#read-or-try-next">Read or try next</a></li>
+</ul>
+</li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#worked-solutions">Worked solutions</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#question-how-tight-does-the-tolerance-need-to-be">Question: how tight does the tolerance need to be?</a></li>
+</ul>
+</li>
+</ul>
+
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Avi Vajpeyi
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  <script src="https://utteranc.es/client.js"
+        repo="nz-gravity/FQCP2026_GW_data_analysis"
+        issue-term="url"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

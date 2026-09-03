@@ -1,0 +1,1173 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Supplement: blind LVK data challenge &#8212; FQCP 2026 GW data analysis</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/04b_lvk_blind_data_challenge';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Part 3A: LISA signals, response, and analysis codes" href="05_lisa_signals_response_codes.html" />
+    <link rel="prev" title="Part 2C: LVK populations and PE checks" href="04_lvk_population_and_checks.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">FQCP 2026 GW data analysis</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    Bayesian gravitational-wave parameter estimation
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Before you start</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 1 — Bayesian inference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="01_bayesian_inference.html">Part 1: Bayesian inference from first principles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="01b_bayesian_samplers.html">Extension lab: how Bayesian samplers explore a posterior</a></li>
+<li class="toctree-l1"><a class="reference internal" href="01c_sampler_diagnostics.html">Extension lab: can you trust the sampler?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="01d_hubble_prior_sensitivity.html">Extension lab: a small Hubble-law inference</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 2 — LVK</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="02_lvk_signals_injections.html">Part 2A: LVK signals, injections, and matched filtering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="03_lvk_gw150914_bilby.html">Part 2B: GW150914 with Bilby</a></li>
+<li class="toctree-l1"><a class="reference internal" href="04_lvk_population_and_checks.html">Part 2C: LVK populations and PE checks</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Supplement: blind LVK data challenge</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 3 — LISA</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="05_lisa_signals_response_codes.html">Part 3A: LISA signals, response, and analysis codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="06_lisa_global_fit_gibbs.html">Part 3B: LISA global fitting and Gibbs sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="07_lisa_pspline_psd.html">Part 3C: LISA PSD estimation with P-splines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="08_lisa_wdm_time_frequency.html">Part 3D: LISA WDM time-frequency analysis</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 4 — Making inference fast</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="10_fast_likelihoods.html">Part 4: Fast likelihoods</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further study</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="03_literature.html">Essential literature for gravitational-wave research</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-launch-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Launch interactive content">
+    <i class="fas fa-rocket"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://colab.research.google.com/github/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/04b_lvk_blind_data_challenge.ipynb" target="_blank"
+   class="btn btn-sm dropdown-item"
+   title="Launch on Colab"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  
+    <img alt="Colab logo" src="../_static/images/logo_colab.png">
+  </span>
+<span class="btn__text-container">Colab</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+<a href="https://github.com/nz-gravity/FQCP2026_GW_data_analysis" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/notebooks/04b_lvk_blind_data_challenge.ipynb" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.ipynb</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Supplement: blind LVK data challenge</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-brief">The brief</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-is-true">What is true</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-to-hand-in">What to hand in</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#suggestions-not-instructions">Suggestions, not instructions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#one-honest-warning">One honest warning</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-signal-model">The signal model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#toolbox">Toolbox</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#supplied-network-response-and-likelihood">Supplied network response and likelihood</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#your-workspace">Your workspace</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#before-you-stop">Before you stop</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#resources-if-you-get-stuck">Resources, if you get stuck</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <!-- colab-badge-top -->
+<p><a class="reference external" href="https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/04b_lvk_blind_data_challenge.ipynb"><img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></a></p>
+<section class="tex2jax_ignore mathjax_ignore" id="supplement-blind-lvk-data-challenge">
+<h1>Supplement: blind LVK data challenge<a class="headerlink" href="#supplement-blind-lvk-data-challenge" title="Link to this heading">#</a></h1>
+<p><strong>FQCP 2026 · Bayesian parameter estimation for gravitational-wave sources</strong></p>
+<section id="the-brief">
+<h2>The brief<a class="headerlink" href="#the-brief" title="Link to this heading">#</a></h2>
+<p>Two synthetic detector streams. Find what is in them.</p>
+<p>This is not a guided exercise, and there is no prescribed method. You get the
+data, the signal model, and a short list of things that are true. How you go
+from there to an answer is yours to decide.</p>
+<section id="what-is-true">
+<h3>What is true<a class="headerlink" href="#what-is-true" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Two detectors, H1 and L1, sampled continuously. No gaps.</p></li>
+<li><p>The noise is Gaussian, stationary, and free of spectral lines.</p></li>
+<li><p>There is <strong>at least one binary black hole</strong>, with chirp mass somewhere in
+<span class="math notranslate nohighlight">\(\mathcal M\in[16.5,\,41.0]\,M_\odot\)</span>.</p></li>
+<li><p>There is <strong>at least one glitch</strong>: a loud transient that is <em>not</em> an
+astrophysical signal.</p></li>
+<li><p>Nothing overlaps in time. Whatever is in there, it happens one thing at a
+time.</p></li>
+</ul>
+<p>Note the phrasing. “At least one” is not “exactly one”.</p>
+<blockquote>
+<div><p><strong>Network timing</strong></p>
+<p>A signal can reach H1 and L1 at different times. The physical delay in this
+challenge is at most 10 ms; a 20 ms coincidence window leaves a small margin
+for sampling and template mismatch. In the restricted PE model the sky
+position is treated as known: the H1 arrival time is <span class="math notranslate nohighlight">\(t_c+4\)</span> ms and the L1
+arrival time is <span class="math notranslate nohighlight">\(t_c-6\)</span> ms, where <span class="math notranslate nohighlight">\(t_c\)</span> is the geocentric coalescence time.</p>
+</div></blockquote>
+</section>
+<section id="what-to-hand-in">
+<h3>What to hand in<a class="headerlink" href="#what-to-hand-in" title="Link to this heading">#</a></h3>
+<ol class="arabic simple">
+<li><p><strong>Times.</strong> Every signal and every glitch you find, with its time. Say which
+is which, and say how you decided.</p></li>
+<li><p><strong>A chirp mass with an uncertainty</strong> for each coherent CBC candidate you
+fit. If you also fit the glitch with a CBC model, explain why its
+best-fitting mass is not automatically a physical measurement.</p></li>
+<li><p><strong>Anything else you found interesting.</strong> This one is not filler. The most
+interesting thing in the data may not be on the list above.</p></li>
+</ol>
+</section>
+<section id="suggestions-not-instructions">
+<h3>Suggestions, not instructions<a class="headerlink" href="#suggestions-not-instructions" title="Link to this heading">#</a></h3>
+<p>If you want a starting point:</p>
+<ul class="simple">
+<li><p>Look at the data first. A spectrogram of whitened strain will tell you a
+lot before you fit anything.</p></li>
+<li><p>Estimate a PSD from data <em>away</em> from whatever you find, then redo your
+analysis with it.</p></li>
+<li><p>Matched filtering is the standard targeted search, but you do <strong>not</strong> need
+to use it here. Excess power, a Q-transform, band-passed energy, a
+spectrogram, or cross-detector comparisons can all reveal a loud transient.</p></li>
+<li><p>Two detectors are better than one. Ask what a real astrophysical signal
+does in both that a local instrumental artefact does not.</p></li>
+<li><p>When you fit, fit for an uncertainty, not a point estimate. Notebook 01’s
+grid is entirely sufficient for two parameters.</p></li>
+</ul>
+</section>
+<section id="one-honest-warning">
+<h3>One honest warning<a class="headerlink" href="#one-honest-warning" title="Link to this heading">#</a></h3>
+<p>You may be tempted to fit a CBC waveform to everything you find. If you do,
+look hard at what the fit to the glitch is telling you, and at whether your
+analysis had any way of knowing the model was wrong. Notebook 01 spent an
+hour on exactly this failure.</p>
+<blockquote>
+<div><p><strong>Boundary</strong></p>
+<p>A controlled classroom challenge: Gaussian line-free noise, Newtonian inspiral
+teaching signals, a fixed detector response, no calibration uncertainty. Do
+not quote a false-alarm rate or an astrophysical detection probability from
+it.</p>
+</div></blockquote>
+<p><a class="reference download internal" download="" href="../_downloads/5fa46c0737972a0a694cbeaea4dc2fb1/lvk_blind_challenge.h5"><span class="xref download myst">Download the HDF5 data directly</span></a>.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span><span class="o">,</span><span class="w"> </span><span class="nn">sys</span><span class="o">,</span><span class="w"> </span><span class="nn">subprocess</span><span class="o">,</span><span class="w"> </span><span class="nn">importlib.util</span>
+
+<span class="n">IN_COLAB</span> <span class="o">=</span> <span class="s2">"COLAB_RELEASE_TAG"</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span>
+<span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">package</span> <span class="k">for</span> <span class="n">package</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"h5py"</span><span class="p">,)</span> <span class="k">if</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="n">package</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">]</span>
+<span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">IN_COLAB</span><span class="p">:</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span>
+                <span class="s2">"-m"</span><span class="p">,</span>
+                <span class="s2">"pip"</span><span class="p">,</span>
+                <span class="s2">"install"</span><span class="p">,</span>
+                <span class="s2">"-q"</span><span class="p">,</span>
+                <span class="s2">"h5py&gt;=3.11"</span><span class="p">,</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
+            <span class="s2">"Install h5py&gt;=3.11, or use the locked workshop environment."</span>
+        <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">urllib.request</span><span class="w"> </span><span class="kn">import</span> <span class="n">urlretrieve</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.signal</span><span class="w"> </span><span class="kn">import</span> <span class="n">butter</span><span class="p">,</span> <span class="n">find_peaks</span><span class="p">,</span> <span class="n">sosfiltfilt</span><span class="p">,</span> <span class="n">spectrogram</span><span class="p">,</span> <span class="n">welch</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s2">"seaborn-v0_8-whitegrid"</span><span class="p">)</span>
+
+<span class="n">local_candidates</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">Path</span><span class="p">(</span><span class="s2">"assets/lvk_blind_challenge.h5"</span><span class="p">),</span>
+    <span class="n">Path</span><span class="p">(</span><span class="s2">"../assets/lvk_blind_challenge.h5"</span><span class="p">),</span>
+<span class="p">]</span>
+<span class="n">DATA_PATH</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
+    <span class="p">(</span><span class="n">path</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">local_candidates</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">()),</span> <span class="n">local_candidates</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="p">)</span>
+<span class="n">DATA_URL</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"https://raw.githubusercontent.com/nz-gravity/"</span>
+    <span class="s2">"FQCP2026_GW_data_analysis/main/assets/lvk_blind_challenge.h5"</span>
+<span class="p">)</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">DATA_PATH</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+    <span class="n">DATA_PATH</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">urlretrieve</span><span class="p">(</span><span class="n">DATA_URL</span><span class="p">,</span> <span class="n">DATA_PATH</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">DATA_PATH</span><span class="p">,</span> <span class="s2">"r"</span><span class="p">)</span> <span class="k">as</span> <span class="n">source</span><span class="p">:</span>
+    <span class="n">sampling_frequency</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">"sampling_frequency_hz"</span><span class="p">])</span>
+    <span class="n">duration</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">"duration_s"</span><span class="p">])</span>
+    <span class="n">start_time</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">"start_time_s"</span><span class="p">])</span>
+    <span class="n">strain</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">detector</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="sa">f</span><span class="s2">"strain/</span><span class="si">{</span><span class="n">detector</span><span class="si">}</span><span class="s2">"</span><span class="p">][:],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">detector</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"H1"</span><span class="p">,</span> <span class="s2">"L1"</span><span class="p">)</span>
+    <span class="p">}</span>
+
+<span class="n">time</span> <span class="o">=</span> <span class="n">start_time</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">strain</span><span class="p">[</span><span class="s2">"H1"</span><span class="p">]))</span> <span class="o">/</span> <span class="n">sampling_frequency</span>
+<span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">strain</span><span class="p">[</span><span class="s2">"H1"</span><span class="p">])</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">strain</span><span class="p">[</span><span class="s2">"L1"</span><span class="p">])</span> <span class="o">==</span> <span class="nb">int</span><span class="p">(</span><span class="n">duration</span> <span class="o">*</span> <span class="n">sampling_frequency</span><span class="p">)</span>
+<span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="k">for</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">strain</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Loaded </span><span class="si">{</span><span class="n">duration</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> s at </span><span class="si">{</span><span class="n">sampling_frequency</span><span class="si">}</span><span class="s2"> Hz from </span><span class="si">{</span><span class="n">DATA_PATH</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Detector arrays:"</span><span class="p">,</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">values</span><span class="o">.</span><span class="n">shape</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">strain</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Loaded 256 s at 1024 Hz from ../assets/lvk_blind_challenge.h5
+Detector arrays: {'H1': (262144,), 'L1': (262144,)}
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="the-signal-model">
+<h2>The signal model<a class="headerlink" href="#the-signal-model" title="Link to this heading">#</a></h2>
+<p>A compact-binary inspiral in the frequency domain, to leading (Newtonian)
+order:</p>
+<div class="math notranslate nohighlight">
+\[
+\tilde h(f;\mathcal M,t_c)\propto f^{-7/6}
+\exp\left[i\left(-\frac{\pi}{4}
++\frac{3}{128}(\pi\mathcal M_{\rm sec}f)^{-5/3}
+-2\pi f t_c\right)\right],
+\]</div>
+<p>tapered smoothly to zero near the innermost stable circular orbit. The chirp
+mass sets how fast the frequency sweeps; <span class="math notranslate nohighlight">\(t_c\)</span> slides the whole thing in time.
+This is a teaching waveform: no post-Newtonian corrections, no merger or
+ringdown, no spins, no precession.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">MTSUN_SI</span> <span class="o">=</span> <span class="mf">4.925490947e-6</span>  <span class="c1"># solar mass in seconds, G M_sun / c^3</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">component_masses</span><span class="p">(</span><span class="n">chirp_mass</span><span class="p">,</span> <span class="n">mass_ratio</span><span class="p">):</span>
+    <span class="n">eta</span> <span class="o">=</span> <span class="n">mass_ratio</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">mass_ratio</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">total_mass</span> <span class="o">=</span> <span class="n">chirp_mass</span> <span class="o">/</span> <span class="n">eta</span> <span class="o">**</span> <span class="p">(</span><span class="mi">3</span> <span class="o">/</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="n">primary_mass</span> <span class="o">=</span> <span class="n">total_mass</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">mass_ratio</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">primary_mass</span><span class="p">,</span> <span class="n">mass_ratio</span> <span class="o">*</span> <span class="n">primary_mass</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">newtonian_chirp</span><span class="p">(</span><span class="n">frequency_array</span><span class="p">,</span> <span class="n">chirp_mass</span><span class="p">,</span> <span class="n">mass_ratio</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">coalescence_time</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Frequency-domain inspiral with a smooth ISCO taper."""</span>
+    <span class="n">waveform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">frequency_array</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+    <span class="n">primary_mass</span><span class="p">,</span> <span class="n">secondary_mass</span> <span class="o">=</span> <span class="n">component_masses</span><span class="p">(</span><span class="n">chirp_mass</span><span class="p">,</span> <span class="n">mass_ratio</span><span class="p">)</span>
+    <span class="n">f_isco</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">6</span><span class="o">**</span><span class="mf">1.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">MTSUN_SI</span> <span class="o">*</span> <span class="p">(</span><span class="n">primary_mass</span> <span class="o">+</span> <span class="n">secondary_mass</span><span class="p">))</span>
+    <span class="n">taper_start</span> <span class="o">=</span> <span class="mf">0.85</span> <span class="o">*</span> <span class="n">f_isco</span>
+    <span class="n">usable</span> <span class="o">=</span> <span class="p">(</span><span class="n">frequency_array</span> <span class="o">&gt;=</span> <span class="mf">20.0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">frequency_array</span> <span class="o">&lt;</span> <span class="n">f_isco</span><span class="p">)</span>
+    <span class="n">taper</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">frequency_array</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+    <span class="n">taper_region</span> <span class="o">=</span> <span class="p">(</span><span class="n">frequency_array</span> <span class="o">&gt;=</span> <span class="n">taper_start</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">frequency_array</span> <span class="o">&lt;</span> <span class="n">f_isco</span><span class="p">)</span>
+    <span class="n">taper</span><span class="p">[</span><span class="n">taper_region</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span>
+        <span class="mi">1</span>
+        <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+            <span class="o">*</span> <span class="p">(</span><span class="n">frequency_array</span><span class="p">[</span><span class="n">taper_region</span><span class="p">]</span> <span class="o">-</span> <span class="n">taper_start</span><span class="p">)</span>
+            <span class="o">/</span> <span class="p">(</span><span class="n">f_isco</span> <span class="o">-</span> <span class="n">taper_start</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">phase</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">4</span>
+        <span class="o">+</span> <span class="mi">3</span>
+        <span class="o">/</span> <span class="mi">128</span>
+        <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">MTSUN_SI</span> <span class="o">*</span> <span class="n">chirp_mass</span> <span class="o">*</span> <span class="n">frequency_array</span><span class="p">[</span><span class="n">usable</span><span class="p">])</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">5</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">frequency_array</span><span class="p">[</span><span class="n">usable</span><span class="p">]</span> <span class="o">*</span> <span class="n">coalescence_time</span>
+    <span class="p">)</span>
+    <span class="n">waveform</span><span class="p">[</span><span class="n">usable</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">frequency_array</span><span class="p">[</span><span class="n">usable</span><span class="p">]</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">7</span> <span class="o">/</span> <span class="mi">6</span><span class="p">)</span> <span class="o">*</span> <span class="n">taper</span><span class="p">[</span><span class="n">usable</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">phase</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">waveform</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">inspiral_duration</span><span class="p">(</span><span class="n">chirp_mass</span><span class="p">,</span> <span class="n">f_low</span><span class="o">=</span><span class="mf">20.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Seconds from f_low to coalescence — use it to size your analysis segments."""</span>
+    <span class="k">return</span> <span class="mi">5</span> <span class="o">/</span> <span class="mi">256</span> <span class="o">*</span> <span class="p">(</span><span class="n">MTSUN_SI</span> <span class="o">*</span> <span class="n">chirp_mass</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">5</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">f_low</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">8</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span>
+
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"a </span><span class="si">{</span><span class="mf">16.5</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> Msun chirp lasts </span><span class="si">{</span><span class="n">inspiral_duration</span><span class="p">(</span><span class="mf">16.5</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> s from 20 Hz"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"a </span><span class="si">{</span><span class="mf">41.0</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> Msun chirp lasts </span><span class="si">{</span><span class="n">inspiral_duration</span><span class="p">(</span><span class="mf">41.0</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> s from 20 Hz"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>a 16.5 Msun chirp lasts 2.1 s from 20 Hz
+a 41.0 Msun chirp lasts 0.5 s from 20 Hz
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="toolbox">
+<h2>Toolbox<a class="headerlink" href="#toolbox" title="Link to this heading">#</a></h2>
+<p>A PSD estimator and a matched filter, because neither is the point of the
+exercise and both are tedious to debug. Use them, replace them, or ignore
+them.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">median_welch</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">seconds</span><span class="o">=</span><span class="mi">4</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Median-averaged Welch PSD: robust to the transients we are looking for."""</span>
+    <span class="k">return</span> <span class="n">welch</span><span class="p">(</span>
+        <span class="n">values</span><span class="p">,</span>
+        <span class="n">fs</span><span class="o">=</span><span class="n">sampling_frequency</span><span class="p">,</span>
+        <span class="n">window</span><span class="o">=</span><span class="p">(</span><span class="s2">"tukey"</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">),</span>
+        <span class="n">nperseg</span><span class="o">=</span><span class="n">seconds</span> <span class="o">*</span> <span class="n">sampling_frequency</span><span class="p">,</span>
+        <span class="n">noverlap</span><span class="o">=</span><span class="n">seconds</span> <span class="o">*</span> <span class="n">sampling_frequency</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="n">detrend</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">average</span><span class="o">=</span><span class="s2">"median"</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="n">frequency</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">rfftfreq</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">sampling_frequency</span><span class="p">)</span>
+<span class="n">frequency_spacing</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">duration</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">matched_filter_snr</span><span class="p">(</span><span class="n">data_fd</span><span class="p">,</span> <span class="n">template_fd</span><span class="p">,</span> <span class="n">psd</span><span class="p">,</span> <span class="n">f_min</span><span class="o">=</span><span class="mf">20.0</span><span class="p">,</span> <span class="n">f_max</span><span class="o">=</span><span class="mf">400.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Phase-maximised SNR as a function of coalescence time."""</span>
+    <span class="n">usable</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="n">frequency</span> <span class="o">&gt;=</span> <span class="n">f_min</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">frequency</span> <span class="o">&lt;=</span> <span class="n">f_max</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">psd</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">psd</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">integrand</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">frequency</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+    <span class="n">integrand</span><span class="p">[</span><span class="n">usable</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_fd</span><span class="p">[</span><span class="n">usable</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">template_fd</span><span class="p">[</span><span class="n">usable</span><span class="p">])</span> <span class="o">/</span> <span class="n">psd</span><span class="p">[</span><span class="n">usable</span><span class="p">]</span>
+    <span class="n">padded</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+    <span class="n">padded</span><span class="p">[:</span> <span class="n">frequency</span><span class="o">.</span><span class="n">size</span><span class="p">]</span> <span class="o">=</span> <span class="n">integrand</span>
+    <span class="n">correlation</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">frequency_spacing</span> <span class="o">*</span> <span class="n">time</span><span class="o">.</span><span class="n">size</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifft</span><span class="p">(</span><span class="n">padded</span><span class="p">)</span>
+    <span class="n">norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+        <span class="mi">4</span> <span class="o">*</span> <span class="n">frequency_spacing</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">template_fd</span><span class="p">[</span><span class="n">usable</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="n">psd</span><span class="p">[</span><span class="n">usable</span><span class="p">])</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">correlation</span><span class="p">)</span> <span class="o">/</span> <span class="n">norm</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">to_frequency_domain</span><span class="p">(</span><span class="n">values</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">rfft</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">/</span> <span class="n">sampling_frequency</span>
+
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"available:"</span><span class="p">,</span> <span class="s2">"median_welch, newtonian_chirp, matched_filter_snr,"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"           inspiral_duration, to_frequency_domain"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>available: median_welch, newtonian_chirp, matched_filter_snr,
+           inspiral_duration, to_frequency_domain
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="supplied-network-response-and-likelihood">
+<h2>Supplied network response and likelihood<a class="headerlink" href="#supplied-network-response-and-likelihood" title="Link to this heading">#</a></h2>
+<p>Finding a candidate is your problem; constructing a consistent two-detector
+likelihood is not. The code below supplies the response, inner product, and a
+likelihood that you may evaluate at any candidate time you find.</p>
+<p>We use the deliberately simplified network model</p>
+<div class="math notranslate nohighlight">
+\[
+\tilde d_I(f)=A\,R_I\,
+\tilde h\!\left(f;\mathcal M,q,t_c+\Delta t_I\right)+\tilde n_I(f),
+\]</div>
+<p>where <span class="math notranslate nohighlight">\(I\)</span> is H1 or L1. The fixed complex gain <span class="math notranslate nohighlight">\(R_I\)</span> represents relative
+amplitude and phase, and <span class="math notranslate nohighlight">\(\Delta t_I\)</span> is the arrival-time delay. In this
+challenge the known sky position has already been compressed into these four
+numbers:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>detector</p></th>
+<th class="head"><p>complex gain <span class="math notranslate nohighlight">\(R_I\)</span></p></th>
+<th class="head"><p>delay <span class="math notranslate nohighlight">\(\Delta t_I\)</span></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>H1</p></td>
+<td><p><span class="math notranslate nohighlight">\(1\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(+4\)</span> ms</p></td>
+</tr>
+<tr class="row-odd"><td><p>L1</p></td>
+<td><p><span class="math notranslate nohighlight">\(0.82e^{0.35i}\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(-6\)</span> ms</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The response is exact for the generated classroom data, but it is <strong>not</strong> a
+general LVK antenna-pattern calculation. The waveform is Newtonian, the mass
+ratio defaults to <span class="math notranslate nohighlight">\(q=0.9\)</span>, the PSD is treated as known, and calibration and
+spins are absent. The common complex amplitude <span class="math notranslate nohighlight">\(A\)</span> contains overall amplitude
+and phase; the helper integrates it out under a broad Gaussian prior. Thus the
+returned value is a genuine marginal likelihood for this stated simplified
+model, not a full CBC likelihood.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">SIMPLIFIED_RESPONSE</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"H1"</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">gain</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">+</span> <span class="mf">0.0</span><span class="n">j</span><span class="p">,</span> <span class="n">delay</span><span class="o">=</span><span class="mf">0.004</span><span class="p">),</span>
+    <span class="s2">"L1"</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">gain</span><span class="o">=</span><span class="mf">0.82</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mf">0.35</span><span class="n">j</span><span class="p">),</span> <span class="n">delay</span><span class="o">=-</span><span class="mf">0.006</span><span class="p">),</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">complex_noise_inner_product</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">second</span><span class="p">,</span> <span class="n">psd</span><span class="p">,</span> <span class="n">frequency_spacing</span><span class="p">,</span> <span class="n">usable</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Complex one-sided noise-weighted inner product before taking a real part."""</span>
+    <span class="k">return</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">frequency_spacing</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">first</span><span class="p">[</span><span class="n">usable</span><span class="p">])</span> <span class="o">*</span> <span class="n">second</span><span class="p">[</span><span class="n">usable</span><span class="p">]</span> <span class="o">/</span> <span class="n">psd</span><span class="p">[</span><span class="n">usable</span><span class="p">]</span>
+    <span class="p">)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">SimplifiedNetworkLikelihood</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Known-response network likelihood near one approximate candidate time.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    candidate_time:</span>
+<span class="sd">        An approximate time found by any search method. It only centres the</span>
+<span class="sd">        eight-second data segment and the default time grid.</span>
+<span class="sd">    psd_estimates:</span>
+<span class="sd">        ``{"H1": (frequency, psd), "L1": (frequency, psd)}``, for example the</span>
+<span class="sd">        output of ``median_welch`` applied to each full detector stream.</span>
+<span class="sd">    mass_ratio:</span>
+<span class="sd">        Fixed teaching value. Change it or add another grid dimension if your</span>
+<span class="sd">        scientific question requires it.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">candidate_time</span><span class="p">,</span>
+        <span class="n">psd_estimates</span><span class="p">,</span>
+        <span class="n">mass_ratio</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
+        <span class="n">segment_duration</span><span class="o">=</span><span class="mf">8.0</span><span class="p">,</span>
+        <span class="n">seconds_before</span><span class="o">=</span><span class="mf">6.0</span><span class="p">,</span>
+        <span class="n">amplitude_prior_scale</span><span class="o">=</span><span class="mf">3e-21</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">candidate_time</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">candidate_time</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mass_ratio</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">mass_ratio</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">segment_duration</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">segment_duration</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">segment_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">candidate_time</span> <span class="o">-</span> <span class="nb">float</span><span class="p">(</span><span class="n">seconds_before</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amplitude_prior_scale</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">amplitude_prior_scale</span><span class="p">)</span>
+
+        <span class="n">first</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">segment_start</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">)</span> <span class="o">*</span> <span class="n">sampling_frequency</span><span class="p">))</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">segment_duration</span> <span class="o">*</span> <span class="n">sampling_frequency</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">first</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">first</span> <span class="o">+</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">time</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"candidate is too close to a file boundary"</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">rfftfreq</span><span class="p">(</span><span class="n">count</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">sampling_frequency</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frequency_spacing</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">segment_duration</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_frequency</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">detector</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">rfft</span><span class="p">(</span><span class="n">strain</span><span class="p">[</span><span class="n">detector</span><span class="p">][</span><span class="n">first</span> <span class="p">:</span> <span class="n">first</span> <span class="o">+</span> <span class="n">count</span><span class="p">])</span>
+            <span class="o">/</span> <span class="n">sampling_frequency</span>
+            <span class="k">for</span> <span class="n">detector</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"H1"</span><span class="p">,</span> <span class="s2">"L1"</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">psd</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">detector</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frequency</span><span class="p">,</span> <span class="o">*</span><span class="n">psd_estimates</span><span class="p">[</span><span class="n">detector</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">detector</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"H1"</span><span class="p">,</span> <span class="s2">"L1"</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">usable</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frequency</span> <span class="o">&gt;=</span> <span class="mf">20.0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frequency</span> <span class="o">&lt;=</span> <span class="mf">400.0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="n">count</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">detector_templates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chirp_mass</span><span class="p">,</span> <span class="n">geocent_time</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Return unit-amplitude H1/L1 templates including fixed response."""</span>
+        <span class="n">local_time</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">geocent_time</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">segment_start</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">detector</span><span class="p">:</span> <span class="n">response</span><span class="p">[</span><span class="s2">"gain"</span><span class="p">]</span>
+            <span class="o">*</span> <span class="n">newtonian_chirp</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span><span class="p">,</span>
+                <span class="n">chirp_mass</span><span class="p">,</span>
+                <span class="n">mass_ratio</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mass_ratio</span><span class="p">,</span>
+                <span class="n">coalescence_time</span><span class="o">=</span><span class="n">local_time</span> <span class="o">+</span> <span class="n">response</span><span class="p">[</span><span class="s2">"delay"</span><span class="p">],</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">detector</span><span class="p">,</span> <span class="n">response</span> <span class="ow">in</span> <span class="n">SIMPLIFIED_RESPONSE</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">log_likelihood</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chirp_mass</span><span class="p">,</span> <span class="n">geocent_time</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Log likelihood with common amplitude and phase marginalised."""</span>
+        <span class="n">templates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">detector_templates</span><span class="p">(</span><span class="n">chirp_mass</span><span class="p">,</span> <span class="n">geocent_time</span><span class="p">)</span>
+        <span class="n">correlation</span> <span class="o">=</span> <span class="mf">0.0</span><span class="n">j</span>
+        <span class="n">template_norm</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="k">for</span> <span class="n">detector</span><span class="p">,</span> <span class="n">template</span> <span class="ow">in</span> <span class="n">templates</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">correlation</span> <span class="o">+=</span> <span class="n">complex_noise_inner_product</span><span class="p">(</span>
+                <span class="n">template</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data_frequency</span><span class="p">[</span><span class="n">detector</span><span class="p">],</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">psd</span><span class="p">[</span><span class="n">detector</span><span class="p">],</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">frequency_spacing</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">usable</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">template_norm</span> <span class="o">+=</span> <span class="n">complex_noise_inner_product</span><span class="p">(</span>
+                <span class="n">template</span><span class="p">,</span>
+                <span class="n">template</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">psd</span><span class="p">[</span><span class="n">detector</span><span class="p">],</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">frequency_spacing</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">usable</span><span class="p">,</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">real</span>
+
+        <span class="n">amplitude_variance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude_prior_scale</span><span class="o">**</span><span class="mi">2</span>
+        <span class="n">marginal_precision</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">amplitude_variance</span> <span class="o">*</span> <span class="n">template_norm</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span>
+            <span class="mf">0.5</span>
+            <span class="o">*</span> <span class="n">amplitude_variance</span>
+            <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">correlation</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+            <span class="o">/</span> <span class="n">marginal_precision</span>
+            <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">marginal_precision</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">log_likelihood_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chirp_masses</span><span class="p">,</span> <span class="n">time_half_width</span><span class="o">=</span><span class="mf">0.35</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Evaluate the same likelihood efficiently over chirp mass and time."""</span>
+        <span class="n">chirp_masses</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">chirp_masses</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">segment_times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">segment_start</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">count</span><span class="p">)</span> <span class="o">/</span> <span class="n">sampling_frequency</span>
+        <span class="n">keep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">segment_times</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">candidate_time</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">time_half_width</span>
+        <span class="n">geocent_times</span> <span class="o">=</span> <span class="n">segment_times</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span>
+        <span class="n">log_likelihood</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">chirp_masses</span><span class="p">),</span> <span class="n">keep</span><span class="o">.</span><span class="n">sum</span><span class="p">()))</span>
+
+        <span class="k">for</span> <span class="n">row</span><span class="p">,</span> <span class="n">chirp_mass</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">chirp_masses</span><span class="p">):</span>
+            <span class="n">network_correlation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">count</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+            <span class="n">template_norm</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="k">for</span> <span class="n">detector</span><span class="p">,</span> <span class="n">response</span> <span class="ow">in</span> <span class="n">SIMPLIFIED_RESPONSE</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">template</span> <span class="o">=</span> <span class="n">response</span><span class="p">[</span><span class="s2">"gain"</span><span class="p">]</span> <span class="o">*</span> <span class="n">newtonian_chirp</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span><span class="p">,</span>
+                    <span class="n">chirp_mass</span><span class="p">,</span>
+                    <span class="n">mass_ratio</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mass_ratio</span><span class="p">,</span>
+                    <span class="n">coalescence_time</span><span class="o">=</span><span class="n">response</span><span class="p">[</span><span class="s2">"delay"</span><span class="p">],</span>
+                <span class="p">)</span>
+                <span class="n">integrand</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frequency</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+                <span class="n">integrand</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">usable</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data_frequency</span><span class="p">[</span><span class="n">detector</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">usable</span><span class="p">]</span>
+                    <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">template</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">usable</span><span class="p">])</span>
+                    <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">psd</span><span class="p">[</span><span class="n">detector</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">usable</span><span class="p">]</span>
+                <span class="p">)</span>
+                <span class="n">padded</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">count</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+                <span class="n">padded</span><span class="p">[:</span> <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span><span class="o">.</span><span class="n">size</span><span class="p">]</span> <span class="o">=</span> <span class="n">integrand</span>
+                <span class="n">network_correlation</span> <span class="o">+=</span> <span class="p">(</span>
+                    <span class="mi">4</span>
+                    <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">frequency_spacing</span>
+                    <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">count</span>
+                    <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifft</span><span class="p">(</span><span class="n">padded</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="n">template_norm</span> <span class="o">+=</span> <span class="n">complex_noise_inner_product</span><span class="p">(</span>
+                    <span class="n">template</span><span class="p">,</span>
+                    <span class="n">template</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">psd</span><span class="p">[</span><span class="n">detector</span><span class="p">],</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">frequency_spacing</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">usable</span><span class="p">,</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">real</span>
+
+            <span class="n">amplitude_variance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude_prior_scale</span><span class="o">**</span><span class="mi">2</span>
+            <span class="n">marginal_precision</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">amplitude_variance</span> <span class="o">*</span> <span class="n">template_norm</span>
+            <span class="n">log_likelihood</span><span class="p">[</span><span class="n">row</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="mf">0.5</span>
+                <span class="o">*</span> <span class="n">amplitude_variance</span>
+                <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">network_correlation</span><span class="p">[</span><span class="n">keep</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span>
+                <span class="o">/</span> <span class="n">marginal_precision</span>
+                <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">marginal_precision</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">geocent_times</span><span class="p">,</span> <span class="n">log_likelihood</span>
+
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"available: SIMPLIFIED_RESPONSE, complex_noise_inner_product,"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"           SimplifiedNetworkLikelihood"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>available: SIMPLIFIED_RESPONSE, complex_noise_inner_product,
+           SimplifiedNetworkLikelihood
+</pre></div>
+</div>
+</div>
+</div>
+<p>A minimal use of the supplied machinery is:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">psd_estimates</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">detector</span><span class="p">:</span> <span class="n">median_welch</span><span class="p">(</span><span class="n">strain</span><span class="p">[</span><span class="n">detector</span><span class="p">])</span> <span class="k">for</span> <span class="n">detector</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"H1"</span><span class="p">,</span> <span class="s2">"L1"</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="n">likelihood</span> <span class="o">=</span> <span class="n">SimplifiedNetworkLikelihood</span><span class="p">(</span><span class="n">candidate_time</span><span class="p">,</span> <span class="n">psd_estimates</span><span class="p">)</span>
+<span class="n">chirp_mass_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">16.5</span><span class="p">,</span> <span class="mf">41.0</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">geocent_time_grid</span><span class="p">,</span> <span class="n">log_likelihood</span> <span class="o">=</span> <span class="n">likelihood</span><span class="o">.</span><span class="n">log_likelihood_grid</span><span class="p">(</span>
+    <span class="n">chirp_mass_grid</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>With uniform priors over the displayed grid, turn that surface into a joint
+posterior and marginalise over time with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">log_likelihood</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">log_likelihood</span><span class="p">))</span>
+<span class="n">d_mass</span> <span class="o">=</span> <span class="n">chirp_mass_grid</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">chirp_mass_grid</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">d_time</span> <span class="o">=</span> <span class="n">geocent_time_grid</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">geocent_time_grid</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">posterior</span> <span class="o">=</span> <span class="n">weights</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span> <span class="o">*</span> <span class="n">d_mass</span> <span class="o">*</span> <span class="n">d_time</span><span class="p">)</span>
+<span class="n">chirp_mass_posterior</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">posterior</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">d_time</span>
+</pre></div>
+</div>
+<p>You are free to use this class, call <code class="docutils literal notranslate"><span class="pre">log_likelihood</span></code> point by point, replace
+the priors, add a mass-ratio grid, or ignore the supplied likelihood entirely.
+It does not prescribe how you must find candidates.</p>
+</section>
+<section id="your-workspace">
+<h2>Your workspace<a class="headerlink" href="#your-workspace" title="Link to this heading">#</a></h2>
+<p>Everything below is yours. Add as many cells as you need.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Start here.</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="before-you-stop">
+<h2>Before you stop<a class="headerlink" href="#before-you-stop" title="Link to this heading">#</a></h2>
+<p>Write your three answers somewhere you can read them out:</p>
+<ol class="arabic simple">
+<li><p>the times, and which are signals and which are glitches;</p></li>
+<li><p>a chirp mass and an uncertainty for each coherent CBC candidate you fitted;</p></li>
+<li><p>the interesting thing.</p></li>
+</ol>
+<p>And one question worth answering for yourself: which of your conclusions
+would survive if the noise were not Gaussian?</p>
+</section>
+<section id="resources-if-you-get-stuck">
+<h2>Resources, if you get stuck<a class="headerlink" href="#resources-if-you-get-stuck" title="Link to this heading">#</a></h2>
+<p>Use these for methods, not for the hidden answer:</p>
+<ul class="simple">
+<li><p>The <a class="reference external" href="https://learn.gwosc.org/courses/odw2025">GWOSC Open Data Workshop</a>
+covers conditioning, matched filtering, detector characterisation, and a
+separate public data challenge.</p></li>
+<li><p><a class="reference external" href="https://bilby-dev.github.io/bilby/compact-binary-coalescence-parameter-estimation.html">Bilby’s compact-binary tutorial</a>
+shows what a fuller signal model and likelihood would add to this two-parameter fit.</p></li>
+<li><p>The course <a class="reference internal" href="03_literature.html"><span class="std std-doc">reading map</span></a> points to search pipelines,
+BayesWave/BayesLine, and public catalogues without revealing this fixture.</p></li>
+</ul>
+<!-- colab-badge-next -->
+<p>Next: <a class="reference external" href="https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/05_lisa_signals_response_codes.ipynb"><img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></a></p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./notebooks"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="04_lvk_population_and_checks.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Part 2C: LVK populations and PE checks</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="05_lisa_signals_response_codes.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Part 3A: LISA signals, response, and analysis codes</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-brief">The brief</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-is-true">What is true</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-to-hand-in">What to hand in</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#suggestions-not-instructions">Suggestions, not instructions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#one-honest-warning">One honest warning</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-signal-model">The signal model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#toolbox">Toolbox</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#supplied-network-response-and-likelihood">Supplied network response and likelihood</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#your-workspace">Your workspace</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#before-you-stop">Before you stop</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#resources-if-you-get-stuck">Resources, if you get stuck</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Avi Vajpeyi
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  <script src="https://utteranc.es/client.js"
+        repo="nz-gravity/FQCP2026_GW_data_analysis"
+        issue-term="url"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

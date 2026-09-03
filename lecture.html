@@ -1,0 +1,803 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Instructor run sheet — 120 minute lecture &#8212; FQCP 2026 GW data analysis</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'lecture';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="_static/searchtools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script src="searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">FQCP 2026 GW data analysis</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="index.html">
+                    Bayesian gravitational-wave parameter estimation
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Before you start</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 1 — Bayesian inference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="notebooks/01_bayesian_inference.html">Part 1: Bayesian inference from first principles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/01b_bayesian_samplers.html">Extension lab: how Bayesian samplers explore a posterior</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/01c_sampler_diagnostics.html">Extension lab: can you trust the sampler?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/01d_hubble_prior_sensitivity.html">Extension lab: a small Hubble-law inference</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 2 — LVK</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="notebooks/02_lvk_signals_injections.html">Part 2A: LVK signals, injections, and matched filtering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/03_lvk_gw150914_bilby.html">Part 2B: GW150914 with Bilby</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/04_lvk_population_and_checks.html">Part 2C: LVK populations and PE checks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/04b_lvk_blind_data_challenge.html">Supplement: blind LVK data challenge</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 3 — LISA</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="notebooks/05_lisa_signals_response_codes.html">Part 3A: LISA signals, response, and analysis codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/06_lisa_global_fit_gibbs.html">Part 3B: LISA global fitting and Gibbs sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/07_lisa_pspline_psd.html">Part 3C: LISA PSD estimation with P-splines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/08_lisa_wdm_time_frequency.html">Part 3D: LISA WDM time-frequency analysis</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 4 — Making inference fast</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="notebooks/10_fast_likelihoods.html">Part 4: Fast likelihoods</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further study</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="notebooks/03_literature.html">Essential literature for gravitational-wave research</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/nz-gravity/FQCP2026_GW_data_analysis" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/lecture.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Instructor run sheet — 120 minute lecture</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#format">Format</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#budget">Budget</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opening-5-min">Opening — 5 min</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#block-1-bayes-from-scratch-25-min">Block 1 — Bayes from scratch (25 min)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#block-2-lvk-signals-and-matched-filtering-20-min">Block 2 — LVK signals and matched filtering (20 min)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#block-3-gw150914-end-to-end-20-min">Block 3 — GW150914, end to end (20 min)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#buffer-5-min">Buffer — 5 min</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#block-4-populations-and-selection-10-min">Block 4 — Populations and selection (10 min)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#block-5-lisa-why-it-is-different-15-min">Block 5 — LISA: why it is different (15 min)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#block-6-the-global-fit-as-gibbs-15-min">Block 6 — The global fit as Gibbs (15 min)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#closing-5-min">Closing — 5 min</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="instructor-run-sheet-120-minute-lecture">
+<h1>Instructor run sheet — 120 minute lecture<a class="headerlink" href="#instructor-run-sheet-120-minute-lecture" title="Link to this heading">#</a></h1>
+<p>Instructor material. Deliberately kept out of <code class="docutils literal notranslate"><span class="pre">_toc.yml</span></code>, so it has a URL but
+does not appear in the student navigation.</p>
+<p>Every beat below links into the built site. Open this page on the podium
+machine and drive the lecture from it.</p>
+<section id="format">
+<h2>Format<a class="headerlink" href="#format" title="Link to this heading">#</a></h2>
+<p>No laptops in the room. Serve the built site and present it full screen:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>--locked<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>http.server<span class="w"> </span>-d<span class="w"> </span>_build/html<span class="w"> </span><span class="m">8000</span>
+</pre></div>
+</div>
+<p>Every figure and animation is already rendered, so nothing samples live in
+front of the room. Students get the Colab links at the end and run the labs
+themselves.</p>
+<p>Exercises become <strong>predictions</strong>. Ask the question, take answers from the room,
+then scroll to the executed output. The <code class="docutils literal notranslate"><span class="pre">*_answers</span></code> pages are the reveal — open
+them in a second tab, never on screen before the question has been asked.</p>
+<p>Before you walk in: open <code class="docutils literal notranslate"><span class="pre">http://localhost:8000</span></code>, zoom to ~150 %, check the
+back row can read a code cell, and click one animation to confirm it plays.</p>
+</section>
+<section id="budget">
+<h2>Budget<a class="headerlink" href="#budget" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Time</p></th>
+<th class="head"><p>Block</p></th>
+<th class="head"><p>Page</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0:00</p></td>
+<td><p>Opening — the inference map</p></td>
+<td><p><a class="reference internal" href="index.html"><span class="std std-doc">index</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>0:05</p></td>
+<td><p>1. Bayes from scratch</p></td>
+<td><p><a class="reference internal" href="notebooks/01_bayesian_inference.html"><span class="std std-doc">01</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>0:30</p></td>
+<td><p>2. LVK signals and matched filtering</p></td>
+<td><p><a class="reference internal" href="notebooks/02_lvk_signals_injections.html"><span class="std std-doc">02</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>0:50</p></td>
+<td><p>3. GW150914, end to end</p></td>
+<td><p><a class="reference internal" href="notebooks/03_lvk_gw150914_bilby.html"><span class="std std-doc">03</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>1:10</p></td>
+<td><p>Buffer / questions</p></td>
+<td><p>—</p></td>
+</tr>
+<tr class="row-odd"><td><p>1:15</p></td>
+<td><p>4. Populations and selection</p></td>
+<td><p><a class="reference internal" href="notebooks/04_lvk_population_and_checks.html"><span class="std std-doc">04</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>1:25</p></td>
+<td><p>5. LISA: why it is different</p></td>
+<td><p><a class="reference internal" href="notebooks/05_lisa_signals_response_codes.html"><span class="std std-doc">05</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>1:40</p></td>
+<td><p>6. The global fit as Gibbs</p></td>
+<td><p><a class="reference internal" href="notebooks/06_lisa_global_fit_gibbs.html"><span class="std std-doc">06</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>1:55</p></td>
+<td><p>Closing and take-home</p></td>
+<td><p><a class="reference internal" href="index.html"><span class="std std-doc">index</span></a></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Eight modules do not fit in two hours. Modules 07, 08 and 10 are signposted in
+the closing block, not walked through. If you are running late, drop block 4
+first — it is the shortest live route in the course and the easiest to
+summarise in two sentences.</p>
+</section>
+<section id="opening-5-min">
+<h2>Opening — 5 min<a class="headerlink" href="#opening-5-min" title="Link to this heading">#</a></h2>
+<div class="math notranslate nohighlight">
+\[\text{data} + \text{signal model} + \text{noise model}
+\to \text{likelihood} \to \text{posterior} \to \text{checks} \to \text{claim}.\]</div>
+<p>Say the thing the whole course rests on: the data, the response and the noise
+model change from LVK to LISA; the logic in that line does not. Promise you
+will point at this map at the start of every block.</p>
+</section>
+<section id="block-1-bayes-from-scratch-25-min">
+<h2>Block 1 — Bayes from scratch (25 min)<a class="headerlink" href="#block-1-bayes-from-scratch-25-min" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="notebooks/01_bayesian_inference.html"><span class="std std-doc">01_bayesian_inference</span></a> — stop at “End
+of the live route”.</p>
+<ul class="simple">
+<li><p><a href="notebooks/01_bayesian_inference.html#the-four-pieces-of-bayes-theorem">The four pieces of Bayes’ theorem</a>
+— stress that the model is <em>chosen</em>, not given.</p></li>
+<li><p><a href="notebooks/01_bayesian_inference.html#priors-and-prior-predictive-checks">Priors and prior predictive checks</a>
+— draw from the prior, look at the data it implies. Cheapest bug-catcher in
+the course.</p></li>
+<li><p><a href="notebooks/01_bayesian_inference.html#tool-1-the-posterior-on-a-grid">Tool 1: the posterior on a grid</a>
+— exact, and it dies in dimension. That death is why samplers exist.</p></li>
+<li><p><a href="notebooks/01_bayesian_inference.html#tool-2-the-posterior-from-a-sampler">Tool 2: the posterior from a sampler</a>
+— same posterior, no grid.</p></li>
+<li><p><strong>ASK:</strong> <em>“<a href="notebooks/01_bayesian_inference.html#exercise-1-does-more-data-help">Exercise 1</a>
+— I double the number of data points. What happens to the width of the
+posterior, and why?”</em> Two answers from the room, then
+<a class="reference internal" href="#notebooks/01_bayesian_inference_answers.html"><span class="xref myst">reveal</span></a>.</p></li>
+<li><p><a href="notebooks/01_bayesian_inference.html#posterior-predictive-check">Posterior predictive check</a>,
+then <a href="notebooks/01_bayesian_inference.html#the-check-that-fails">the check that fails</a>.
+Spend real time here: a posterior can be perfectly computed and still answer
+the wrong question.</p></li>
+<li><p><a href="notebooks/01_bayesian_inference.html#the-gravitational-wave-bridge-the-same-likelihood-in-frequency">The gravitational-wave bridge</a>
+and <a href="notebooks/01_bayesian_inference.html#from-residuals-to-the-whittle-likelihood">from residuals to Whittle</a>.
+This is the hinge of the course: everything after it is the same Gaussian
+likelihood with a harder forward model.</p></li>
+</ul>
+<p>Skip in the room:
+<a href="notebooks/01_bayesian_inference.html#is-there-a-signal-at-all-evidence-and-the-bayes-factor">evidence and Bayes factors</a>,
+exercises 2–4. Name them as take-home.</p>
+</section>
+<section id="block-2-lvk-signals-and-matched-filtering-20-min">
+<h2>Block 2 — LVK signals and matched filtering (20 min)<a class="headerlink" href="#block-2-lvk-signals-and-matched-filtering-20-min" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="notebooks/02_lvk_signals_injections.html"><span class="std std-doc">02_lvk_signals_injections</span></a> — stop
+at “End of the live route”.</p>
+<ul class="simple">
+<li><p><a href="notebooks/02_lvk_signals_injections.html#three-questions-that-must-stay-separate">Three questions that must stay separate</a>
+— is there a signal / what is it / how do we know we are right. Every later
+confusion is one of these three collapsing into another.</p></li>
+<li><p><strong>ANIMATION:</strong> <a href="notebooks/02_lvk_signals_injections.html#animation-why-chirp-mass-is-measured-so-precisely">why chirp mass is measured so precisely</a>.
+Best thirty seconds in the course for a non-specialist audience.</p></li>
+<li><p><a href="notebooks/02_lvk_signals_injections.html#from-source-to-a-detector-network">From source to a detector network</a>.</p></li>
+<li><p><a href="notebooks/02_lvk_signals_injections.html#finding-the-signal-first-matched-filtering">Matched filtering</a>,
+then <strong>ANIMATION:</strong> <a href="notebooks/02_lvk_signals_injections.html#animation-sliding-the-template-through-whitened-data">sliding the template through whitened data</a>.
+Follow immediately with
+<a href="notebooks/02_lvk_signals_injections.html#a-template-only-works-if-it-is-close-enough">a template only works if it is close enough</a>.</p></li>
+<li><p><strong>ASK:</strong> <em>“<a href="notebooks/02_lvk_signals_injections.html#question-how-densely-must-a-bank-be-packed">how densely must a bank be packed?</a>”</em>
+Take the qualitative half only: if each extra parameter multiplies the
+template count, what does that do to the cost of a search? Arithmetic is
+take-home.</p></li>
+<li><p><a href="notebooks/02_lvk_signals_injections.html#inject-and-infer-manually">Inject and infer manually</a>,
+then <a href="notebooks/02_lvk_signals_injections.html#put-the-same-likelihood-behind-bilby-s-interface">the same likelihood behind Bilby’s interface</a>.
+Land the point: Bilby is an interface, not a new method.</p></li>
+</ul>
+<p>Signpost only:
+<a href="notebooks/02_lvk_signals_injections.html#why-a-network-localises-the-sky">sky localisation</a>,
+<a href="notebooks/02_lvk_signals_injections.html#a-two-dimensional-posterior-with-a-real-degeneracy">distance–inclination degeneracy</a>.</p>
+</section>
+<section id="block-3-gw150914-end-to-end-20-min">
+<h2>Block 3 — GW150914, end to end (20 min)<a class="headerlink" href="#block-3-gw150914-end-to-end-20-min" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="notebooks/03_lvk_gw150914_bilby.html"><span class="std std-doc">03_lvk_gw150914_bilby</span></a>. Attribute the
+GWOSC 5.2 tutorial out loud —
+<a href="notebooks/03_lvk_gw150914_bilby.html#source-and-attribution">source and attribution</a>.</p>
+<ul class="simple">
+<li><p><a href="notebooks/03_lvk_gw150914_bilby.html#get-the-gw150914-analysis-data">Get the analysis data</a>,
+then <a href="notebooks/03_lvk_gw150914_bilby.html#why-does-gw150914-need-only-four-seconds">why only four seconds</a>
+and <a href="notebooks/03_lvk_gw150914_bilby.html#what-those-analysis-windows-contain-in-the-time-domain">what the windows contain</a>.</p></li>
+<li><p><a href="notebooks/03_lvk_gw150914_bilby.html#estimate-the-psd-from-off-source-data">Estimate the PSD off-source</a>,
+with <a href="notebooks/03_lvk_gw150914_bilby.html#optional-visual-explainer-why-use-a-median">why a median</a>.</p></li>
+<li><p><strong>ASK:</strong> <em>“<a href="notebooks/03_lvk_gw150914_bilby.html#question">why estimate the PSD away from the signal?</a>”</em>
+Short, everyone can answer — a good pace-recovery point if you are behind.</p></li>
+<li><p><a href="notebooks/03_lvk_gw150914_bilby.html#define-the-restricted-prior">The restricted prior</a>.
+Say plainly that the non-spinning model and fast sampler settings are
+workshop compromises, not the published analysis.</p></li>
+<li><p><a href="notebooks/03_lvk_gw150914_bilby.html#run-dynesty">Run Dynesty</a>, then
+<a href="notebooks/03_lvk_gw150914_bilby.html#compare-with-the-published-posterior">compare with the published posterior</a>.</p></li>
+<li><p><strong>ASK:</strong> <em>“do the two posteriors agree — and what should ‘agree’ even mean:
+overlapping intervals, consistent medians, or matching widths?”</em>
+(<a href="notebooks/03_lvk_gw150914_bilby.html#id1">the question</a>) Best discussion
+question in the course. Leave 3 minutes for it.</p></li>
+</ul>
+</section>
+<section id="buffer-5-min">
+<h2>Buffer — 5 min<a class="headerlink" href="#buffer-5-min" title="Link to this heading">#</a></h2>
+<p>Questions. If none come, this is where block 3’s overlay discussion runs long
+by design.</p>
+</section>
+<section id="block-4-populations-and-selection-10-min">
+<h2>Block 4 — Populations and selection (10 min)<a class="headerlink" href="#block-4-populations-and-selection-10-min" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="notebooks/04_lvk_population_and_checks.html"><span class="std std-doc">04_lvk_population_and_checks</span></a> —
+live route ends early; genuinely short.</p>
+<ul class="simple">
+<li><p><a href="notebooks/04_lvk_population_and_checks.html#start-with-the-catalogue-you-detected">Start with the catalogue you detected</a>
+— and it is not the population.</p></li>
+<li><p><a href="notebooks/04_lvk_population_and_checks.html#the-selection-correction-in-one-equation">The selection correction in one equation</a>.</p></li>
+<li><p><strong>ASK:</strong> <em>“<a href="notebooks/04_lvk_population_and_checks.html#question">the naive estimate is biased in a predictable direction — which
+direction?</a>”</em> Then
+<a class="reference internal" href="#notebooks/04_lvk_population_and_checks_answers.html"><span class="xref myst">reveal</span></a>.</p></li>
+<li><p>State the boundary: this is toy population inference, not production
+hierarchical inference.
+<a href="notebooks/04_lvk_population_and_checks.html#extension-events-are-posteriors-not-numbers">Events are posteriors, not numbers</a>
+is take-home.</p></li>
+</ul>
+</section>
+<section id="block-5-lisa-why-it-is-different-15-min">
+<h2>Block 5 — LISA: why it is different (15 min)<a class="headerlink" href="#block-5-lisa-why-it-is-different-15-min" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="notebooks/05_lisa_signals_response_codes.html"><span class="std std-doc">05_lisa_signals_response_codes</span></a>
+— stop at “End of the live route”.</p>
+<ul class="simple">
+<li><p><a href="notebooks/05_lisa_signals_response_codes.html#lisa-s-band-and-source-zoo">Band and source zoo</a>,
+then <a href="notebooks/05_lisa_signals_response_codes.html#why-lisa-parameter-estimation-is-unusually-coupled">why LISA PE is unusually coupled</a>
+— everything is on at once, forever.</p></li>
+<li><p><strong>ANIMATION:</strong> <a href="notebooks/05_lisa_signals_response_codes.html#animation-orbital-motion-becomes-response-modulation">orbital motion becomes response modulation</a>.
+Play it. This is the single idea that separates LISA from LVK in most
+people’s heads.</p></li>
+<li><p><a href="notebooks/05_lisa_signals_response_codes.html#sensitivity-and-galactic-confusion">Sensitivity and Galactic confusion</a>.</p></li>
+<li><p><a href="notebooks/05_lisa_signals_response_codes.html#inner-product-snr-and-likelihood">Inner product, SNR, and likelihood</a>
+— point back at the opening map: same likelihood, harder response.</p></li>
+<li><p><a href="notebooks/05_lisa_signals_response_codes.html#analysis-code-map">Analysis-code map</a>
+— Erebor / Gemoo / GLASS / Eryn, one sentence each, so the names are not a
+mystery when they meet them in a talk.</p></li>
+</ul>
+<p>Signpost only:
+<a href="notebooks/05_lisa_signals_response_codes.html#extension-from-one-way-links-to-xyz-aet">links and delays into XYZ/AET</a>,
+<a href="notebooks/05_lisa_signals_response_codes.html#extension-fisher-forecasts-for-lisa">Fisher forecasts</a>.</p>
+</section>
+<section id="block-6-the-global-fit-as-gibbs-15-min">
+<h2>Block 6 — The global fit as Gibbs (15 min)<a class="headerlink" href="#block-6-the-global-fit-as-gibbs-15-min" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="notebooks/06_lisa_global_fit_gibbs.html"><span class="std std-doc">06_lisa_global_fit_gibbs</span></a> — stop at
+“End of the live route”.</p>
+<ul class="simple">
+<li><p><a href="notebooks/06_lisa_global_fit_gibbs.html#the-global-fit-a-wheel-of-conditional-analyses">The wheel of conditional analyses</a>.</p></li>
+<li><p><a href="notebooks/06_lisa_global_fit_gibbs.html#gibbs-versus-blocked-metropolis-hastings">Gibbs versus blocked Metropolis-Hastings</a>.</p></li>
+<li><p><strong>ANIMATION:</strong> <a href="notebooks/06_lisa_global_fit_gibbs.html#animation-one-conditional-block-at-a-time">one conditional block at a time</a>.
+Narrate the shared residual being handed on — that hand-off <em>is</em> the global
+fit.</p></li>
+<li><p><strong>ASK:</strong> <em>“<a href="notebooks/06_lisa_global_fit_gibbs.html#question">why can one-pass subtraction depend on the order you remove
+sources in?</a>”</em> Answers
+first, then <a class="reference internal" href="#notebooks/06_lisa_global_fit_gibbs_answers.html"><span class="xref myst">reveal</span></a>.</p></li>
+<li><p>Boundary: a fixed catalogue with BIC is not a trans-dimensional global fit.</p></li>
+</ul>
+</section>
+<section id="closing-5-min">
+<h2>Closing — 5 min<a class="headerlink" href="#closing-5-min" title="Link to this heading">#</a></h2>
+<p>Three things you did not walk through, one sentence and one figure each:</p>
+<ul class="simple">
+<li><p><a href="notebooks/07_lisa_pspline_psd.html#fit-the-penalised-whittle-objective">07 — P-spline PSDs</a>:
+the PSD is estimated <em>inside</em> the analysis, with uncertainty.</p></li>
+<li><p><a href="notebooks/08_lisa_wdm_time_frequency.html#wilson-daubechies-meyer-wdm-time-frequency-map-and-likelihood">08 — WDM time-frequency</a>:
+gaps and non-stationarity; a diagonal WDM likelihood is an approximation once
+they induce covariance.</p></li>
+<li><p><a href="notebooks/10_fast_likelihoods.html#the-check-that-decides-whether-you-may-use-them">10 — fast likelihoods</a>:
+heterodyning and relative binning, and the accuracy check that decides
+whether you are allowed to use them.</p></li>
+</ul>
+<p>Then: everything is on the site, every notebook opens in Colab with the
+<span class="guilabel">rocket</span> button and runs top to bottom on its own. Point at
+<a class="reference internal" href="notebooks/04b_lvk_blind_data_challenge.html"><span class="std std-doc">the blind data challenge</span></a> as the
+thing to do if they only do one, and at <a class="reference internal" href="glossary.html"><span class="std std-doc">the glossary</span></a> and
+<a class="reference internal" href="notebooks/03_literature.html"><span class="std std-doc">the literature list</span></a> for what to read next. Close
+on the map you opened with.</p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./."
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#format">Format</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#budget">Budget</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opening-5-min">Opening — 5 min</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#block-1-bayes-from-scratch-25-min">Block 1 — Bayes from scratch (25 min)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#block-2-lvk-signals-and-matched-filtering-20-min">Block 2 — LVK signals and matched filtering (20 min)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#block-3-gw150914-end-to-end-20-min">Block 3 — GW150914, end to end (20 min)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#buffer-5-min">Buffer — 5 min</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#block-4-populations-and-selection-10-min">Block 4 — Populations and selection (10 min)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#block-5-lisa-why-it-is-different-15-min">Block 5 — LISA: why it is different (15 min)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#block-6-the-global-fit-as-gibbs-15-min">Block 6 — The global fit as Gibbs (15 min)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#closing-5-min">Closing — 5 min</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Avi Vajpeyi
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  <script src="https://utteranc.es/client.js"
+        repo="nz-gravity/FQCP2026_GW_data_analysis"
+        issue-term="url"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

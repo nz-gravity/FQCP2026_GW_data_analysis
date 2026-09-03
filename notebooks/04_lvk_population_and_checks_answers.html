@@ -1,0 +1,1063 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Part 2C: LVK populations and PE checks &#8212; FQCP 2026 GW data analysis</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/04_lvk_population_and_checks_answers';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">FQCP 2026 GW data analysis</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    Bayesian gravitational-wave parameter estimation
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Before you start</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 1 — Bayesian inference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="01_bayesian_inference.html">Part 1: Bayesian inference from first principles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="01b_bayesian_samplers.html">Extension lab: how Bayesian samplers explore a posterior</a></li>
+<li class="toctree-l1"><a class="reference internal" href="01c_sampler_diagnostics.html">Extension lab: can you trust the sampler?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="01d_hubble_prior_sensitivity.html">Extension lab: a small Hubble-law inference</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 2 — LVK</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="02_lvk_signals_injections.html">Part 2A: LVK signals, injections, and matched filtering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="03_lvk_gw150914_bilby.html">Part 2B: GW150914 with Bilby</a></li>
+<li class="toctree-l1"><a class="reference internal" href="04_lvk_population_and_checks.html">Part 2C: LVK populations and PE checks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="04b_lvk_blind_data_challenge.html">Supplement: blind LVK data challenge</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 3 — LISA</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="05_lisa_signals_response_codes.html">Part 3A: LISA signals, response, and analysis codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="06_lisa_global_fit_gibbs.html">Part 3B: LISA global fitting and Gibbs sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="07_lisa_pspline_psd.html">Part 3C: LISA PSD estimation with P-splines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="08_lisa_wdm_time_frequency.html">Part 3D: LISA WDM time-frequency analysis</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Part 4 — Making inference fast</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="10_fast_likelihoods.html">Part 4: Fast likelihoods</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further study</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="03_literature.html">Essential literature for gravitational-wave research</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-launch-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Launch interactive content">
+    <i class="fas fa-rocket"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://colab.research.google.com/github/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/04_lvk_population_and_checks_answers.ipynb" target="_blank"
+   class="btn btn-sm dropdown-item"
+   title="Launch on Colab"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  
+    <img alt="Colab logo" src="../_static/images/logo_colab.png">
+  </span>
+<span class="btn__text-container">Colab</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+<a href="https://github.com/nz-gravity/FQCP2026_GW_data_analysis" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/notebooks/04_lvk_population_and_checks_answers.ipynb" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.ipynb</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Part 2C: LVK populations and PE checks</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Part 2C: LVK populations and PE checks</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal-and-route">Goal and route</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#start-with-the-catalogue-you-detected">1. Start with the catalogue you detected</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-selection-correction-in-one-equation">The selection correction in one equation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#question">Question</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#extension-events-are-posteriors-not-numbers">Extension: events are posteriors, not numbers</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#checklist-what-to-verify-before-a-population-claim">Checklist: what to verify before a population claim</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#read-or-try-next">Read or try next</a></li>
+</ul>
+</li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#worked-solutions">Worked solutions</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#question-how-wrong-is-the-naive-estimate">Question: how wrong is the naive estimate?</a></li>
+</ul>
+</li>
+</ul>
+
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <!-- colab-badge-top -->
+<p><a class="reference external" href="https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/04_lvk_population_and_checks.ipynb"><img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></a></p>
+<section class="tex2jax_ignore mathjax_ignore" id="part-2c-lvk-populations-and-pe-checks">
+<h1>Part 2C: LVK populations and PE checks<a class="headerlink" href="#part-2c-lvk-populations-and-pe-checks" title="Link to this heading">#</a></h1>
+<p><strong>FQCP 2026 · Bayesian parameter estimation for gravitational-wave sources</strong></p>
+<section id="goal-and-route">
+<h2>Goal and route<a class="headerlink" href="#goal-and-route" title="Link to this heading">#</a></h2>
+<p>Turn event-level information into a population statement and see why the detected catalogue is not the underlying population.</p>
+<blockquote>
+<div><p><strong>Live route</strong></p>
+<p>Run the selection-bias picture and complete its question. Stop at the end-of-live-route marker; posterior-sample reweighting is an extension.</p>
+</div></blockquote>
+<p><strong>Boundary:</strong> The toy treats event masses as exactly measured. Production population inference reweights uncertain event posterior samples and estimates selection with injection campaigns.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">norm</span>
+
+<span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">20260817</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s2">"seaborn-v0_8-whitegrid"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="start-with-the-catalogue-you-detected">
+<h2>1. Start with the catalogue you detected<a class="headerlink" href="#start-with-the-catalogue-you-detected" title="Link to this heading">#</a></h2>
+<p>Imagine an underlying population of binary masses. The detector does not see a
+random subset: louder, heavier systems are easier to detect. The observed
+catalogue can therefore have a different shape from the population that
+produced it.</p>
+<p>The next plot deliberately separates three objects:</p>
+<ul class="simple">
+<li><p>the <strong>underlying population</strong> we would like to infer;</p></li>
+<li><p>the <strong>detected catalogue</strong> selected from it;</p></li>
+<li><p>the population mean inferred with and without correcting that selection.</p></li>
+</ul>
+<p>Predict first: if high-mass systems are easier to detect, should the detected
+catalogue look heavier or lighter than the underlying population?</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">norm</span>
+
+<span class="n">population_mean</span><span class="p">,</span> <span class="n">population_width</span> <span class="o">=</span> <span class="mf">28.0</span><span class="p">,</span> <span class="mf">5.0</span>
+<span class="n">all_masses</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">population_mean</span><span class="p">,</span> <span class="n">population_width</span><span class="p">,</span> <span class="mi">8000</span><span class="p">)</span>
+<span class="n">all_masses</span> <span class="o">=</span> <span class="n">all_masses</span><span class="p">[(</span><span class="n">all_masses</span> <span class="o">&gt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">all_masses</span> <span class="o">&lt;</span> <span class="mi">55</span><span class="p">)]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">detection_probability</span><span class="p">(</span><span class="n">mass</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">mass</span> <span class="o">-</span> <span class="mi">22</span><span class="p">)</span> <span class="o">/</span> <span class="mf">3.5</span><span class="p">))</span>
+
+
+<span class="n">detected</span> <span class="o">=</span> <span class="n">all_masses</span><span class="p">[</span><span class="n">rng</span><span class="o">.</span><span class="n">random</span><span class="p">(</span><span class="n">all_masses</span><span class="o">.</span><span class="n">size</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">detection_probability</span><span class="p">(</span><span class="n">all_masses</span><span class="p">)][</span>
+    <span class="p">:</span><span class="mi">40</span>
+<span class="p">]</span>
+<span class="n">mean_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">320</span><span class="p">)</span>
+<span class="n">integration_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">55</span><span class="p">,</span> <span class="mi">900</span><span class="p">)</span>
+<span class="n">naive</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">corrected</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">mean</span> <span class="ow">in</span> <span class="n">mean_grid</span><span class="p">:</span>
+    <span class="n">event_term</span> <span class="o">=</span> <span class="n">norm</span><span class="o">.</span><span class="n">logpdf</span><span class="p">(</span><span class="n">detected</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">population_width</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trapezoid</span><span class="p">(</span>
+        <span class="n">norm</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">integration_grid</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">population_width</span><span class="p">)</span>
+        <span class="o">*</span> <span class="n">detection_probability</span><span class="p">(</span><span class="n">integration_grid</span><span class="p">),</span>
+        <span class="n">integration_grid</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">naive</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">event_term</span><span class="p">)</span>
+    <span class="n">corrected</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">event_term</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">detected</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">alpha</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">normalise_population</span><span class="p">(</span><span class="n">logp</span><span class="p">):</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">logp</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">logp</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">p</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">trapezoid</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">mean_grid</span><span class="p">)</span>
+
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">11</span><span class="p">,</span> <span class="mf">3.4</span><span class="p">))</span>
+<span class="n">mass_axis</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">55</span><span class="p">,</span> <span class="mi">300</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">all_masses</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">35</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">histtype</span><span class="o">=</span><span class="s2">"step"</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"underlying"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">detected</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">13</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"detected"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">mass_axis</span><span class="p">,</span> <span class="n">detection_probability</span><span class="p">(</span><span class="n">mass_axis</span><span class="p">)</span> <span class="o">/</span> <span class="mi">20</span><span class="p">,</span> <span class="s2">"--"</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"selection (scaled)"</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">"mass [toy units]"</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">"density"</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Detected is not underlying"</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">mean_grid</span><span class="p">,</span> <span class="n">normalise_population</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">naive</span><span class="p">)),</span> <span class="n">label</span><span class="o">=</span><span class="s2">"ignores selection"</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">mean_grid</span><span class="p">,</span> <span class="n">normalise_population</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">corrected</span><span class="p">)),</span> <span class="n">label</span><span class="o">=</span><span class="s2">"selection-aware"</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">population_mean</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"k"</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s2">"--"</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"injection"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">"population mean"</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="s2">"posterior density"</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">"Selection changes the answer"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/f902a75b51b484082d1f916f1dce9e51cdf3059e1c806738f1dda7f588e22b8e.png" src="../_images/f902a75b51b484082d1f916f1dce9e51cdf3059e1c806738f1dda7f588e22b8e.png" />
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Injected population mean: </span><span class="si">{</span><span class="n">population_mean</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Detected-catalogue mean: </span><span class="si">{</span><span class="n">detected</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Naive MAP: </span><span class="si">{</span><span class="n">mean_grid</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">naive</span><span class="p">)]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Selection-aware MAP: </span><span class="si">{</span><span class="n">mean_grid</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">corrected</span><span class="p">)]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Injected population mean: 28.00
+Detected-catalogue mean: 28.75
+Naive MAP: 28.72
+Selection-aware MAP: 27.47
+</pre></div>
+</div>
+</div>
+</div>
+<section id="the-selection-correction-in-one-equation">
+<h3>The selection correction in one equation<a class="headerlink" href="#the-selection-correction-in-one-equation" title="Link to this heading">#</a></h3>
+<p>If <span class="math notranslate nohighlight">\(\Lambda\)</span> describes the population, the detected catalogue contributes</p>
+<div class="math notranslate nohighlight">
+\[
+p(\Lambda\mid\{d_i\},\mathrm{det})\propto p(\Lambda)
+\prod_i\frac{\int p(d_i\mid\theta)p(\theta\mid\Lambda)d\theta}
+{\alpha(\Lambda)}.
+\]</div>
+<p><span class="math notranslate nohighlight">\(\alpha(\Lambda)\)</span> is the fraction of that proposed population the search would
+detect. Dividing by it corrects the fact that the catalogue is selected rather
+than random. For the first pass, the plot is the main lesson; this equation is
+the bookkeeping that produces the corrected blue curve.</p>
+<p>This compact example treats masses as exactly measured. Real population inference reweights uncertain event posteriors, estimates selection with injection campaigns, infers several hyperparameters and often the rate, and checks sensitivity to event-level priors and waveform systematics.</p>
+</section>
+<section id="question">
+<h3>Question<a class="headerlink" href="#question" title="Link to this heading">#</a></h3>
+<p>Measure how far each estimate sits from the injected population mean, and say
+which of the two answers the astrophysical question.</p>
+<ol class="arabic simple">
+<li><p>Compute the absolute error of the naive MAP and of the selection-aware MAP.</p></li>
+<li><p>The naive estimate is not merely noisy, it is biased in a predictable
+direction. Which direction, and why that one?</p></li>
+<li><p>Both analyses are internally consistent and neither is a coding mistake.
+What exactly is the naive posterior a correct answer <em>to</em>?</p></li>
+</ol>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Your code here. `mean_grid`, `naive`, `corrected`, and `population_mean` are</span>
+<span class="c1"># all defined above.</span>
+</pre></div>
+</div>
+</div>
+</div>
+<details>
+<summary>Hint</summary>
+<p>The detected catalogue is not a random draw from the underlying population.
+Heavier systems are louder, so they enter the catalogue more often — compare
+<code class="docutils literal notranslate"><span class="pre">detected.mean()</span></code> with <code class="docutils literal notranslate"><span class="pre">population_mean</span></code> before you look at either posterior.</p>
+</details>
+<blockquote>
+<div><p><strong>End of the live route</strong></p>
+<p>Selection effects alone can move a population result even when every detected
+event is measured perfectly. The extension below adds the next complication:
+real events are posterior distributions rather than exact masses.</p>
+</div></blockquote>
+</section>
+</section>
+<section id="extension-events-are-posteriors-not-numbers">
+<h2>Extension: events are posteriors, not numbers<a class="headerlink" href="#extension-events-are-posteriors-not-numbers" title="Link to this heading">#</a></h2>
+<p>Section 1 treated every mass as exactly measured so that selection bias stayed
+visible on its own. Real events arrive as <strong>posterior samples</strong>, and that
+changes the hierarchical likelihood: the single-event term becomes an average
+over that event’s samples,</p>
+<div class="math notranslate nohighlight">
+\[
+\int p(d_i\mid\theta)\,p(\theta\mid\Lambda)\,d\theta
+\;\propto\;
+\frac{1}{S}\sum_{s=1}^{S}
+\frac{p(\theta_{is}\mid\Lambda)}{\pi_{\rm PE}(\theta_{is})}.
+\]</div>
+<p>The division by <span class="math notranslate nohighlight">\(\pi_{\rm PE}\)</span> is easy to miss. Posterior samples were drawn
+under <strong>the prior used by the event-level PE run</strong>, not under a flat prior. If
+that prior is not divided out, its shape is counted again as population
+information.</p>
+<p>Selection remains a separate catalogue-level correction,</p>
+<div class="math notranslate nohighlight">
+\[
+\alpha(\Lambda)=\int p_{\rm det}(\theta)\,p(\theta\mid\Lambda)\,d\theta,
+\]</div>
+<p>and the catalogue likelihood contains <span class="math notranslate nohighlight">\(\alpha(\Lambda)^{-N}\)</span>. For the usual
+likelihood of already detected events, do <strong>not</strong> multiply each posterior
+sample by <span class="math notranslate nohighlight">\(p_{\rm det}(\theta)\)</span> as well: that would count the detection process
+twice. The search injections used to estimate <span class="math notranslate nohighlight">\(\alpha\)</span> must, however, represent
+the population and the complete search pipeline being analysed.</p>
+<p>Below, the PE runs used <span class="math notranslate nohighlight">\(\pi_{\rm PE}(m)\propto m^4\)</span>. A rising prior like this
+is an ordinary choice — priors flat in distance-cubed or in detector-frame
+mass do the same thing — and it is steep here so the effect is visible with
+only 40 events.</p>
+<p><strong>Predict before running:</strong> the PE prior rises with mass. If it is left
+in, should the inferred population mean come out too high or too low?</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">measurement_sigma</span> <span class="o">=</span> <span class="mf">3.0</span>
+<span class="n">n_event_samples</span> <span class="o">=</span> <span class="mi">400</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">pe_prior</span><span class="p">(</span><span class="n">mass</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">mass</span><span class="o">**</span><span class="mi">4</span>
+
+
+<span class="c1"># Each detected event is measured with finite precision, then analysed under</span>
+<span class="c1"># pe_prior.  Importance resampling turns the measurement likelihood into</span>
+<span class="c1"># posterior samples without needing a sampler here.</span>
+<span class="n">noisy_observation</span> <span class="o">=</span> <span class="n">detected</span> <span class="o">+</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">measurement_sigma</span><span class="p">,</span> <span class="n">detected</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+<span class="n">proposal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span>
+    <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">noisy_observation</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">measurement_sigma</span><span class="p">,</span> <span class="p">(</span><span class="n">detected</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">4000</span><span class="p">)),</span>
+    <span class="mi">8</span><span class="p">,</span>
+    <span class="mi">55</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">proposal_weights</span> <span class="o">=</span> <span class="n">pe_prior</span><span class="p">(</span><span class="n">proposal</span><span class="p">)</span>
+<span class="n">proposal_weights</span> <span class="o">/=</span> <span class="n">proposal_weights</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">event_samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="n">rng</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n_event_samples</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="n">weight</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span><span class="p">,</span> <span class="n">weight</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">proposal</span><span class="p">,</span> <span class="n">proposal_weights</span><span class="p">)</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"posterior samples per event:"</span><span class="p">,</span> <span class="n">event_samples</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>posterior samples per event: (40, 400)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">hyper_posterior</span><span class="p">(</span><span class="n">divide_pe_prior</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="n">event_samples</span> <span class="k">if</span> <span class="n">samples</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">samples</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">mean_grid</span> <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">grid</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">mean</span> <span class="ow">in</span> <span class="n">grid</span><span class="p">:</span>
+        <span class="n">population_density</span> <span class="o">=</span> <span class="n">norm</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">population_width</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">divide_pe_prior</span><span class="p">:</span>
+            <span class="n">population_density</span> <span class="o">=</span> <span class="n">population_density</span> <span class="o">/</span> <span class="n">pe_prior</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trapezoid</span><span class="p">(</span>
+            <span class="n">norm</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">integration_grid</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">population_width</span><span class="p">)</span>
+            <span class="o">*</span> <span class="n">detection_probability</span><span class="p">(</span><span class="n">integration_grid</span><span class="p">),</span>
+            <span class="n">integration_grid</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">population_density</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+
+
+<span class="n">correct</span> <span class="o">=</span> <span class="n">normalise_population</span><span class="p">(</span><span class="n">hyper_posterior</span><span class="p">(</span><span class="n">divide_pe_prior</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="n">prior_contaminated</span> <span class="o">=</span> <span class="n">normalise_population</span><span class="p">(</span><span class="n">hyper_posterior</span><span class="p">(</span><span class="n">divide_pe_prior</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mf">7.5</span><span class="p">,</span> <span class="mf">3.4</span><span class="p">))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">mean_grid</span><span class="p">,</span> <span class="n">correct</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C0"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"PE prior divided out"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">mean_grid</span><span class="p">,</span> <span class="n">prior_contaminated</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"C3"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"PE prior left in"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">population_mean</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"k"</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s2">"--"</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"injection"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">"population mean"</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="s2">"posterior density"</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">"Same data, same sampler, one forgotten prior"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="n">correct_map</span> <span class="o">=</span> <span class="n">mean_grid</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">correct</span><span class="p">)]</span>
+<span class="n">contaminated_map</span> <span class="o">=</span> <span class="n">mean_grid</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">prior_contaminated</span><span class="p">)]</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"injected population mean : </span><span class="si">{</span><span class="n">population_mean</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"PE prior divided out     : </span><span class="si">{</span><span class="n">correct_map</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"PE prior left in         : </span><span class="si">{</span><span class="n">contaminated_map</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"shift                    : </span><span class="si">{</span><span class="n">contaminated_map</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">correct_map</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/74767897443af3e2196e3b41f477b100a11b856903942301841a060f7c3d15cc.png" src="../_images/74767897443af3e2196e3b41f477b100a11b856903942301841a060f7c3d15cc.png" />
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>injected population mean : 28.00
+PE prior divided out     : 26.46
+PE prior left in         : 28.16
+shift                    : +1.69
+</pre></div>
+</div>
+</div>
+</div>
+<details>
+<summary><i>Expected output &mdash; open this if your cell has not run yet</i></summary>
+<img src="https://raw.githubusercontent.com/nz-gravity/FQCP2026_GW_data_analysis/assets/expected/population-pe-prior.png" alt="expected output: population-pe-prior" style="max-width:100%">
+</details><p><strong>Do not read the single-catalogue numbers as a verdict.</strong> With 40
+events the statistical scatter on the population mean is of order one mass unit,
+so on any one realisation either curve can land closer to the injection by
+luck — including the wrong one. That is precisely why a bug like this survives
+code review.</p>
+<p>The way to see it is to repeat the experiment. The scatter averages away; a
+systematic error does not.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">coarse_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">80</span><span class="p">)</span>
+<span class="n">shifts</span><span class="p">,</span> <span class="n">correct_errors</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">trial</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">20</span><span class="p">):</span>
+    <span class="n">trial_rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">500</span> <span class="o">+</span> <span class="n">trial</span><span class="p">)</span>
+    <span class="n">trial_detected</span> <span class="o">=</span> <span class="n">all_masses</span><span class="p">[</span>
+        <span class="n">trial_rng</span><span class="o">.</span><span class="n">random</span><span class="p">(</span><span class="n">all_masses</span><span class="o">.</span><span class="n">size</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">detection_probability</span><span class="p">(</span><span class="n">all_masses</span><span class="p">)</span>
+    <span class="p">][:</span><span class="mi">40</span><span class="p">]</span>
+    <span class="n">trial_observed</span> <span class="o">=</span> <span class="n">trial_detected</span> <span class="o">+</span> <span class="n">trial_rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span>
+        <span class="mi">0</span><span class="p">,</span> <span class="n">measurement_sigma</span><span class="p">,</span> <span class="n">trial_detected</span><span class="o">.</span><span class="n">size</span>
+    <span class="p">)</span>
+    <span class="n">trial_proposal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span>
+        <span class="n">trial_rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span>
+            <span class="n">trial_observed</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">measurement_sigma</span><span class="p">,</span> <span class="p">(</span><span class="n">trial_detected</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">4000</span><span class="p">)</span>
+        <span class="p">),</span>
+        <span class="mi">8</span><span class="p">,</span>
+        <span class="mi">55</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">trial_weights</span> <span class="o">=</span> <span class="n">pe_prior</span><span class="p">(</span><span class="n">trial_proposal</span><span class="p">)</span>
+    <span class="n">trial_weights</span> <span class="o">/=</span> <span class="n">trial_weights</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">trial_samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">trial_rng</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n_event_samples</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="n">weight</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">row</span><span class="p">,</span> <span class="n">weight</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">trial_proposal</span><span class="p">,</span> <span class="n">trial_weights</span><span class="p">)</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">good</span> <span class="o">=</span> <span class="n">coarse_grid</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">hyper_posterior</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">trial_samples</span><span class="p">,</span> <span class="n">coarse_grid</span><span class="p">))]</span>
+    <span class="n">bad</span> <span class="o">=</span> <span class="n">coarse_grid</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">hyper_posterior</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">trial_samples</span><span class="p">,</span> <span class="n">coarse_grid</span><span class="p">))]</span>
+    <span class="n">shifts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bad</span> <span class="o">-</span> <span class="n">good</span><span class="p">)</span>
+    <span class="n">correct_errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">good</span> <span class="o">-</span> <span class="n">population_mean</span><span class="p">)</span>
+
+<span class="n">shifts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">shifts</span><span class="p">)</span>
+<span class="n">correct_errors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">correct_errors</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span>
+    <span class="sa">f</span><span class="s2">"correct analysis, error over 20 catalogues : "</span>
+    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">correct_errors</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2"> +/- </span><span class="si">{</span><span class="n">correct_errors</span><span class="o">.</span><span class="n">std</span><span class="p">()</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span>
+    <span class="sa">f</span><span class="s2">"shift from the forgotten prior             : "</span>
+    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">shifts</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2"> +/- </span><span class="si">{</span><span class="n">shifts</span><span class="o">.</span><span class="n">std</span><span class="p">()</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"shifts with the same sign                  : "</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="p">(</span><span class="n">shifts</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">}</span><span class="s2">/20"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="p">(</span><span class="n">shifts</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mi">18</span><span class="p">,</span> <span class="s2">"the forgotten prior should bias one way"</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"check passed: the error is systematic, not scatter"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>correct analysis, error over 20 catalogues : -0.95 +/- 0.85
+shift from the forgotten prior             : +1.70 +/- 0.12
+shifts with the same sign                  : 20/20
+check passed: the error is systematic, not scatter
+</pre></div>
+</div>
+</div>
+</div>
+<p>The correct analysis scatters around the injection, with a residual offset
+well inside its own spread — that is what 40 events buys you. The forgotten
+prior shifts the answer the <em>same way every time</em> —
+that is the signature of a systematic, and it is why repeated simulation, not a
+single convincing-looking run, is what validates a population pipeline.</p>
+<p>Nothing about the sampler was wrong here. No convergence diagnostic would flag
+it, and the contaminated posterior looks perfectly healthy on its own. This is
+the characteristic failure of hierarchical inference: <strong>the bug lives in the
+bookkeeping between stages, not inside either stage.</strong></p>
+</section>
+<section id="checklist-what-to-verify-before-a-population-claim">
+<h2>Checklist: what to verify before a population claim<a class="headerlink" href="#checklist-what-to-verify-before-a-population-claim" title="Link to this heading">#</a></h2>
+<p>Each item below has bitten a real analysis.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Check</p></th>
+<th class="head"><p>What it catches</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>sampler convergence and <span class="math notranslate nohighlight">\(N_{\rm eff}\)</span> at <strong>event</strong> level</p></td>
+<td><p>a hyper-posterior built on unconverged event runs</p></td>
+</tr>
+<tr class="row-odd"><td><p>posterior samples pressing against prior boundaries</p></td>
+<td><p>an event whose prior, not data, set its width</p></td>
+</tr>
+<tr class="row-even"><td><p>posterior-predictive and residual checks per event</p></td>
+<td><p>waveform or noise mismodelling entering the population</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>dividing out the event-level sampling prior</strong></p></td>
+<td><p>the bias demonstrated above</p></td>
+</tr>
+<tr class="row-even"><td><p>enough samples per event that the Monte Carlo sum is stable</p></td>
+<td><p>a hyper-likelihood dominated by a handful of samples</p></td>
+</tr>
+<tr class="row-odd"><td><p>injections that match the analysed population <strong>and</strong> pipeline</p></td>
+<td><p>a selection function <span class="math notranslate nohighlight">\(\alpha(\Lambda)\)</span> that describes a different search</p></td>
+</tr>
+<tr class="row-even"><td><p>repeating under alternative waveform, calibration, and population models</p></td>
+<td><p>a result that is really a statement about one model choice</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The last one is the difference between “the data prefer this population” and
+“this population model, fitted to these data, prefers these hyperparameters”.</p>
+</section>
+<section id="read-or-try-next">
+<h2>Read or try next<a class="headerlink" href="#read-or-try-next" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://arxiv.org/abs/1809.02293">Thrane &amp; Talbot (2019)</a> derives
+hierarchical likelihoods and selection effects from the event-level likelihood.</p></li>
+<li><p>The <a class="reference external" href="https://arxiv.org/abs/2111.03634">GWTC-3 population analysis</a> is a
+concrete example of mass, spin, redshift, rate, and model-systematics inference.</p></li>
+<li><p><a class="reference external" href="https://colmtalbot.github.io/gwpopulation/">GWPopulation</a> provides the
+maintained model and hyper-likelihood machinery. Before using it, be able to
+point to the event-prior division and selection factor in this notebook.</p></li>
+</ul>
+<!-- colab-badge-next -->
+<p>Next: <a class="reference external" href="https://githubtocolab.com/nz-gravity/FQCP2026_GW_data_analysis/blob/main/notebooks/04b_lvk_blind_data_challenge.ipynb"><img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></a></p>
+</section>
+</section>
+<hr class="docutils" />
+<section class="tex2jax_ignore mathjax_ignore" id="worked-solutions">
+<h1>Worked solutions<a class="headerlink" href="#worked-solutions" title="Link to this heading">#</a></h1>
+<p>Everything above this line is the lab notebook, unchanged. Below are the
+solutions to its exercises, as cells that actually run: execute the notebook
+from the top and every variable they need will already exist.</p>
+<section id="question-how-wrong-is-the-naive-estimate">
+<h2>Question: how wrong is the naive estimate?<a class="headerlink" href="#question-how-wrong-is-the-naive-estimate" title="Link to this heading">#</a></h2>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">naive_error</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">mean_grid</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">naive</span><span class="p">)]</span> <span class="o">-</span> <span class="n">population_mean</span><span class="p">)</span>
+<span class="n">corrected_error</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">mean_grid</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">corrected</span><span class="p">)]</span> <span class="o">-</span> <span class="n">population_mean</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"detected-catalogue mean:        </span><span class="si">{</span><span class="n">detected</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"injected population mean:       </span><span class="si">{</span><span class="n">population_mean</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"naive absolute error:           </span><span class="si">{</span><span class="n">naive_error</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"selection-aware absolute error: </span><span class="si">{</span><span class="n">corrected_error</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>detected-catalogue mean:        28.749
+injected population mean:       28.000
+naive absolute error:           0.721
+selection-aware absolute error: 0.533
+</pre></div>
+</div>
+</div>
+</div>
+<p>The naive estimate is biased <strong>high</strong>, because detectability rises with mass and
+the catalogue therefore over-represents heavy systems. It is not wrong about
+anything it was asked: it is a correct description of <em>the detected catalogue</em>.
+It is only wrong as a description of the astrophysical population, which is the
+question anyone actually wanted answered. Dividing by <span class="math notranslate nohighlight">\(\alpha(\Lambda)\)</span> is what
+turns one question into the other.</p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./notebooks"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Part 2C: LVK populations and PE checks</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal-and-route">Goal and route</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#start-with-the-catalogue-you-detected">1. Start with the catalogue you detected</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-selection-correction-in-one-equation">The selection correction in one equation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#question">Question</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#extension-events-are-posteriors-not-numbers">Extension: events are posteriors, not numbers</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#checklist-what-to-verify-before-a-population-claim">Checklist: what to verify before a population claim</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#read-or-try-next">Read or try next</a></li>
+</ul>
+</li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#worked-solutions">Worked solutions</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#question-how-wrong-is-the-naive-estimate">Question: how wrong is the naive estimate?</a></li>
+</ul>
+</li>
+</ul>
+
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Avi Vajpeyi
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  <script src="https://utteranc.es/client.js"
+        repo="nz-gravity/FQCP2026_GW_data_analysis"
+        issue-term="url"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
